@@ -62,8 +62,8 @@ class ModelRouter:
 
     def _gemini(self, messages):
         prompt = "\n".join(f"{m['role']}: {m['content']}" for m in messages)
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.s.gemini_model}:generateContent"
         r = self.client.post(url, params={"key": self.s.gemini_api_key}, json={"contents": [{"parts": [{"text": prompt}]}]})
         r.raise_for_status()
         text = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        return ModelReply(text, "gemini", "gemini-2.0-flash")
+        return ModelReply(text, "gemini", self.s.gemini_model)
