@@ -62,7 +62,7 @@ python main.py
 | 4 · Start | Run `python main.py`, open your bot in Telegram, and send a message. Long polling lasts only while this process runs. |
 
 > [!NOTE]
-> The Gemini adapter currently hardcodes `gemini-2.0-flash`. The October 7, 2026 live check returned HTTP 404 for that retired model. Gemini 2.5 Flash worked in a temporary local override; the repository runtime code has not been changed. A valid key does not fix the hardcoded model. The router still attempts Ollama first when using an API fallback.
+> Fixed: Gemini now defaults to `gemini-2.5-flash`. Set `GEMINI_MODEL` in `.env` to use another supported model. The router still attempts Ollama first when using an API fallback.
 
 Keep `.env`, tokens and Google client JSON out of git. `.gitignore` already covers `.env` and `config/google_client_secret.json`. Never put a service-role key in a browser or Telegram.
 
@@ -115,7 +115,7 @@ pytest -q
 
 **6 tests passed in the local setup check on October 7, 2026.** This badge is a recorded offline result, not a CI status. Tests mock model responses; they do not prove live Telegram, Ollama, OpenRouter, Gemini, Google or Supabase connectivity.
 
-A separate live smoke test on October 7, 2026 verified Telegram long polling and a reply through Gemini 2.5 Flash using a temporary local-only router override. The test process was stopped afterward; this repository is not a deployment. The unchanged router still needs its retired Gemini model updated.
+A separate live smoke test on October 7, 2026 verified Telegram long polling and a reply through Gemini 2.5 Flash using a temporary local-only router override. The test process was stopped afterward; this repository is not a deployment. The router now defaults to Gemini 2.5 Flash, configurable with `GEMINI_MODEL`.
 
 See [`TEST_CHECKLIST.md`](TEST_CHECKLIST.md) and [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) before treating the bot as ready for everyday use.
 
