@@ -80,3 +80,11 @@ M13 Google beta, October 8:
 
 M15 prepared, not deployed: 41 local tests including exact group mention, ignored untagged groups, no private state and disabled group tools. Slow-text progress timer and revised prompt need owner-chat checks. Group tagging needs a real group test. Keep BotFather privacy mode ON; exact @crayon_v1_bot mentions are sufficient. No existing group was selected or messaged.
 M13 2.16.0 live: health ok/db true. Privacy page visually inspected. Cloud credentials in Render; Gmail API enabled. Live captured smoke test passes /help and synthetic private-Google rejection. OAuth and real reads/send still untested; public verification not submitted.
+
+October 8 23:15 IST live follow-up:
+- 2.17.1 health ok=true/db=true.
+- Personal OAuth completed; real /google_status, /gmail search (five IDs/headers), /gmail_read newsletter body and /calendar next-seven-days passed in owner's DM.
+- Real one-line /email_draft self-addressed review-only fixture displayed exact content/hash; /email_cancel answered no send. Real send not tested; owner has a separate draft that was not touched by these tests.
+- Slow text response delivered progress before clean final answer; revised prompt inspected on one HTTP/HTTPS sample, not a quality benchmark.
+- BotFather says privacy ENABLED, with username mentions delivered. Left unchanged. Real group delivery not yet tested; no group chosen or messaged.
+- Public Google verification not submitted; testing status remains. No payment/assessment initiated.
