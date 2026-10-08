@@ -10,7 +10,7 @@ import cr_agent as A
 import cr_config as C
 import cr_db as db
 import cr_memory as mem
-from cr_safety import redact, looks_like_secret
+from cr_safety import redact, looks_like_secret, clean_text
 
 log = logging.getLogger("crayon.tg")
 _http = httpx.Client(timeout=httpx.Timeout(45.0, connect=10.0))
@@ -23,7 +23,8 @@ What I do:
 - set reminders that actually fire ("remind me tomorrow 8am to ...")
 - draft messages for review (never sends to other people)
 - save notes, tell the time, answer questions
-- read photos, PDFs/text files and voice notes (up to 4 MB)
+- accept files up to 20 MB, read common documents/photos/audio/video
+- inspect ZIP/TAR listings; explain formats I cannot decode
 
 Commands:
 /goal <goal> - plan and execute bounded multi-step work
@@ -52,7 +53,7 @@ def api(method, **params):
 class Out:
     """Real sender. Tests use CaptureOut with the same interface."""
     def send(self, chat_id, text, markup=None):
-        text = redact(text) or "(empty)"
+        text = clean_text(text) or "(empty)"
         chunks = [text[i:i + 3900] for i in range(0, len(text), 3900)]
         for i, ch in enumerate(chunks):
             params = {"chat_id": chat_id, "text": ch, "disable_web_page_preview": True}
@@ -88,7 +89,7 @@ class CaptureOut:
         self.sent, self.meta, self.reactions = [], {}, []
 
     def send(self, chat_id, text, markup=None):
-        self.sent.append({"text": redact(text), "markup": bool(markup)})
+        self.sent.append({"text": clean_text(text), "markup": bool(markup)})
 
     def react(self, chat_id, message_id, emoji):
         self.reactions.append({"emoji":emoji,"message_id":message_id})
@@ -119,9 +120,9 @@ def handle_update(upd, out=None):
         name = (msg["from"].get("first_name") or "").strip()
         if uid > 0:
             db.kv_set("tg_latest_"+str(uid), {"chat_id":chat_id,"message_id":msg.get("message_id"),
-                "media":any(msg.get(k) for k in ("photo","voice","audio","document"))})
+                "media":any(msg.get(k) for k in ("photo","voice","audio","document","video","video_note","animation","sticker"))})
         text = msg.get("text")
-        if any(msg.get(k) for k in ("photo","voice","audio","document")) or not text:
+        if any(msg.get(k) for k in ("photo","voice","audio","document","video","video_note","animation","sticker")) or not text:
             with mem.user_lock(uid):
                 _handle_media(uid, chat_id, name, msg, out)
             return
@@ -291,42 +292,69 @@ def _handle_media(uid, chat_id, name, msg, out):
     elif msg.get("document"):
         item = msg["document"]
         mime = item.get("mime_type", "")
+    else:
+        for kind in ("video", "video_note", "animation", "sticker"):
+            if msg.get(kind):
+                item = msg[kind]
+                mime = item.get("mime_type") or ("video/webm" if item.get("is_video") else "application/x-tgsticker" if item.get("is_animated") else "image/webp" if kind=="sticker" else "video/mp4")
+                break
     if not item:
-        out.send(chat_id, "Send text, a photo, PDF/text document, or a voice note.")
+        out.send(chat_id, "I received an attachment type I cannot read yet. Try sending it as a document.")
         return
     caption = msg.get("caption", "")
     if looks_like_secret(caption):
         out.delete(chat_id, msg.get("message_id"))
         out.send(chat_id, "The caption appears to contain a secret. I did not process or save it.")
         return
+    finished = threading.Event()
+    def progress(text):
+        try:
+            out.send(chat_id, text)
+        except Exception:
+            pass
+    def keep_updated():
+        for message in ("Still reading it. Larger files can take a little longer.", "Still processing with the media provider. I will tell you if it fails."):
+            if finished.wait(25):
+                return
+            progress(message)
     try:
         mem.touch_user(uid, name)
         if _over_cap(uid):
             out.send(chat_id, "Today's free-tier message limit is reached.")
             return
-        if item.get("file_size", 0) > cr_media.MAX_BYTES or mime not in cr_media.ALLOWED:
-            raise ValueError("Supported uploads up to 4 MB: photos, PDF/text/CSV and voice/audio.")
+        if item.get("file_size", 0) > cr_media.MAX_BYTES:
+            raise ValueError("Telegram bot downloads are limited to 20 MB. Send a smaller file or split it.")
+        if msg.get("message_id") and hasattr(out, "react"):
+            accepted=out.react(chat_id,msg["message_id"],"👀")
+            db.audit(uid,"telegram_reaction",f"message_id={msg['message_id']} emoji=👀 accepted={accepted}")
+        progress("Big file, give me a moment to read it." if item.get("file_size", 0)>4_000_000 else "Got it, reading your file now.")
+        threading.Thread(target=keep_updated, daemon=True).start()
         out.typing(chat_id)
         f = api("getFile", file_id=item["file_id"])
         path = f.get("file_path", "")
         if not path or ".." in path or path.startswith("/"):
             raise ValueError("Could not get the upload safely.")
         if f.get("file_size", 0) > cr_media.MAX_BYTES:
-            raise ValueError("Upload exceeds the 4 MB limit.")
+            raise ValueError("Upload exceeds the 20 MB download limit.")
         data = bytearray()
         with _http.stream("GET", f"https://api.telegram.org/file/bot{C.TELEGRAM_TOKEN}/{path}") as r:
             r.raise_for_status()
             for chunk in r.iter_bytes():
                 data.extend(chunk)
                 if len(data) > cr_media.MAX_BYTES:
-                    raise ValueError("Upload exceeds the 4 MB limit.")
-        reply = cr_media.analyze(bytes(data), mime, caption)
+                    raise ValueError("Upload exceeds the 20 MB download limit.")
+        reply = cr_media.analyze(bytes(data), mime, caption, item.get("file_name", ""), progress=progress)
+        finished.set()
         db.audit(uid,"media_processed", f"mime={mime} bytes={len(data)}")
         mem.add_message(uid, "user", "[User sent media: " + mime + "] " + redact(caption))
-        mem.add_message(uid, "assistant", "[Media analysis delivered; raw contents not retained]")
+        mem.add_message(uid, "assistant", "[Media analysis summary; raw file not retained] " + clean_text(reply)[:3000])
         if hasattr(out, "meta"):
             out.meta = {"media": mime, "bytes": len(data), "verified": bool(reply)}
         out.send(chat_id, reply or "I couldn't read that clearly.")
     except Exception as e:
-        log.warning("media handling failed: %s",redact(str(e))[:180])
-        out.send(chat_id, "I couldn't read that upload: " + redact(str(e))[:200])
+        finished.set()
+        log.warning("media handling failed: %s",type(e).__name__)
+        reason = str(e) if isinstance(e, ValueError) else "The download or media provider failed. Try a smaller file or retry shortly."
+        out.send(chat_id, "I couldn't read that upload: " + redact(reason)[:200])
+    finally:
+        finished.set()
