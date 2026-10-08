@@ -21,12 +21,17 @@ HELP = """I'm Crayon. Just talk to me.
 What I do:
 - remember you across restarts (see /memory)
 - set reminders that actually fire ("remind me tomorrow 8am to ...")
+- draft messages for review (never sends to other people)
 - save notes, tell the time, answer questions
 - read photos, PDFs/text files and voice notes (up to 4 MB)
 
 Commands:
 /goal <goal> - plan and execute bounded multi-step work
 /memory_review - duplicates and reviewable preference suggestions
+/proactive on|off - opt-in daily task/reminder check-in
+/digest morning|evening|both|off - opt-in daily digests
+/digest_now - task/reminder summary now
+/quiet_hours 21 9 - silence check-ins and digests at night
 /memory - what I remember about you
 /forget <key> - remove one thing
 /delete_my_data - wipe everything I hold on you
@@ -146,6 +151,31 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         out.send(chat_id, "Memory review (no facts changed):\n" + json.dumps(review, ensure_ascii=False, indent=2))
         if hasattr(out, "meta"):
             out.meta = {"memory_review": review}
+    elif cmd in ("/proactive", "/digest", "/quiet_hours"):
+        import cr_proactive as P
+        if cmd == "/quiet_hours":
+            try:
+                start, end = [int(x) for x in arg.split()]
+                if not (0 <= start <= 23 and 0 <= end <= 23):
+                    raise ValueError()
+                P.set_option(uid, chat_id, "quiet_start", start)
+                ok = P.set_option(uid, chat_id, "quiet_end", end)
+                out.send(chat_id, f"Quiet hours: {start}:00 to {end}:00 in your timezone." if ok else "Couldn't save quiet hours.")
+            except Exception:
+                out.send(chat_id, "Use /quiet_hours <start hour> <end hour>, e.g. /quiet_hours 21 9.")
+        else:
+            key = "proactive" if cmd == "/proactive" else "digest"
+            allowed = ("on", "off") if key == "proactive" else ("morning", "evening", "both", "off")
+            if arg not in allowed:
+                out.send(chat_id, "Use " + cmd + " " + "|".join(allowed) + ". Currently: " + str(P.settings(uid)[key]))
+            else:
+                value = (arg == "on") if key == "proactive" else arg
+                ok = P.set_option(uid, chat_id, key, value)
+                out.send(chat_id, cmd[1:] + " is " + arg + ". Quiet hours apply; free-host timing is best-effort." if ok else "Couldn't save that setting.")
+    elif cmd == "/digest_now":
+        import cr_proactive as P
+        mem.touch_user(uid, name)
+        out.send(chat_id, P.digest_text(uid))
     elif cmd == "/memory":
         out.send(chat_id, mem.render_memory(uid))
     elif cmd == "/forget":
@@ -271,7 +301,7 @@ def _handle_media(uid, chat_id, name, msg, out):
                     raise ValueError("Upload exceeds the 4 MB limit.")
         reply = cr_media.analyze(bytes(data), mime, caption)
         mem.add_message(uid, "user", "[User sent media: " + mime + "] " + redact(caption))
-        mem.add_message(uid, "assistant", reply)
+        mem.add_message(uid, "assistant", "[Media analysis delivered; raw contents not retained]")
         if hasattr(out, "meta"):
             out.meta = {"media": mime, "bytes": len(data), "verified": bool(reply)}
         out.send(chat_id, reply or "I couldn't read that clearly.")
