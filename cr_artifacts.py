@@ -19,7 +19,7 @@ def csv_bytes(headers,rows):
         w.writerow([cell(x) for x in row])
     return stream.getvalue().encode('utf-8-sig')
 
-def chart_bytes(title,labels,values,unit=''):
+def chart_bytes(title,labels,values,unit='',footer='Crayon | Supplied data, not independently verified'):
     if not isinstance(labels,list) or not isinstance(values,list) or not 1<=len(labels)<=12 or len(labels)!=len(values):raise ValueError('chart needs matching1-12 labels and values')
     if not isinstance(title,str) or not 1<=len(title)<=70 or len(unit)>25:raise ValueError('title or unit too long')
     if any(not isinstance(x,str) or not 1<=len(x)<=22 for x in labels):raise ValueError('labels must be1-22 characters')
@@ -35,5 +35,5 @@ def chart_bytes(title,labels,values,unit=''):
     for i,(label,v) in enumerate(zip(labels,nums)):
         y=112+i*54;d.text((32,y+4),label,fill='#2B2D31',font=font(18));w=round(540*v/maximum)
         d.rectangle((285,y,285+w,y+30),fill='#FFC93C');d.text((840,y+3),format(v,'.8g'),fill='#2B2D31',font=font(18))
-    d.text((32,height-40),'Crayon | Supplied data, not independently verified',fill='#6B7280',font=font(16))
+    d.text((32,height-40),footer[:110],fill='#6B7280',font=font(16))
     b=io.BytesIO();im.save(b,format='PNG');return b.getvalue()
