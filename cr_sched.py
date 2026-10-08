@@ -85,9 +85,6 @@ def _loop():
             cr_proactive.tick(cr_telegram.Out())
             import cr_wake
             cr_wake.idle_stop()
-            import cr_work
-            cr_work.init()
-            cr_work.tick(cr_telegram.Out())
             import cr_mail_watch
             cr_mail_watch.tick(cr_telegram.Out())
         except Exception as e:
@@ -100,5 +97,7 @@ def start():
     if _started:
         return
     _started = True
+    import cr_work
+    cr_work.start()
     threading.Thread(target=_loop, daemon=True, name="scheduler").start()
     log.info("scheduler started")
