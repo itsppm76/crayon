@@ -56,7 +56,7 @@ def handle(uid,chat,text,msg,out):
             except G.GoogleError as e:out.send(chat,str(e))
         return True
     confirm=t in ('send it','send','yes send it','send this email','send the email','cancel','cancel draft','cancel email')
-    candidate=bool(re.search(r'\b(email|e-mail|gmail|inbox|mail|calendar|schedule|meetings)\b',t))
+    candidate=bool(re.search(r'\b(emails?|e-mails?|gmail|inbox|mails?|calendar|schedule|meetings)\b',t))
     if not (confirm or candidate or state):return False
     if msg and any(msg.get(k) for k in ('forward_origin','forward_from','via_bot')):
         out.send(chat,'Google actions need a request directly from you, not forwarded content.');return True
@@ -78,6 +78,21 @@ def handle(uid,chat,text,msg,out):
                 state['to']=text.strip();show_draft(uid,chat,out,state['to']+' | '+state['subject']+' | '+state['body']);db.kv_set('google_compose_'+str(uid),None);return True
             elif t in ('never mind','nevermind','stop'):
                 db.kv_set('google_compose_'+str(uid),None);out.send(chat,'Cancelled. No email sent.');return True
+        attention_request=(bool(re.search(r'\b(emails?|e-mails?|gmail|inbox|mails?)\b',t)) and bool(re.search(r'\b(check|show|review|anything|something)\b',t)) and bool(re.search(r'\b(attention|pending|urgent|important)\b',t)) and not re.search(r'\b(send|reply|forward|draft|delete|how|example)\b',t))
+        if attention_request:
+            if re.search(r'\b(tasks?|to-?dos?)\b',t):
+                import cr_tools as tools
+                result=tools.list_tasks({'uid':uid})
+                tasks=result.get('tasks',[])
+                out.send(chat,'Tracked tasks:\n'+('\n'.join(str(x.get('title','Untitled')) for x in tasks) if tasks else 'No active tasks tracked in Crayon. This does not mean your emails contain no tasks.'))
+            import cr_mail_watch as W,time
+            row=G.status(uid)
+            if not row:raise G.GoogleError('Connect Google first.')
+            # One-off metadata check only. Never enables or changes a scheduled watch.
+            out.send(chat,'Checking recent inbox metadata for possible attention items...')
+            result,_=W.scan(uid,{'email':row['email'],'since':int(time.time())-7*86400,'seen':[]})
+            out.send(chat,(result or 'No inbox messages returned for the past7days.')+'\nThis checks up to4 recent messages using labels, subjects and bounded excerpts, not a complete inbox/task audit. Nothing sent to Gemini; no actions taken.')
+            return True
         intent=classify(text)
         action=intent.get('action')
         if action not in ('inbox','calendar','draft'):return False
