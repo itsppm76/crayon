@@ -57,7 +57,7 @@ def remember(ctx, key, value):
     return {"ok": ok, "verified": ok, "note": "stored and read back" if ok else "could not store (empty or looked like a secret)"}
 
 
-@tool("forget", "Delete one remembered fact by key.", {"key": S}, ["key"], RISK_WRITE)
+@tool("forget", "Delete one remembered fact by key. The user is asked to confirm first.", {"key": S}, ["key"], RISK_DANGER)
 def forget(ctx, key):
     ok = mem.forget(ctx["uid"], key)
     return {"ok": ok, "verified": ok}
@@ -156,7 +156,10 @@ def _task_view(uid, tid):
       "Start tracking a bigger goal as a task with ordered steps (subtasks) that persist across days. Break the goal into 2-8 concrete steps. Use when the user gives a multi-step goal or project.",
       {"title": S, "goal": S, "steps": {"type": "array", "items": {"type": "string"}}}, ["title", "steps"], RISK_WRITE)
 def create_task(ctx, title, steps, goal=""):
-    steps = [str(x).strip()[:200] for x in (steps or []) if str(x).strip()][:8]
+    if isinstance(steps, str):
+        steps = [x for x in re.split(r"\n|;", steps)]
+    steps = [str((x.get("title") or x.get("step") or "") if isinstance(x, dict) else x).strip()[:200] for x in (steps or [])]
+    steps = [x for x in steps if x][:8]
     if not steps:
         return {"ok": False, "verified": False, "error": "need at least one step"}
     n = db.q("SELECT count(*) AS n FROM tasks WHERE user_id=%s AND status='active'", (ctx["uid"],), "one")["n"]
@@ -250,10 +253,43 @@ def run_python(ctx, task):
     return {"ok": ok, "verified": bool(r["output"]), **r}
 
 
+def needs_confirm(name, args):
+    t = TOOLS.get(name)
+    if not t:
+        return False
+    return t["risk"] == RISK_DANGER or (name == "close_task" and (args or {}).get("status") == "cancelled")
+
+
+def describe(name, args):
+    a = args or {}
+    if name == "forget":
+        return f"Forget what I know as '{a.get('key', '?')}'"
+    if name == "close_task":
+        return f"Cancel task #{a.get('task_id', '?')}"
+    return f"Run {name}"
+
+
+def _ask_confirmation(name, args, ctx):
+    import json, uuid
+    pid = uuid.uuid4().hex[:10]
+    label = describe(name, args)
+    db.q("UPDATE pending_actions SET status='superseded' WHERE user_id=%s AND status='pending'", (ctx["uid"],), "none")
+    db.q("INSERT INTO pending_actions(id,user_id,action,args,label,expires_at) VALUES(%s,%s,%s,%s::jsonb,%s, now() + interval '10 minutes')",
+         (pid, ctx["uid"], name, json.dumps(args or {}), label), "none")
+    db.audit(ctx["uid"], "confirmation_requested", f"{name} {label}")
+    return {"ok": True, "verified": False, "needs_confirmation": True, "label": label,
+            "note": "NOT done yet. The user must reply YES to confirm; do not claim it happened."}
+
+
 def run(name, args, ctx):
     t = TOOLS.get(name)
     if not t:
         return {"ok": False, "verified": False, "error": f"unknown tool {name}"}
+    if needs_confirm(name, args) and not ctx.get("confirmed"):
+        try:
+            return _ask_confirmation(name, args, ctx)
+        except Exception as e:
+            return {"ok": False, "verified": False, "error": f"could not request confirmation: {type(e).__name__}"}
     try:
         clean = {k: v for k, v in (args or {}).items() if k in t["decl"]["parameters"]["properties"]}
         return t["fn"](ctx, **clean)
