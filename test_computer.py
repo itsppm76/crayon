@@ -37,3 +37,20 @@ def test_queue_retention(monkeypatch):
     K.next_job({'system':'Linux'})
     assert queries[0].startswith('DELETE FROM computer_jobs')
     assert "30 minutes" in queries[0]
+
+
+def test_tester_file_gate(monkeypatch):
+    assert K.permitted(7555366869)
+    assert not K.permitted(1234)
+    for op in ('read_text','write_text','list_files'):
+        assert not K.execute(7555366869,op,{'filename':'owner.txt','text':'bad'})['ok']
+
+def test_tester_status_hides_machine(monkeypatch):
+    monkeypatch.setattr(K.db,'kv_get',lambda *a:{'at':K.time.time(),'info':{'private':'secret'}})
+    assert K.status(7555366869)['computer']=={}
+    assert K.status(K.OWNER)['computer']=={'private':'secret'}
+
+def test_execution_cap_failclosed(monkeypatch):
+    monkeypatch.setattr(K,'status',lambda uid:{'ok':True})
+    monkeypatch.setattr(K,'reserve',lambda uid:False)
+    assert not K.execute(7555366869,'calculate',{'expression':'2+2'})['ok']
