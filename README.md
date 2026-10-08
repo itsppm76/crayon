@@ -16,7 +16,7 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-117_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-118_passed-22A06B?style=for-the-badge)
 
 [**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
@@ -24,9 +24,9 @@
 
 ---
 
-## ✅ Tonight's release: v2.28.0
+## ✅ Tonight's release: v2.28.1
 
-117 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
+118 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
 
 ### Who gets what
 
@@ -43,6 +43,7 @@
 - The fixed World Bank 2024 GDP-per-capita demo returns checked India/China/US records, source screenshot, CSV, chart, findings and work log. Not arbitrary research automation.
 - Owner computer status, arithmetic and text-file create/read passed live tests.
 - Google mail/calendar reads, owner-reviewed email send, and calendar preview/Cancel passed live checks. No calendar event write claimed.
+- Requests such as "Check pending tasks and emails that need attention" use a private bounded inbox-metadata path, separate from the chat model. It lists Crayon tasks and checks up to4 messages from the past7days; not a complete inbox audit and does not turn scheduled checks on.
 - Group exact-tag replies and untagged-ignore passed live tests; add-welcome still needs a real add test.
 - 17-command Telegram menu, plain-text replies, reactions and progress messages are deployed.
 - PNG screenshots/charts use Telegram `sendPhoto` within photo dimensions; CSVs stay documents. Existing artifact limit is 2MB. Photo-card delivery and rendered in-chat screenshot pixels were verified live.
@@ -315,7 +316,7 @@ Each user requests their own short link in their own private Crayon chat. Never 
 
 Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is not active. Additional testers are not enabled until their Telegram IDs are verified.117 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is not active. Additional testers are not enabled until their Telegram IDs are verified.118 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
 
 ### Mail checks and private calendar previews (2.27.0)
 
