@@ -61,6 +61,13 @@ class Out:
                 params["reply_markup"] = markup
             api("sendMessage", **params)
 
+    def artifact(self,chat_id,item):
+        if len(item['data'])>2000000:raise ValueError('attachment too large')
+        r=_http.post(f"https://api.telegram.org/bot{C.TELEGRAM_TOKEN}/sendDocument",data={'chat_id':str(chat_id)},files={'document':(item['filename'],item['data'],item['mime'])})
+        row=r.json()
+        if not row.get('ok'):raise RuntimeError('Telegram attachment not confirmed')
+        return row['result']['message_id']
+
     def react(self, chat_id, message_id, emoji):
         try:
             api("setMessageReaction", chat_id=chat_id, message_id=message_id,
@@ -94,6 +101,10 @@ class CaptureOut:
     def react(self, chat_id, message_id, emoji):
         self.reactions.append({"emoji":emoji,"message_id":message_id})
         return True
+
+    def artifact(self,chat_id,item):
+        self.sent.append({'text':'Attachment: '+item['filename'],'markup':False})
+        return 1
 
     def typing(self, chat_id):
         pass
