@@ -221,9 +221,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         out.send(chat_id,"You're welcome." if text.strip().lower().rstrip('.!') in ('thanks','thank you') else "Hey! What can I help with?" if text.strip().lower().rstrip('.!') in ('hi','hey','hello') else "Got it.");return
     import cr_dashboard
     if cr_dashboard.handle(uid,chat_id,text,out):return
-    if text=='/work' or text.startswith('/work '):
-        import cr_work
-        if cr_work.handle(uid,chat_id,text,out):return
+    import cr_work
+    if cr_work.handle(uid,chat_id,text,out):return
     plain=text.strip().lower().rstrip('.!')
     aliases={"help":"/help","connect google":"/connect_google","disconnect google":"/disconnect_google","google status":"/google_status","what do you remember about me?":"/memory","what do you remember about me":"/memory","show my memory":"/memory","memory review":"/memory_review","turn on daily check-ins":"/proactive on","turn off daily check-ins":"/proactive off","morning digest":"/digest morning","evening digest":"/digest evening","turn off digests":"/digest off","my digest":"/digest_now"}
     if plain=="privacy options":
