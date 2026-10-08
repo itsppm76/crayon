@@ -63,7 +63,14 @@ class Out:
 
     def artifact(self,chat_id,item):
         if len(item['data'])>2000000:raise ValueError('attachment too large')
-        r=_http.post(f"https://api.telegram.org/bot{C.TELEGRAM_TOKEN}/sendDocument",data={'chat_id':str(chat_id)},files={'document':(item['filename'],item['data'],item['mime'])})
+        method,field='sendDocument','document'
+        if item['mime']=='image/png':
+            import io
+            from PIL import Image
+            with Image.open(io.BytesIO(item['data'])) as image:
+                w,h=image.size
+            if len(item['data'])<=10000000 and w+h<=10000 and max(w,h)/min(w,h)<=20:method,field='sendPhoto','photo'
+        r=_http.post(f"https://api.telegram.org/bot{C.TELEGRAM_TOKEN}/{method}",data={'chat_id':str(chat_id)},files={field:(item['filename'],item['data'],item['mime'])})
         row=r.json()
         if not row.get('ok'):raise RuntimeError('Telegram attachment not confirmed')
         return row['result']['message_id']
