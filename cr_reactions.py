@@ -9,7 +9,7 @@ def choose(text):
         return "❤️"
     if re.search(r"\b(congrats|congratulations|birthday|celebrate|celebration|passed|graduated)\b", t):
         return "🎉"
-    if re.search(r"\b(let.?s goo*|yay+|won|nailed|awesome|amazing|excited)\b", t):
+    if re.search(r"\b(yoo+|yo+|let.?s goo*|yay+|won|nailed|awesome|amazing|excited)\b", t):
         return "🔥"
     if re.search(r"\b(lol|lmao|haha+|joke|funny)\b", t):
         return "😂"
@@ -19,4 +19,4 @@ def choose(text):
         return "🤔"
     if re.search(r"\b(ok|okay|got it|continue|nice|good|done|alright)\b", t):
         return "👍"
-    return "👍" if len(t) > 8 else None
+    return "👍"
