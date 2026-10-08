@@ -1,4 +1,4 @@
-"""Opt-in hourly metadata-only mail check. No model, body reads or external effects."""
+"""Opt-in hourly sender/subject/provider-snippet mail check. No model/body reads/actions."""
 import time,re,json
 import cr_db as db
 import cr_google as G
@@ -12,7 +12,7 @@ def configure(uid,chat,on):
     if not row:raise G.GoogleError('Connect Google first.')
     now=int(time.time())
     db.kv_set(KEY(uid),{'chat':chat,'email':row['email'],'since':now,'checked':now,'seen':[]})
-    return 'Email checks on: hourly during your awake hours, from now onward. No replies or calendar changes. Metadata only, never sent to Gemini. Attention uses Google IMPORTANT/starred labels or subject keywords, so it can miss things. Optional mail gets one short FYI. Free-host timing is best-effort.'
+    return 'Email checks on: hourly during your awake hours, from now onward. No replies or calendar changes. Sender/subject and bounded provider snippet excerpts only, never sent to Gemini. Attention uses Google IMPORTANT/starred labels or subject keywords, so it can miss things. Optional mail gets one short FYI. Free-host timing is best-effort.'
 def scan(uid,state):
     if G.status(uid).get('email')!=state['email']:raise G.GoogleError('Connected account changed. Turn email checks on again.')
     messages=G.request(uid,'https://gmail.googleapis.com/gmail/v1/users/me/messages',{'q':'in:inbox after:'+str(state['since']),'maxResults':20})
@@ -25,7 +25,8 @@ def scan(uid,state):
         from cr_safety import redact,clean_text
         subject=redact(clean_text(h.get('subject','(no subject)')).replace('\n',' ')[:130])
         sender=redact(clean_text(h.get('from','unknown sender')).replace('\n',' ')[:100])
-        line=sender+': '+subject
+        snippet=redact(clean_text(item.get('snippet','')).replace('\n',' ')[:180])
+        line=sender+': '+subject+(' | Excerpt: '+snippet if snippet else '')
         labels=item.get('labelIds',[])
         target=attention if any(x in labels for x in ('IMPORTANT','STARRED')) or re.search(r'\b(deadline|action required|due|overdue|urgent|interview|exam)\b',subject,re.I) else optional
         target.append(line)
