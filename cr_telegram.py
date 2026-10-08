@@ -60,6 +60,14 @@ class Out:
                 params["reply_markup"] = markup
             api("sendMessage", **params)
 
+    def react(self, chat_id, message_id, emoji):
+        try:
+            api("setMessageReaction", chat_id=chat_id, message_id=message_id,
+                reaction=[{"type":"emoji", "emoji":emoji}], is_big=False)
+            return True
+        except Exception:
+            return False
+
     def typing(self, chat_id):
         try:
             api("sendChatAction", chat_id=chat_id, action="typing")
@@ -76,10 +84,14 @@ class Out:
 
 class CaptureOut:
     def __init__(self):
-        self.sent, self.meta = [], {}
+        self.sent, self.meta, self.reactions = [], {}, []
 
     def send(self, chat_id, text, markup=None):
         self.sent.append({"text": redact(text), "markup": bool(markup)})
+
+    def react(self, chat_id, message_id, emoji):
+        self.reactions.append({"emoji":emoji,"message_id":message_id})
+        return True
 
     def typing(self, chat_id):
         pass
@@ -125,6 +137,10 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         out.send(chat_id, "That looked like a password or key, so I deleted your message and did not save it. Don't paste secrets here. If it was real, rotate it.")
         db.audit(uid, "secret_blocked")
         return
+    import cr_reactions
+    emoji = cr_reactions.choose(text)
+    if emoji and message_id and hasattr(out, "react"):
+        out.react(chat_id, message_id, emoji)
     cmd, _, arg = text.partition(" ")
     cmd = cmd.split("@")[0].lower()
     arg = arg.strip()
