@@ -1,7 +1,7 @@
 """Run in Codespaces. Outbound-only, fixed bounded operations, isolated data folder."""
 import ast,json,math,operator,os,pathlib,platform,time,urllib.request
-BASE=os.environ['CRAYON_BRIDGE_URL'].rstrip('/')
-TOKEN=os.environ['CRAYON_BRIDGE_TOKEN']
+BASE=os.environ.get('CRAYON_BRIDGE_URL','https://crayon-v1.onrender.com').rstrip('/')
+TOKEN=os.environ.get('CRAYON_BRIDGE_TOKEN') or (pathlib.Path.home()/'.config/crayon/bridge-token').read_text().strip()
 ROOT=pathlib.Path.home()/'crayon-files';ROOT.mkdir(exist_ok=True)
 def arithmetic(text):
     nodes=ast.parse(text,mode='eval');budget=[0]
@@ -18,6 +18,9 @@ def arithmetic(text):
     return calc(nodes.body)
 def run(op,args):
     import re
+    if op=='browse':
+        from computer_browser import browse
+        return browse(args)
     if op=='status':return {'ok':True,'verified':True,'system':platform.system(),'cpu':os.cpu_count(),'python':platform.python_version()}
     if op=='calculate':return {'ok':True,'verified':True,'value':arithmetic(args['expression'])}
     if op=='list_files':return {'ok':True,'verified':True,'files':[p.name for p in ROOT.iterdir() if p.is_file() and not p.is_symlink()][:100]}
@@ -40,7 +43,8 @@ def post(path,body):
     with urllib.request.urlopen(req,timeout=20) as r:return json.load(r)
 def main():
     print('Crayon computer worker active. No public ports. Stop with Ctrl+C.',flush=True)
-    while True:
+    until=time.monotonic()+1500
+    while time.monotonic()<until:
         try:
             job=post('/computer/next',run('status',{}))
             if job:
