@@ -2,42 +2,163 @@
 
 # 🖍️ Crayon v1
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=2800&pause=900&color=FFC93C&center=true&vCenter=true&width=680&lines=Color+for+everyday+questions.;Telegram+chat.+Model+fallbacks.;A+prototype.+Clear+boundaries." alt="Animated Crayon introduction" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=2800&pause=900&color=FFC93C&center=true&vCenter=true&width=720&lines=A+Telegram+assistant+that+remembers.;Searches+the+web.+Runs+code.+Keeps+reminders.;Tracks+multi-day+tasks.+Admits+what+it+didn't+do." alt="Animated Crayon introduction" />
 
-**A Python personal-assistant prototype for Telegram.**
+**A personal assistant on Telegram with persistent memory, live web search, sandboxed code, reminders, tracked tasks and honest safety rails. Runs entirely on free tiers.**
 
 ![MIT license](https://img.shields.io/badge/license-MIT-FFC93C?style=for-the-badge)
-![Offline tests](https://img.shields.io/badge/offline_tests-6%2F6_pass-22A06B?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Telegram](https://img.shields.io/badge/Telegram-long_polling-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)
-![Status](https://img.shields.io/badge/status-prototype-2B2D31?style=for-the-badge)
+![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
+![Postgres](https://img.shields.io/badge/Neon-Postgres-00E599?style=for-the-badge&logo=postgresql&logoColor=white)
+![Render](https://img.shields.io/badge/Render-free_tier-46E3B7?style=for-the-badge&logo=render&logoColor=black)
+![Cost](https://img.shields.io/badge/cost-%240_free_tiers-22A06B?style=for-the-badge)
 
-[Quick start](#-quick-start) · [Architecture](#-architecture) · [Boundaries](#-know-the-boundaries) · [Roadmap](#-next-on-the-page)
+[**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
 </div>
 
 ---
 
-## 🟡 Small core, clear pieces
+## 🟡 What Crayon can do
 
-Crayon separates the conversation core from the Telegram interface. It tries local Ollama first, then configured OpenRouter `:free` models, then Gemini. Notes and conversation history are kept per user in memory.
+Crayon lives in a Telegram chat at [`@crayon_v1_bot`](https://t.me/crayon_v1_bot), hosted at <https://crayon-v1.onrender.com/>. Everything below is live on the deployed bot.
 
-| Piece | What exists today |
+| # | Capability | What it means in practice |
+| :-: | :--- | :--- |
+| 1 | 🧠 **Persistent memory** | Facts, preferences and projects are stored in Neon Postgres and recalled across chats and restarts. See and edit them with `/memory` and `/forget`. |
+| 2 | 🔎 **Web search** | Current information through the Tavily API, with DuckDuckGo, Mojeek and Wikipedia as fallbacks. Can also open a public page and read its text. |
+| 3 | 🧪 **Sandboxed code execution** | Exact math and data checks run in a Python sandbox with no internet, files or access to your data. |
+| 4 | ⏰ **Reminders and scheduled jobs** | One-off or recurring reminders, plus self-running jobs that fire a prompt on schedule. Delivered by an in-process polling scheduler. |
+| 5 | 📋 **Multi-day tracked tasks** | Tasks with subtasks and per-step status (`todo`, `doing`, `done`, `blocked`). Progress is injected into the conversation, and a daily check-in nudge follows up on open tasks. |
+| 6 | 🛡️ **Safety rails** | Confirmation before irreversible actions, automatic deletion of messages that look like secrets, and an honesty guard that blocks unbacked "done" claims. |
+| 7 | 🩺 **`/health` and `/selftest`** | A public health check and a token-protected end-to-end self test. |
+
+### Chat commands
+
+| Command | Does |
 | :--- | :--- |
-| Telegram | `/start`, `/help`, `/delete_my_data`, text replies and approval-button scaffolding |
-| Agent | Conversation history, safe-tool dispatch and a configurable tool-loop budget |
-| Tools | Time lookup, notes and reminder records |
-| Models | Ollama → OpenRouter free-model rotation → Gemini fallback |
-| Memory | Per-user, process-local memory; Supabase SQL schema is included but not wired in |
-| Google | OAuth helper with Calendar/Gmail read-only scopes; live routes are incomplete |
-| Web | Adapter placeholder for a future interface |
+| `/start` | Greets you and registers your profile |
+| `/help` | Lists what Crayon understands |
+| `/memory` | Shows everything Crayon remembers about you |
+| `/forget <key>` | Removes one remembered fact, then checks it is gone |
+| `/delete_my_data confirm` | Permanently deletes your memory, notes, reminders and chat history |
 
-> [!IMPORTANT]
-> This is a prototype, not a finished hosted assistant. Reminders are recorded, not delivered by a scheduler. Google reads, persistent storage and external writes are not ready. Gemini's current adapter is text-only and does not return tool calls.
+Everything else is natural language: "remind me tomorrow at 9 to call the bank", "track my passport renewal as a task", "what's the latest on ...".
 
-## 🟢 Quick start
+### Tools the model can call
 
-**For basic Telegram chat, you need a bot token and one working model backend.** Supabase and Google OAuth are optional future-integration setup, not requirements for basic chat.
+| Group | Tools |
+| :--- | :--- |
+| Memory and notes | `remember`, `forget`, `save_note`, `list_notes` |
+| Time and reminders | `get_time`, `set_reminder`, `schedule_job`, `list_reminders`, `cancel_reminder` |
+| Tracked tasks | `create_task`, `list_tasks`, `update_step`, `close_task` |
+| Web and compute | `web_search`, `read_url`, `run_python` |
+
+Each tool is tagged with a risk level (safe, write or dangerous). Dangerous ones, such as `forget`, require an explicit YES first.
+
+---
+
+## 🔵 Architecture
+
+```mermaid
+flowchart TD
+    U[You on Telegram] -->|long polling| TG[cr_telegram]
+    TG --> SEC{Looks like a secret?}
+    SEC -->|yes| DEL[Delete message, never store it]
+    SEC -->|no| AG[cr_agent: tool loop, max 6 calls]
+    AG --> LLM[Gemini 2.5 Flash + Flash-Lite fallback]
+    AG --> TOOLS[cr_tools]
+    TOOLS --> MEM[(Neon Postgres)]
+    TOOLS --> WEB[cr_web]
+    WEB --> TAV[Tavily]
+    WEB --> FB[DuckDuckGo / Mojeek / Wikipedia]
+    WEB --> SB[Python sandbox]
+    AG --> HG{Honesty guard}
+    HG --> U
+    SCH[cr_sched: polling scheduler] --> MEM
+    SCH -->|due reminders, jobs, daily nudges| TG
+    HOST[main.py: /health, /selftest] --> MEM
+    classDef yellow fill:#FFC93C,color:#2B2D31,stroke:#2B2D31
+    classDef blue fill:#DDF1FF,color:#2B2D31,stroke:#3776AB
+    class AG,LLM yellow
+    class TG,TOOLS,WEB,SCH,HOST blue
+```
+
+### Stack
+
+| Layer | Choice | Cost |
+| :--- | :--- | :--- |
+| Interface | Telegram Bot API, long polling | Free |
+| Hosting | Render web service (free tier) | Free |
+| Database | Neon Postgres (free tier) | Free |
+| Model | Gemini 2.5 Flash, with `gemini-2.5-flash-lite` as fallback | Free tier |
+| Search | Tavily API, then DuckDuckGo, Mojeek, Wikipedia | Free tier |
+
+### Modules
+
+| File | Role |
+| :--- | :--- |
+| `main.py` | Entry point: HTTP server for `/health` and `/selftest`, database setup, Telegram polling |
+| `cr_telegram.py` | Telegram transport, command handling, per-user daily message cap, secret interception |
+| `cr_agent.py` | Agent loop, system prompt, confirmation flow, honesty guard |
+| `cr_llm.py` | Gemini client with model fallback |
+| `cr_tools.py` | Tool registry and implementations (memory, reminders, tasks, web, code) |
+| `cr_memory.py` | Facts, preferences, history and data deletion |
+| `cr_db.py` | Neon Postgres access and schema (users, facts, messages, notes, reminders, tasks, subtasks, pending actions, audit log) |
+| `cr_web.py` | Search with fallbacks, page reader, code sandbox |
+| `cr_sched.py` | Background scheduler for reminders, jobs and daily task check-ins |
+| `cr_safety.py` | Secret detection and log redaction |
+| `cr_selftest.py` | End-to-end self test behind `/selftest` |
+| `cr_config.py` | All settings, read from environment variables |
+
+> [!NOTE]
+> The repo also contains the original prototype layout (`core/`, `adapters/`, `tools/`, `db/schema.sql`, `notebooks/`). The deployed bot runs the `cr_*.py` modules above.
+
+---
+
+## 🧭 Design choices
+
+**Polling, not webhooks.** Both the Telegram connection and the reminder scheduler poll. This was deliberate: it needs no public webhook registration and survives the free host sleeping and waking. A keep-warm ping keeps the Render service awake so the scheduler keeps running.
+
+**Memory is explicit and inspectable.** Crayon stores what you ask it to remember. `/memory` shows it all, `/forget` removes one item, and `/delete_my_data confirm` wipes everything and verifies the result.
+
+**Progress injection for tasks.** Open tasks and their step status are fed back into the model's context, so a multi-day task survives across chats without you repeating yourself. A check-in nudge (at most about one per task per day, during waking hours in your timezone) reminds you of active tasks that have gone quiet.
+
+**Free by default.** Every component runs on a free tier. A per-user daily message cap protects those limits.
+
+---
+
+## 🛡️ Safety rails
+
+| Rail | Behaviour |
+| :--- | :--- |
+| **Confirmation for irreversible actions** | Dangerous tools do not run on the model's say-so. Crayon stores a pending action and asks you to reply **YES** or **NO**. It expires after 10 minutes. |
+| **Secret auto-deletion** | If a message looks like a password or API key, Crayon deletes it from the chat, does not save it, logs the event and tells you to rotate the secret if it was real. Known server secrets are also redacted from logs. |
+| **Honesty guard** | The model may not claim something is saved, set or deleted unless a tool result in that same turn was verified. If it claims "done" without backing, the reply is replaced with a plain statement that nothing ran. |
+| **Verified deletes** | `/forget` and `/delete_my_data` re-check the database and say so if anything remains. |
+| **Untrusted web content** | Search snippets and page text are treated as data, never instructions. |
+| **Bounded tool loop** | At most 6 tool calls per message. |
+| **Audit log** | Confirmations, declines and blocked secrets are written to an audit table. |
+
+---
+
+## 🩺 Endpoints
+
+| Endpoint | Auth | Returns |
+| :--- | :--- | :--- |
+| `GET /health` | none | JSON with `ok`, `version`, `db` (database reachable) and `mode` |
+| `POST /selftest` | `Authorization: Bearer <CRAYON_ADMIN_TOKEN>` | Sends test messages through the real pipeline (live Gemini, live database) as a synthetic user, with nothing sent to Telegram. Can also trigger a scheduler tick and probe reminders or facts, then clean up. Returns `403` without the token. |
+
+```bash
+curl https://crayon-v1.onrender.com/health
+```
+
+---
+
+## 🟢 Setup
+
+You need a Telegram bot token, a Gemini API key and a Postgres connection string. Search works without Tavily but is better with it.
 
 ```bash
 git clone https://github.com/itsppm76/crayon.git
@@ -45,101 +166,48 @@ cd crayon
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
 ```
 
-Edit your local `.env`, then run:
+Set these environment variables (a local `.env` works; never commit it):
+
+| Variable | Required | Purpose |
+| :--- | :-: | :--- |
+| `TELEGRAM_BOT_TOKEN` | yes | Token from `@BotFather` |
+| `GEMINI_API_KEY` | yes | Google AI Studio key |
+| `DATABASE_URL` | yes | Neon Postgres connection string |
+| `CRAYON_ADMIN_TOKEN` | for `/selftest` | Bearer token guarding `/selftest` |
+| `TAVILY_API_KEY` | recommended | Tavily search; without it, fallbacks are used |
+| `GEMINI_MODEL` | no | Default `gemini-2.5-flash` |
+| `GEMINI_FALLBACK_MODELS` | no | Default `gemini-2.5-flash-lite` |
+| `CRAYON_TZ` | no | Default timezone, default `Asia/Kolkata` |
+| `CRAYON_MODE` | no | `polling` (default) |
+| `CRAYON_PUBLIC_URL` | no | Public URL used for keep-warm |
+| `CRAYON_DAILY_CAP` | no | Messages per user per day, default 80 |
+| `CRAYON_HISTORY_TURNS` | no | Chat turns kept in context, default 14 |
+
+Run it:
 
 ```bash
 python main.py
 ```
 
-| Step | What to configure |
-| :--- | :--- |
-| 1 · Telegram | In `@BotFather`, send `/newbot`, choose a name and a username ending in `bot`. Put the token in `TELEGRAM_BOT_TOKEN`. |
-| 2 · Local model | If using Ollama, install it and pull the configured model. The example uses `gemma4:e4b`; check availability and set `OLLAMA_MODEL` to an installed model. |
-| 3 · API fallback | Set `OPENROUTER_API_KEY` plus `OPENROUTER_MODELS` containing only `:free` IDs, or set `GEMINI_API_KEY` from AI Studio. |
-| 4 · Start | Run `python main.py`, open your bot in Telegram, and send a message. Long polling lasts only while this process runs. |
+**Deploy on Render:** create a free web service from this repo, set the variables above, use `python main.py` as the start command, and let Render supply `PORT`. Check `/health` once it is up.
 
-> [!NOTE]
-> Fixed: Gemini now defaults to `gemini-2.5-flash`. Set `GEMINI_MODEL` in `.env` to use another supported model. The router still attempts Ollama first when using an API fallback.
+---
 
-Keep `.env`, tokens and Google client JSON out of git. `.gitignore` already covers `.env` and `config/google_client_secret.json`. Never put a service-role key in a browser or Telegram.
+## 🟠 Honest limits
 
-### Optional integration groundwork
+- It is a single-user-scale project on free tiers. Free hosts sleep, free models rate-limit and Render's free instance can be slow on a cold start.
+- Reminders are delivered by an in-process poller, so timing is close but not exact, and a long outage delays them.
+- The code sandbox has no network or file access by design, so it cannot fetch data.
+- Search quality depends on Tavily and its fallbacks; snippets can be wrong or stale.
+- The honesty guard and secret detector are heuristics, not proofs. Rotate any secret that was pasted into a chat.
+- Gmail, Calendar and other external writes are not part of the live bot. The Google OAuth code in `core/` is unused groundwork.
+- Test coverage in `tests/` is from the earlier prototype and mocks model responses. Live behaviour is checked through `/selftest` and the bot itself.
 
-<details>
-<summary><strong>Supabase and Google OAuth</strong></summary>
+See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) and [`ROADMAP.md`](ROADMAP.md) for older notes written before the milestones above; the sections in this README reflect the current deployed state.
 
-**Supabase:** create one project, run [`db/schema.sql`](db/schema.sql), and set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `TOKEN_ENCRYPTION_KEY` server-side. A repository adapter still needs to be built; setting these variables does not enable persistence.
-
-**Google:** create a Desktop OAuth client, enable Gmail and Calendar APIs, and add yourself as a test user while the consent screen is in testing mode. Save client JSON to `config/google_client_secret.json`. [`core/google_oauth.py`](core/google_oauth.py) requests only `calendar.readonly` and `gmail.readonly`. `/connect`, callbacks, reads and token storage still need wiring and live tests.
-
-</details>
-
-### Colab
-
-Open [`notebooks/crayon_v1.ipynb`](notebooks/crayon_v1.ipynb), replace the notebook's clone URL with `https://github.com/itsppm76/crayon.git`, add credentials in Colab Secrets, and run cells top-to-bottom. Runtime disconnects stop the bot; in-memory data is lost on restart.
-
-## 🔵 Architecture
-
-```mermaid
-flowchart TD
-    TG[Telegram chat] --> TA[Telegram adapter]
-    WA[Future web adapter] -.-> A[core.Agent]
-    TA --> A
-    A --> R[ModelRouter]
-    R --> O[Local Ollama]
-    O -->|on failure| OR[OpenRouter :free models]
-    OR -->|on failure| G[Gemini text fallback]
-    A --> T[Safe tools: time, notes, reminder records]
-    T --> M[Per-user in-memory storage]
-    A --> M
-    DB[Supabase SQL schema] -. future repository .-> M
-    GO[Google read-only OAuth helper] -. future tools .-> A
-    classDef yellow fill:#FFC93C,color:#2B2D31,stroke:#2B2D31
-    classDef blue fill:#DDF1FF,color:#2B2D31,stroke:#3776AB
-    classDef muted fill:#F3F4F6,color:#6B7280,stroke:#9CA3AF,stroke-dasharray:5 5
-    class A,R yellow
-    class TA,T,M blue
-    class WA,DB,GO muted
-```
-
-Solid lines are implemented paths. Dotted lines are unfinished integration work. A backend is skipped if its API key is absent; all backends failing raises an error.
-
-## 🟠 Test the core
-
-```bash
-pytest -q
-```
-
-**6 tests passed in the local setup check on October 7, 2026.** This badge is a recorded offline result, not a CI status. Tests mock model responses; they do not prove live Telegram, Ollama, OpenRouter, Gemini, Google or Supabase connectivity.
-
-A separate live smoke test on October 7, 2026 verified Telegram long polling and a reply through Gemini 2.5 Flash using a temporary local-only router override. The test process was stopped afterward; this repository is not a deployment. The router now defaults to Gemini 2.5 Flash, configurable with `GEMINI_MODEL`.
-
-See [`TEST_CHECKLIST.md`](TEST_CHECKLIST.md) and [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) before treating the bot as ready for everyday use.
-
-## 🔴 Know the boundaries
-
-- Memory is per user, but disappears when the process stops.
-- The Telegram adapter handles model calls synchronously and has no custom backend-error reply handler.
-- The system prompt treats outside text as data and forbids external writes. This is a policy prompt, not a proof against malicious input.
-- Approval buttons are scaffolding. They acknowledge approval but intentionally do not send mail, create events or contact others.
-- Google OAuth asks for read-only scopes; actual Calendar/Gmail tools are unfinished.
-- Free models and free hosts have limits. Reliable always-on hosting and usage beyond free tiers may cost money.
-- The tool-loop budget needs stricter dispatch enforcement, rate limits and audit logs before production use.
-
-## 🟣 Next on the page
-
-From [`ROADMAP.md`](ROADMAP.md):
-
-- [ ] Supabase repository, encrypted tokens and RLS tests
-- [ ] OAuth callback and live read-only Gmail/Calendar tools
-- [ ] Durable reminder scheduler and optional morning summaries
-- [ ] Tool parsing, rate limits, audit log and strict five-call enforcement
-- [ ] Draft objects and approval replay protection before any scoped writes
-- [ ] Always-on long-polling host with a working model fallback
-- [ ] Web adapter sharing the same conversation core
+---
 
 ## ⚪ License
 
