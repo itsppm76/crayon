@@ -1,0 +1,45 @@
+"""Secret redaction. Used on everything that is logged, stored or sent."""
+import os
+import re
+
+_PATTERNS = [
+    re.compile(r"\b\d{8,10}:[A-Za-z0-9_-]{30,}\b"),            # telegram bot token
+    re.compile(r"\bAIza[0-9A-Za-z_-]{30,}\b"),                  # google api key
+    re.compile(r"\bpostgres(?:ql)?://[^\s]+", re.I),            # db urls
+    re.compile(r"\bnpg_[A-Za-z0-9]{10,}\b"),                    # neon password
+    re.compile(r"\b(?:sk|pk|rk)-[A-Za-z0-9_-]{20,}\b"),         # generic api keys
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),              # github tokens
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{30,}\b"),
+    re.compile(r"\bhf_[A-Za-z0-9]{30,}\b"),
+    re.compile(r"\bxox[abprs]-[A-Za-z0-9-]{20,}\b"),
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)", re.S),
+    re.compile(r"(?i)\b(password|passwd|pwd|secret|api[_ -]?key|token)\b\s*[:=]\s*\S{6,}"),
+]
+_ENV_KEYS = ("TELEGRAM_BOT_TOKEN", "GEMINI_API_KEY", "DATABASE_URL", "CRAYON_ADMIN_TOKEN")
+
+
+def _env_secrets():
+    vals = []
+    for k in _ENV_KEYS:
+        v = os.environ.get(k, "")
+        if len(v) >= 8:
+            vals.append(v)
+    return vals
+
+
+def redact(text):
+    if not text:
+        return text
+    out = str(text)
+    for v in _env_secrets():
+        out = out.replace(v, "[redacted]")
+    for p in _PATTERNS:
+        out = p.sub("[redacted]", out)
+    return out
+
+
+def looks_like_secret(text):
+    """True when a user message appears to contain a credential."""
+    if not text:
+        return False
+    return any(p.search(text) for p in _PATTERNS)
