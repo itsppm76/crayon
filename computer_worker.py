@@ -43,7 +43,9 @@ def post(path,body):
     with urllib.request.urlopen(req,timeout=20) as r:return json.load(r)
 def main():
     print('Crayon computer worker active. No public ports. Stop with Ctrl+C.',flush=True)
-    until=time.monotonic()+1500
+    # Deployment-controlled session cap, never set through a bot job. Default25min.
+    raw=int(os.environ.get('CRAYON_WORKER_SESSION_SECONDS','1500'))
+    until=time.monotonic()+max(60,min(raw,21600))
     while time.monotonic()<until:
         try:
             job=post('/computer/next',run('status',{}))
