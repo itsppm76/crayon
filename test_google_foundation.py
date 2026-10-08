@@ -117,3 +117,11 @@ def test_google_group_read_blocked(monkeypatch):
     out=T.CaptureOut()
     T._handle_text(22,-123,'Test','/gmail',1,out)
     assert 'private chat' in out.sent[0]['text']
+
+
+def test_draft_single_line_review(monkeypatch):
+    monkeypatch.setattr(G,'status',lambda uid:{'email':'owner@example.com'})
+    monkeypatch.setattr(G,'encrypt',lambda uid,data:'encrypted')
+    monkeypatch.setattr(G.db,'q',lambda *a,**kw:None)
+    out=G.make_draft(11,'owner@example.com | Review only | Do not send this.')
+    assert 'Draft only, not sent' in out and 'Subject: Review only' in out
