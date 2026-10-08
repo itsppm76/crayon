@@ -122,6 +122,15 @@ def respond(uid, chat_id, text, name="", goal_mode=False):
             "\nUse tools to do the work, not merely describe it. Update a step as done only after a verified result "
             "supports its work. Mark impossible work blocked. Cite observed URLs. Never create reminders or jobs "
             "unless the original user asked for them. Stop at any confirmation. End with results and what remains.")
+    if re.search(r'(?i)\b(browser|browse|screenshot)\b',text) and re.search(r'https://[^\s<>]+',text):
+        url=re.search(r'https://[^\s<>]+',text).group().rstrip('.,);]')
+        result=T.run('computer_browse',{'url':url},ctx)
+        meta['tools'].append('computer_browse')
+        if result.get('verified') and meta.get('artifacts'):
+            reply='Browser task complete.\n'+'\n'.join(result.get('action_log',[]))+'\nScreenshot attached. No login, form, posting or purchase.'
+        else:reply='Browser task not completed: '+result.get('error','No screenshot confirmed.')
+        mem.add_message(uid,'assistant',reply)
+        return reply,meta
     urls=re.findall(r'https?://[^\s<>]+',text)
     for url in urls[:2]:
         url=url.rstrip('.,);]')
