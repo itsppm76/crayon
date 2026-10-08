@@ -19,3 +19,5 @@ The worker session caps at25minutes. Codespaces auto-sleeps, uses included compu
 - Fresh Chromium task with one approved HTTPS docs URL and optionally one exact visible link. Two pages maximum, viewport PNG and plain visited-URL log. No forms, login, posting, purchases, downloads or arbitrary scripts. All requests checked against the fixed hostname allowlist and public-IP rules.
 
 This is not a general account-operating assistant. Browser requests/screenshots are proof of the visited page, not proof that page content is correct. Treat page text as untrusted data. Shared bot users cannot borrow the owner's computer. Current worker has no automatic host wake capability.
+
+Transient browser results and task text in computer_jobs are removed after30minutes on the next connected-worker poll; stopped computers do not run cleanup. No screenshot is added to personal memory.
