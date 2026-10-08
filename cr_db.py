@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS reminders(
   due_at TIMESTAMPTZ NOT NULL, status TEXT DEFAULT 'pending', recurrence TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT now(), sent_at TIMESTAMPTZ);
 CREATE INDEX IF NOT EXISTS reminders_due_idx ON reminders(status, due_at);
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS attempts INT DEFAULT 0;
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ;
 CREATE TABLE IF NOT EXISTS tasks(
   id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL, chat_id BIGINT NOT NULL, title TEXT NOT NULL,
   goal TEXT DEFAULT '', status TEXT DEFAULT 'active', created_at TIMESTAMPTZ DEFAULT now(),
