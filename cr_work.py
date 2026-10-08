@@ -54,7 +54,7 @@ def create(uid,chat,arg):
     try:
         with conn.transaction():
             conn.execute('SELECT pg_advisory_xact_lock(39272412)')
-            active=conn.execute("SELECT count(*) AS n FROM work_jobs WHERE user_id=%s AND status IN ('queued','running','paused')",(uid,)).fetchone()['n']
+            active=conn.execute("SELECT count(*) AS n FROM work_jobs WHERE user_id=%s AND status IN ('queued','running','pausing','paused')",(uid,)).fetchone()['n']
             quota=conn.execute("SELECT count(*) AS total,count(*) FILTER(WHERE user_id=%s) AS own FROM work_jobs WHERE created_at>now()-interval '24 hours'",(uid,)).fetchone()
             if active>=3 or quota['own']>=3 or quota['total']>=10:raise ValueError('Work queue limit: 3 active and 3 new jobs per person/24h, 10 total/24h. No quota changes.')
             job=conn.execute('INSERT INTO work_jobs(user_id,chat_id,title,steps) VALUES(%s,%s,%s,%s::jsonb) RETURNING id',(uid,chat,title,json.dumps(steps))).fetchone()['id']
@@ -66,20 +66,20 @@ def create(uid,chat,arg):
 def get(uid,ident):return db.q('SELECT * FROM work_jobs WHERE id=%s AND user_id=%s',(int(ident),uid),'one')
 def view(row):
     results=row.get('results') or []
-    lines=[f"Work #{row['id']}: {row['title']}",f"Status: {row['status']}. Verified steps: {len(results)}/{len(row['steps'])}."]
+    lines=[f"Work #{row['id']}: {row['title']}",f"Status: {row['status']}. Completed steps: {len(results)}/{len(row['steps'])}."]
     for i,step in enumerate(row['steps'],1):
-        lines.append(f"{i}. {step['op']}: {step['input']}"+(' [verified]' if i<=len(results) else ' [not completed]'))
+        lines.append(f"{i}. {step['op']}: {step['input']}"+(' [receipt saved]' if i<=len(results) else ' [not completed]'))
     if row.get('error'):lines+=['Failure: '+row['error']]
     for i,result in enumerate(results,1):lines+=['Step '+str(i)+' evidence:',result['text']]
-    if row.get('status')=='blocked':lines+=['Stopped without retry. Inspect the last failure before explicitly restarting.']
+    if row.get('status')=='blocked':lines+=['Stopped without retry. Inspect the failure, then queue a new job only if needed.']
     return '\n'.join(lines)[:14500]
 
 def control(uid,ident,op):
     row=get(uid,ident)
     if not row:raise ValueError('No such work in your account')
-    allowed={'pause':('queued','running'),'resume':('paused',),'cancel':('queued','running','paused','blocked')}
+    allowed={'pause':('queued','running'),'resume':('paused',),'cancel':('queued','running','pausing','paused','blocked')}
     if op not in allowed or row['status'] not in allowed[op]:raise ValueError('That control does not apply to this work state.')
-    status={'pause':'paused','resume':'queued','cancel':'cancelled'}[op]
+    status={'pause':('pausing' if row['status']=='running' else 'paused'),'resume':'queued','cancel':'cancelled'}[op]
     db.q('UPDATE work_jobs SET status=%s,updated_at=now() WHERE id=%s AND user_id=%s',(status,ident,uid),'none')
     return get(uid,ident)
 
@@ -114,7 +114,7 @@ def step_run(step):
 
 def tick(out,only_user=None):
     # Interrupted work is not retried automatically. Record a block, never invent done.
-    db.q("UPDATE work_jobs SET status='blocked',updated_at=now() WHERE status='running' AND updated_at<now()-interval '5 minutes'",(),'none')
+    db.q("UPDATE work_jobs SET status='blocked',updated_at=now() WHERE status IN ('running','pausing') AND updated_at<now()-interval '5 minutes'",(),'none')
     cond=' AND user_id=%s' if only_user is not None else ' AND user_id>0'
     row=db.q("UPDATE work_jobs SET status='running',updated_at=now() WHERE id=(SELECT id FROM work_jobs WHERE status='queued'"+cond+" ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *",(only_user,) if only_user is not None else (),'one')
     if row:
@@ -125,10 +125,10 @@ def tick(out,only_user=None):
             result['at']=datetime.now(timezone.utc).isoformat();results.append(result)
             # Pause/cancel wins races: evidence retained only for a still-existing owner row.
             status='done' if len(results)==len(row['steps']) else 'queued'
-            db.q("UPDATE work_jobs SET results=%s::jsonb,status=CASE WHEN status='running' THEN %s ELSE status END,updated_at=now() WHERE id=%s AND user_id=%s",(json.dumps(results),status,row['id'],uid),'none')
+            db.q("UPDATE work_jobs SET results=%s::jsonb,status=CASE WHEN status='running' THEN %s WHEN status='pausing' THEN 'paused' ELSE status END,updated_at=now() WHERE id=%s AND user_id=%s",(json.dumps(results),status,row['id'],uid),'none')
         except Exception as e:
             from cr_safety import redact
-            db.q("UPDATE work_jobs SET status=CASE WHEN status='running' THEN 'blocked' ELSE status END,error=%s,updated_at=now() WHERE id=%s",(redact(str(e))[:180],row['id']),'none')
+            db.q("UPDATE work_jobs SET status=CASE WHEN status='running' THEN 'blocked' WHEN status='pausing' THEN 'paused' ELSE status END,error=%s,updated_at=now() WHERE id=%s",(redact(str(e))[:180],row['id']),'none')
             db.audit(uid,'work_blocked',str(row['id'])+': '+redact(str(e))[:120])
     # No unsolicited activation: each job was explicitly queued by its owner.
     ready=db.q("SELECT * FROM work_jobs WHERE status IN ('done','blocked') AND NOT notified"+cond+" ORDER BY updated_at LIMIT 3",(only_user,) if only_user is not None else ())
