@@ -52,3 +52,7 @@ curl -X POST https://crayon-v1.onrender.com/selftest \
 ## Prototype tests
 
 `pytest -q` runs the offline tests in `tests/`. They cover the original prototype code in `core/` and `tools/` with mocked model responses. They say nothing about the deployed `cr_*.py` bot.
+
+## Phase 2
+
+M7: `/goal <concrete research/calculation goal>` saves a 2-4 step plan and executes with up to 12 tools, repeat-call limits, and a time budget. Local runtime tests pass. Live acceptance pending deployment. Admin form `/admin-test` uses captured output and requires the existing admin token. Selftest rejects real user IDs; scheduler excludes negative test users.
