@@ -84,7 +84,8 @@ def run(body):
         import cr_work,cr_tools
         from unittest.mock import patch
         cr_work.init();out=tg.CaptureOut()
-        n=cr_tools.now_local(uid).replace(hour=12)
+        n=cr_tools.now_local(uid)
+        if body.get("work_hour") is not None:n=n.replace(hour=max(0,min(23,int(body["work_hour"]))))
         with patch.object(cr_tools,"now_local",return_value=n):
             done=cr_work.tick(out,only_user=uid)
         results.append({"work_tick":done,"out":[m["text"] for m in out.sent]})
