@@ -91,7 +91,7 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False):
     try:
         mem.touch_user(uid, name)
         mem.add_message(uid, "user", text)
-        conf = handle_confirmation(uid, chat_id, text)
+        conf = None if readonly else handle_confirmation(uid, chat_id, text)
         if conf is not None:
             mem.add_message(uid, "assistant", conf)
             meta["confirmation"] = True
