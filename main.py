@@ -47,6 +47,12 @@ class Handler(BaseHTTPRequestHandler):
         return bool(C.ADMIN_TOKEN) and tok == C.ADMIN_TOKEN
 
     def do_GET(self):
+        if self.path == "/admin-test":
+            return self._send(200, """<!doctype html><title>Crayon admin test</title><h1>Captured self-test</h1>
+<p>Negative synthetic users only. No Telegram sends.</p>
+<form method="post" action="/admin-test"><label>Admin token <input type="password" name="token"></label>
+<label>Test JSON <textarea name="body" rows="12" cols="70">{"uid":-7007,"texts":["hello"],"cleanup":true}</textarea></label>
+<button>Run captured test</button></form>""", "text/html")
         if self.path.startswith("/health"):
             import cr_db as db
             info = {"ok": True, "version": C.VERSION, "db": db.available(), "mode": C.MODE}
@@ -60,6 +66,18 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(raw or b"{}")
         except Exception:
             body = {}
+        if self.path == "/admin-test":
+            from urllib.parse import parse_qs
+            import html, hmac
+            data = parse_qs(raw.decode())
+            if not C.ADMIN_TOKEN or not hmac.compare_digest(data.get("token", [""])[0], C.ADMIN_TOKEN):
+                return self._send(403, "forbidden")
+            try:
+                import cr_selftest
+                result = cr_selftest.run(json.loads(data.get("body", ["{}"]) [0]))
+                return self._send(200, "<title>Crayon self-test result</title><h1>Captured result</h1><pre>" + html.escape(json.dumps(result, indent=2, default=str)) + "</pre>", "text/html")
+            except Exception:
+                return self._send(500, "Test failed; inspect server logs")
         if self.path == "/selftest":
             if not self._admin():
                 return self._send(403, "forbidden")
