@@ -70,6 +70,19 @@ def run(body):
         results.append({"reminders": [dict(r) for r in rows]})
     if body.get("probe") == "facts":
         results.append({"facts": [dict(key=f["key"], value=f["value"]) for f in mem.facts(uid)]})
+    if body.get("work_tick"):
+        import cr_work,cr_tools
+        from unittest.mock import patch
+        cr_work.init();out=tg.CaptureOut()
+        n=cr_tools.now_local(uid).replace(hour=12)
+        with patch.object(cr_tools,"now_local",return_value=n):
+            done=cr_work.tick(out,only_user=uid)
+        results.append({"work_tick":done,"out":[m["text"] for m in out.sent]})
+    if body.get("work_probe"):
+        import cr_work
+        cr_work.init()
+        rows=db.q("SELECT * FROM work_jobs WHERE user_id=%s ORDER BY id",(uid,))
+        results.append({"work_probe":[cr_work.view(r) for r in rows]})
     if body.get("cleanup"):
         mem.delete_all(uid)
     return {"ok": True, "results": results}
