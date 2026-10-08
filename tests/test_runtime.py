@@ -114,3 +114,14 @@ def test_quiet_hours_block_all_optional_messages(monkeypatch):
     from cr_telegram import CaptureOut
     out=CaptureOut()
     assert P.tick(out,only_user=-4)==[] and not out.sent
+
+def test_reaction_selection():
+    from cr_reactions import choose
+    assert choose('Please build this')=='👀'
+    assert choose('Lets gooo')=='🔥'
+    assert choose('thank you')=='❤️'
+    assert choose('I passed the exam')=='🎉'
+    assert choose('lol haha')=='😂'
+    assert choose('What time is it?')=='🤔'
+    assert choose('yes') is None
+    assert choose('/memory') is None
