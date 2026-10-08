@@ -16,7 +16,7 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-132_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-135_passed-22A06B?style=for-the-badge)
 
 [**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
@@ -24,17 +24,18 @@
 
 ---
 
-## ✅ Tonight's release: v2.30.0
+## ✅ Tonight's release: v2.31.1
 
-132 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
+135 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
 
-### Overnight task power (2.30.0)
+### Overnight task power (2.31.1)
 
+- `/tasks add Title | step1 | step2`: deterministic task creation. `/tasks export`: task CSV and progress-chart PNG, with recorded-results caveat.
 - `/tasks`: private task dashboard with progress, blocked steps, next step, reminders and internal-work queue. `/tasks show ID` shows recorded results; `/tasks done ID STEP | note` records your own completion note, not an independently verified result.
 - `/work brief topic`: queues a bounded assignment starter from fetched public sources: answer, sourced points, possible outline and gaps. AI draft, not submission-ready; exact fetched URLs are checked, claim support remains fallible.
 - `/work plan Title | research topic | calculate 2+2` : 1-3 explicit internal steps. Supported: public research/source receipts, public page text, basic exact arithmetic and briefs. No Google, shell, website actions, email/calendar writes or messages to other people.
 - `/work list`, `show ID`, `pause ID`, `resume ID`, `cancel ID`, `export ID`: persistent progress and TXT report/CSV source ledger. 3 active jobs and 3 new jobs/person/24h, 10 total/24h. Interrupted steps block without retry; quiet hours delay completion notifications. Default quiet hours 21:00-09:00.
-- Scheduled model jobs are read-only at tool enforcement. New internal queue has live deployed captured tests (real database/source/model paths, no Telegram send). Morning real-Telegram queue/brief/export proof is still pending.
+- Scheduled model jobs are read-only at tool enforcement. New internal queue has live deployed captured tests for two-step queue, brief, work TXT/CSV export, pause/resume/cancel, cross-user isolation, task creation/dashboard/chart-export and quiet-hour deferral (real database/source/model paths, no Telegram send). Morning real-Telegram queue/brief/export proof is still pending.
 - Inbox attention reports now have short sections and decoded HTML entities; owner's real Telegram rendering checked.
 
 ### Who gets what
@@ -325,7 +326,7 @@ Each user requests their own short link in their own private Crayon chat. Never 
 
 Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is not active. Additional testers are not enabled until their Telegram IDs are verified.132 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is not active. Additional testers are not enabled until their Telegram IDs are verified.135 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
 
 ### Mail checks and private calendar previews (2.27.0)
 
