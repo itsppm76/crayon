@@ -47,7 +47,7 @@ def test_friendly_draft_hides_ids(monkeypatch,store):
     assert 'hiddenid' not in out.sent[0]['text'] and out.sent[0]['markup']
     assert store['google_reviewed_10']==['hiddenid','hiddenhash']
 
-@pytest.mark.parametrize('text',['connect Google','please connect my Google account','link my Gmail','how do I connect Google','/connect_google'])
+@pytest.mark.parametrize('text',['Plz connect to my Google','pls link to my Gmail account','connect Google','please connect my Google account','link my Gmail','how do I connect Google','/connect_google'])
 def test_connect_text_no_keyboard(monkeypatch,text):
     monkeypatch.setattr(T.db,'audit',lambda *a,**k:None)
     monkeypatch.setattr(H.G,'configured',lambda:True)
