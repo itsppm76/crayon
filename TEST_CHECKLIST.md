@@ -96,3 +96,5 @@ October 8 23:15 IST live follow-up:
 - BotFather privacy DISABLED confirmed. Real owner test group tagged greeting and tagged question answered. Untagged reply ignored. Membership welcome not live exercised.
 - Friendly guide/reply keyboard, direct Google intent reads, encrypted pending recipient clarification, reviewed Send/Cancel and simple text confirmation. Single recipient, no CC/BCC/attachments. Previous draft invalidated on new review. Google results remain outside model and memory.
 - Natural mail/calendar/draft, delete UI and reply keyboard require live readback; do not call all phrases proven. Existing commands remain power options.
+- Real 2.18 chat proofs: natural `help` guide, `Email [owner address] saying ...` exact review with hidden IDs, Cancel button returned no-send, natural calendar returned events, natural mail search returned Google's no-matches result, privacy options displayed review/delete buttons.
+- No new live send for `send it`; local review-pointer/UID/expiry gates tested. No destructive delete or disconnect performed. Welcome needs a future add event. Reply-keyboard layout still needs pixel inspection with keyboard opened.
