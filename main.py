@@ -48,6 +48,21 @@ class Handler(BaseHTTPRequestHandler):
         return bool(C.ADMIN_TOKEN) and tok == C.ADMIN_TOKEN
 
     def do_GET(self):
+        if self.path.split('?',1)[0]=='/google/connect':
+            from urllib.parse import parse_qs,urlsplit
+            import cr_google as G
+            q=parse_qs(urlsplit(self.path).query)
+            try:
+                location=G.authorization_url(q.get('state',[''])[0])
+                self.send_response(302)
+                self.send_header('Location',location)
+                self.send_header('Cache-Control','no-store')
+                self.send_header('Referrer-Policy','no-referrer')
+                self.send_header('Content-Length','0')
+                self.end_headers()
+                return
+            except Exception:
+                return self._send(400,'<title>Crayon Google connection</title><h1>Link expired or unavailable</h1><p>Return to your private Crayon chat and type connect Google for a fresh link.</p>','text/html')
         if self.path.split("?",1)[0] == "/google/callback":
             from urllib.parse import parse_qs,urlsplit
             import cr_google as G, html
