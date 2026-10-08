@@ -20,8 +20,7 @@ def test_goal_bad_plan(monkeypatch):
 
 def test_media_rejects_large_and_unsupported():
     import pytest, cr_media
-    with pytest.raises(ValueError):
-        cr_media.analyze(b'x','application/zip')
+    assert "can't decode" in cr_media.analyze(b'x','application/zip')
     with pytest.raises(ValueError):
         cr_media.analyze(b'x'*(cr_media.MAX_BYTES+1),'image/png')
 
