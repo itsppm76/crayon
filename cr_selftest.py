@@ -70,6 +70,16 @@ def run(body):
         results.append({"reminders": [dict(r) for r in rows]})
     if body.get("probe") == "facts":
         results.append({"facts": [dict(key=f["key"], value=f["value"]) for f in mem.facts(uid)]})
+    if body.get("work_controls"):
+        import cr_work
+        cr_work.init();out=tg.CaptureOut()
+        rows=db.q("SELECT id FROM work_jobs WHERE user_id=%s ORDER BY id DESC LIMIT 1",(uid,))
+        if rows:
+            ident=rows[0]['id']
+            for op in body['work_controls']:
+                cr_work.handle(uid,uid,"/work "+op+" "+str(ident),out)
+            foreign=cr_work.get(uid-1,ident)
+            results.append({"work_controls":[m['text'] for m in out.sent],"cross_user_visible":bool(foreign)})
     if body.get("work_tick"):
         import cr_work,cr_tools
         from unittest.mock import patch
