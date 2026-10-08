@@ -19,7 +19,7 @@ def _strip(s):
     return htmlmod.unescape(re.sub(r"<[^>]+>", "", s or "")).strip()
 
 
-def search(query, n=5):
+def _ddg(query, n=5):
     r = _c.get("https://html.duckduckgo.com/html/", params={"q": query}, headers=BROWSER_UA)
     if r.status_code != 200:
         raise RuntimeError(f"search provider HTTP {r.status_code}")
@@ -85,3 +85,38 @@ def run_code(task):
         if "codeExecutionResult" in p:
             result = p["codeExecutionResult"].get("output", "")
     return {"answer": out["text"][:2000], "code": code[:1500], "output": result[:1500]}
+
+
+def _mojeek(query, n=5):
+    r = _c.get("https://www.mojeek.com/search", params={"q": query}, headers=BROWSER_UA)
+    if r.status_code != 200:
+        raise RuntimeError(f"mojeek HTTP {r.status_code}")
+    out = []
+    for m in re.finditer(r'<a[^>]*class="title"[^>]*href="([^"]+)"[^>]*>(.*?)</a>(.*?)(?=<a[^>]*class="title"|$)', r.text, re.S):
+        href, title, rest = m.groups()
+        sm = re.search(r'<p class="s"[^>]*>(.*?)</p>', rest, re.S)
+        if href.startswith("http"):
+            out.append({"title": _strip(title)[:150], "url": href, "snippet": _strip(sm.group(1))[:300] if sm else ""})
+        if len(out) >= n:
+            break
+    return out
+
+
+def _wiki(query, n=5):
+    r = _c.get("https://en.wikipedia.org/w/api.php", params={"action": "query", "list": "search", "srsearch": query, "format": "json", "srlimit": n})
+    if r.status_code != 200:
+        raise RuntimeError(f"wikipedia HTTP {r.status_code}")
+    return [{"title": x["title"], "url": "https://en.wikipedia.org/wiki/" + x["title"].replace(" ", "_"), "snippet": _strip(x.get("snippet", ""))} for x in r.json()["query"]["search"]]
+
+
+def search(query, n=5):
+    errs = []
+    for name, fn in (("duckduckgo", _ddg), ("mojeek", _mojeek), ("wikipedia", _wiki)):
+        try:
+            res = fn(query, n)
+            if res:
+                return res
+            errs.append(f"{name}: no results")
+        except Exception as e:
+            errs.append(f"{name}: {type(e).__name__} {str(e)[:60]}")
+    raise RuntimeError("all search providers failed: " + "; ".join(errs))
