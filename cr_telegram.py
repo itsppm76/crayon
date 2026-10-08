@@ -199,7 +199,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     aliases={"help":"/help","connect google":"/connect_google","disconnect google":"/disconnect_google","google status":"/google_status","what do you remember about me?":"/memory","what do you remember about me":"/memory","show my memory":"/memory","memory review":"/memory_review","turn on daily check-ins":"/proactive on","turn off daily check-ins":"/proactive off","morning digest":"/digest morning","evening digest":"/digest evening","turn off digests":"/digest off","my digest":"/digest_now"}
     if plain=="privacy options":
         out.send(chat_id,"You can say 'show my memory' to review saved facts, or ask me to forget a specific fact. To remove all stored personal data and Google access, use the delete option below.",markup={"inline_keyboard":[[{"text":"Review memory","callback_data":"ux:memory"},{"text":"Delete my data","callback_data":"ux:delete_review"}]]});return
-    if __import__('re').fullmatch(r"(?:please )?(?:connect|link|reconnect)(?: my)? (?:google|gmail)(?: account)?(?: please)?[.!?]*",plain) or plain in ('how do i connect google','how to connect google','i want to connect google','connect my google account'):
+    if __import__('re').fullmatch(r"(?:(?:please|plz|pls) )?(?:connect|link|reconnect)(?: to)?(?: my)? (?:google|gmail)(?: account)?(?: please)?[.!?]*",plain) or plain in ('how do i connect google','how to connect google','i want to connect google','connect my google account'):
         plain='connect google'
     text=aliases.get(plain,text)
     if not text.startswith('/') and chat_id==uid:
