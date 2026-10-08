@@ -84,7 +84,7 @@ def handle_confirmation(uid, chat_id, text):
     return f"I tried to do this ({p['label']}) but couldn't confirm it worked. Nothing is guaranteed; please check."
 
 
-def respond(uid, chat_id, text, name="", goal_mode=False):
+def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False):
     """Handle one user message. Returns (reply_text, meta)."""
     meta = {"tools": [], "failed": [], "model": "", "user_text": text}
     degraded = False
@@ -104,8 +104,8 @@ def respond(uid, chat_id, text, name="", goal_mode=False):
     if not contents or contents[-1]["role"] != "user":
         contents.append(llm.user(text))
     system = build_system(uid) if not degraded else SYSTEM.format(now=datetime.now().strftime("%c"), tz="", memory="(memory is temporarily unavailable)")
-    ctx = {"uid": uid, "chat_id": chat_id, "meta": meta}
-    if goal_mode:
+    ctx = {"uid": uid, "chat_id": chat_id, "meta": meta, "readonly":readonly}
+    if goal_mode and not readonly:
         plan = llm.ask_json("Make 2-4 concrete steps for this goal using only Crayon's available tools. "
             "No external messages, purchases, accounts or imaginary tools. Return JSON {\"steps\":[\"...\"]}. "
             "Goal: " + text[:2000], default={})
@@ -122,7 +122,7 @@ def respond(uid, chat_id, text, name="", goal_mode=False):
             "\nUse tools to do the work, not merely describe it. Update a step as done only after a verified result "
             "supports its work. Mark impossible work blocked. Cite observed URLs. Never create reminders or jobs "
             "unless the original user asked for them. Stop at any confirmation. End with results and what remains.")
-    if re.fullmatch(r'(?i)(?:run )?world bank research chart demo[.!]?',text.strip()):
+    if not readonly and re.fullmatch(r'(?i)(?:run )?world bank research chart demo[.!]?',text.strip()):
         import cr_research_chart as RC
         try:reply=RC.run(ctx);meta['tools'].append('world_bank_chart_chain')
         except Exception as e:reply='Research chart not completed: '+str(e)[:180]
@@ -156,7 +156,7 @@ def respond(uid, chat_id, text, name="", goal_mode=False):
     reply = ""
     try:
         while True:
-            out = llm.generate(contents, system=system, tools=None if degraded or calls_used >= budget or time.monotonic()-started > 90 else T.declarations())
+            out = llm.generate(contents, system=system, tools=None if degraded or calls_used >= budget or time.monotonic()-started > 90 else T.declarations(readonly=readonly))
             meta["model"] = out["model"]
             if not out["calls"]:
                 reply = out["text"]
