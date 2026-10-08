@@ -34,7 +34,7 @@ def handle(uid,chat,text,msg,out):
     if re.search(r'(?i)\b(create|book|add|schedule)\b',text) and re.search(r'(?i)\b(calendar|slot|event)\b',text) and not text.startswith('/calendar_slot '):
         out.send(chat,'I can prepare a private solo slot on your primary calendar. Please give exact title, ISO start/end with UTC offsets and timezone: /calendar_slot Title | 2026-10-10T10:00:00+05:30 | 2026-10-10T11:00:00+05:30 | Asia/Calcutta . No attendees, invitations or venue booking. I show Create/Cancel before anything writes.')
         return True
-    if text.startswith('/calendar_slot '):
+    if text=='/calendar_slot' or text.startswith('/calendar_slot '):
         import cr_calendar_draft as K
         try:
             fields=[x.strip() for x in text[len('/calendar_slot '):].split(' | ')]
