@@ -29,13 +29,13 @@
 
 Every feature is reported separately as built, deployed and live-tested. Free quotas and hosting do not create an uptime or scale promise.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.135 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.136 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
 
 ## Next interaction layer (design only)
 
 Public no-login website interactions, including Calendly and Google appointment pages. Emails supply untrusted links, never authority. Show exact destination, form fields, slot, disclosed identity and any cancellation/no-show/payment terms for owner review. Calendar/timezone/class timetable checked before proposing a booking; incomplete availability blocks commitment. One-use approval bound to page/form/fields/slot, then fresh state check, submit once, inspect confirmation pixels and return source URL/proof. No login, account cookies, purchases/payments, sensitive portals, arbitrary external instructions or automatic retry of uncertain submission. This is not built and is not a promise that every public website works.
 
-## Overnight2.31.1
+## Overnight2.32.1
 
 - Deployed/captured-proof: private task dashboard, bounded persistent internal-work queue, pause/resume/cancel, source receipts, assignment starter briefs, TXT/CSV export, scheduled read-only enforcement. Real Telegram new-feature proof pending morning.
 - Mail attention sections/entity decoding real Telegram tested.19-command menu deployed, popup proof pending.
