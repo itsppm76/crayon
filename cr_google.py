@@ -60,7 +60,7 @@ def redirect_uri():
     return C.PUBLIC_URL.rstrip("/") + "/google/callback"
 
 
-def begin(uid):
+def begin(uid, calendar_write=False):
     if not configured():
         raise GoogleError("Google setup is not active yet")
     if int(uid)<=0:
@@ -68,6 +68,7 @@ def begin(uid):
     init()
     state=secrets.token_urlsafe(32)
     hashed=hashlib.sha256(state.encode()).hexdigest()
+    db.kv_set("oauth_calendar_write_"+hashed,bool(calendar_write))
     db.q("DELETE FROM google_oauth_states WHERE expires_at<now()",fetch="none")
     db.q("DELETE FROM google_email_drafts WHERE expires_at<now() AND status='pending'",fetch="none")
     db.q("INSERT INTO google_oauth_states(state_hash,user_id,expires_at) VALUES(%s,%s,now()+interval '10 minutes')",(hashed,uid),"none")
@@ -83,7 +84,7 @@ def authorization_url(state):
     if not row:raise GoogleError('Invalid or expired connection link')
     return "https://accounts.google.com/o/oauth2/v2/auth?"+urlencode({
         "client_id":C.env("GOOGLE_CLIENT_ID"),"redirect_uri":redirect_uri(),"response_type":"code",
-        "scope":" ".join(SCOPES),"access_type":"offline","prompt":"consent","state":state})
+        "scope":" ".join([x.replace("calendar.events.readonly","calendar.events") if db.kv_get("oauth_calendar_write_"+hashed,False) else x for x in SCOPES]),"access_type":"offline","prompt":"consent","state":state})
 
 
 def complete(state, code):
@@ -101,7 +102,8 @@ def complete(state, code):
             raise GoogleError("Google did not complete the connection")
         tokens=r.json()
         granted=set(tokens.get("scope","").split())
-        required={x for x in SCOPES if x.startswith("https://")}
+        required={x.replace("calendar.events.readonly","calendar.events") if db.kv_get("oauth_calendar_write_"+hashed,False) else x for x in SCOPES if x.startswith("https://")}
+        db.kv_set("oauth_calendar_write_"+hashed,None)
         if not required.issubset(granted) or not tokens.get("refresh_token"):
             raise GoogleError("Required Google permissions or refresh token were not granted")
         profile=client.get("https://openidconnect.googleapis.com/v1/userinfo",headers={"Authorization":"Bearer "+tokens["access_token"]})
@@ -157,6 +159,11 @@ def disconnect(uid):
                 revoked=client.post("https://oauth2.googleapis.com/revoke",data={"token":token}).status_code==200
         except Exception:
             revoked=False
+    db.kv_set("mail_watch_"+str(uid),None)
+    db.kv_set("calendar_reviewed_"+str(uid),None)
+    import cr_calendar_draft
+    cr_calendar_draft.init()
+    db.q("DELETE FROM google_calendar_drafts WHERE user_id=%s",(uid,),"none")
     db.kv_set("google_compose_"+str(uid),None)
     db.kv_set("google_mail_results_"+str(uid),None)
     db.kv_set("google_reviewed_"+str(uid),None)
