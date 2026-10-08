@@ -197,6 +197,9 @@ def update_step(ctx, task_id, step, status, result=""):
     v = _task_view(ctx["uid"], int(task_id))
     s = next((x for x in v["steps"] if x["n"] == int(step)), None)
     ok = bool(s and s["status"] == status)
+    if ok and v["status"]=="done" and status!="done":
+        db.q("UPDATE tasks SET status='active',updated_at=now() WHERE id=%s",(int(task_id),),"none")
+        v["status"]="active"
     if ok and v["total"] and v["done"] == v["total"] and v["status"] == "active":
         db.q("UPDATE tasks SET status='done', updated_at=now() WHERE id=%s", (int(task_id),), "none")
         v["status"] = "done"
