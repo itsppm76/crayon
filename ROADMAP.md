@@ -25,3 +25,5 @@
 - Webhook mode, independent web UI adapter, automated CI, autonomous paywall/login bypass.
 
 Every feature is reported separately as built, deployed and live-tested. Free quotas and hosting do not create an uptime or scale promise.
+
+Tester release2.24.0: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.97 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
