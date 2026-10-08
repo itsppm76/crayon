@@ -16,31 +16,27 @@ log = logging.getLogger("crayon.tg")
 _http = httpx.Client(timeout=httpx.Timeout(45.0, connect=10.0))
 _pool = ThreadPoolExecutor(max_workers=6)
 
-HELP = """I'm Crayon. Just talk to me.
+HELP = """I'm Crayon. Just tell me what you need.
 
-What I do:
-- remember you across restarts (see /memory)
-- set reminders that actually fire ("remind me tomorrow 8am to ...")
-- draft messages for review (never sends to other people)
-- save notes, tell the time, answer questions
-- accept files up to 20 MB, read common documents/photos/audio/video
-- inspect ZIP/TAR listings; explain formats I cannot decode
+Try saying:
+"Remind me tomorrow at 8am to call Mum."
+"Help me plan a project and track the steps."
+"Remember that I prefer short answers."
+"What do you remember about me?"
+"Any new mail from Alex?"
+"What's on my calendar?"
+"Email alex@example.com saying the meeting moved to 5."
 
-Commands:
-/goal <goal> - plan and execute bounded multi-step work
-/memory_review - duplicates and reviewable preference suggestions
-/proactive on|off - opt-in daily task/reminder check-in
-/digest morning|evening|both|off - opt-in daily digests
-/digest_now - task/reminder summary now
-/quiet_hours 21 9 - silence check-ins and digests at night
-/connect_google - connect your own Google (testing mode)
-/google_status, /disconnect_google - connection controls
-/gmail <search>, /gmail_read <ID>, /calendar - direct reads
-/email_draft, /email_send, /email_cancel - reviewed email only
-/memory - what I remember about you
-/forget <key> - remove one thing
-/delete_my_data - wipe everything I hold on you
-/help - this message"""
+I'll show the email first. Tap Send or say "send it" after reviewing it. You can cancel instead. I never send an unreviewed email.
+
+You can send photos, documents, audio or video up to 20 MB. Ask follow-up questions about them.
+
+Say "connect Google", "my reminders", "my tasks", "memory review" or "help". For updates, say "turn on daily check-ins" or "morning digest". Google is in testing mode, so only approved testers can connect and access may need renewing after 7 days.
+
+In a group, tag @crayon_v1_bot. Your personal memory and account actions stay in private chat.
+
+Say "privacy options" for data controls. Advanced slash commands still work."""
+
 
 
 def api(method, **params):
@@ -145,7 +141,7 @@ def handle_update(upd, out=None):
             db.kv_set("tg_latest_"+str(uid), {"chat_id":chat_id,"message_id":msg.get("message_id"),
                 "media":any(msg.get(k) for k in ("photo","voice","audio","document","video","video_note","animation","sticker"))})
         text = msg.get("text")
-        if text and text.startswith(("/email_send", "/email_draft", "/connect_google")) and (msg.get("forward_origin") or msg.get("forward_from") or msg.get("via_bot")):
+        if text and (text.startswith(("/email_send", "/email_draft", "/connect_google")) or __import__("re").search(r"\b(email|gmail|inbox|mail|calendar|send|google)\b",text,__import__("re").I)) and (msg.get("forward_origin") or msg.get("forward_from") or msg.get("via_bot")):
             out.send(chat_id, "Google actions need a direct command from you, not forwarded content.")
             return
         if any(msg.get(k) for k in ("photo","voice","audio","document","video","video_note","animation","sticker")) or not text:
@@ -186,6 +182,14 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     if emoji and message_id and hasattr(out, "react"):
         reaction_ok = out.react(chat_id, message_id, emoji)
         db.audit(uid,"telegram_reaction",f"message_id={message_id} emoji={emoji} accepted={reaction_ok}")
+    plain=text.strip().lower().rstrip('.!')
+    aliases={"help":"/help","connect google":"/connect_google","disconnect google":"/disconnect_google","google status":"/google_status","what do you remember about me?":"/memory","what do you remember about me":"/memory","show my memory":"/memory","memory review":"/memory_review","turn on daily check-ins":"/proactive on","turn off daily check-ins":"/proactive off","morning digest":"/digest morning","evening digest":"/digest evening","turn off digests":"/digest off","my digest":"/digest_now"}
+    if plain=="privacy options":
+        out.send(chat_id,"You can say 'show my memory' to review saved facts, or ask me to forget a specific fact. To remove all stored personal data and Google access, use the delete option below.",markup={"inline_keyboard":[[{"text":"Review memory","callback_data":"ux:memory"},{"text":"Delete my data","callback_data":"ux:delete_review"}]]});return
+    text=aliases.get(plain,text)
+    if not text.startswith('/') and chat_id==uid:
+        import cr_google_chat
+        if cr_google_chat.handle(uid,chat_id,text,None,out):return
     fields = text.split(None,1)
     if not fields:return
     cmd, arg = fields[0], fields[1] if len(fields)>1 else ""
@@ -193,9 +197,9 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     arg = arg.strip()
     if cmd == "/start":
         mem.touch_user(uid, name)
-        out.send(chat_id, f"Hi{' ' + name if name else ''}, I'm Crayon. I remember what matters about you now, even after restarts. Say hi, or try /help.")
+        out.send(chat_id, f"Hi{' ' + name if name else ''}, I'm Crayon. I remember what matters about you now, even after restarts. Just tell me what you need, or say 'help'.")
     elif cmd == "/help":
-        out.send(chat_id, HELP)
+        out.send(chat_id, HELP, markup={"keyboard":[[{"text":"My reminders"},{"text":"My tasks"}],[{"text":"Show my memory"},{"text":"Privacy options"}],[{"text":"Connect Google"},{"text":"Help"}]],"resize_keyboard":True,"one_time_keyboard":True})
     elif cmd == "/goal":
         if not arg:
             out.send(chat_id, "Use /goal followed by a concrete research or calculation goal.")
@@ -230,11 +234,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             elif cmd == "/calendar":
                 out.send(chat_id,G.calendar(uid))
             elif cmd == "/email_draft":
-                draft=G.make_draft(uid,arg)
-                import re
-                match=re.search(r"/email_send ([a-f0-9]+) ([a-f0-9]+)",draft)
-                markup={"inline_keyboard":[[{"text":"Send this exact email", "callback_data":"email_send:"+match[1]+":"+match[2]}],[{"text":"Cancel draft", "callback_data":"email_cancel:"+match[1]}]]} if match else None
-                out.send(chat_id,draft,markup=markup)
+                import cr_google_chat
+                cr_google_chat.show_draft(uid,chat_id,out,arg)
             elif cmd == "/email_send":
                 bits=arg.split()
                 if len(bits)!=2:raise G.GoogleError("Use the exact /email_send command shown beneath your draft")
@@ -290,9 +291,9 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             ok = mem.delete_all(uid)
             out.send(chat_id, "Everything I held on you is deleted (checked: nothing left)." if ok else "I tried to wipe your data but some rows remain. Not fully deleted.")
         else:
-            out.send(chat_id, "This permanently deletes your memory, notes, reminders and chat history. To go ahead, send: /delete_my_data confirm")
+            out.send(chat_id,"This permanently deletes memory, notes, reminders, chat history and Google credentials.",markup={"inline_keyboard":[[{"text":"Review deletion","callback_data":"ux:delete_review"}]]})
     elif text.startswith("/"):
-        out.send(chat_id, "I don't know that command. /help lists what I understand.")
+        out.send(chat_id, "I don't recognize that. Tell me what you want to do, or say help.")
     else:
         if _over_cap(uid):
             out.send(chat_id, "You've hit today's message limit for the free tier. Try again tomorrow.")
@@ -310,10 +311,17 @@ def handle_callback(cb, out):
     except Exception:
         pass
     data=cb.get("data","")
-    if not data.startswith(("email_send:","email_cancel:")):return
+    if not data.startswith(("email_send:","email_cancel:","ux:")):return
     uid=cb.get("from",{}).get("id",0)
     chat_id=cb.get("message",{}).get("chat",{}).get("id")
     if uid<=0 or chat_id!=uid:return
+    if data.startswith("ux:"):
+        with mem.user_lock(uid):
+            if data=="ux:delete_review":out.send(chat_id,"Permanently delete all stored memory, notes, reminders, chat history and Google credentials?",markup={"inline_keyboard":[[{"text":"Delete all my data","callback_data":"ux:delete_confirm"},{"text":"Keep my data","callback_data":"ux:keep"}]]})
+            elif data=="ux:delete_confirm":_handle_text(uid,chat_id,"","/delete_my_data confirm",None,out)
+            elif data=="ux:memory":_handle_text(uid,chat_id,"","/memory",None,out)
+            else:out.send(chat_id,"Kept your data unchanged.")
+        return
     import cr_google as G
     try:
         with mem.user_lock(uid):
