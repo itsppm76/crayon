@@ -45,7 +45,7 @@ def create(uid,ident,h):
         with G.httpx.Client(timeout=20) as client:
             info=client.get('https://oauth2.googleapis.com/tokeninfo',params={'access_token':token})
             if info.status_code!=200 or 'https://www.googleapis.com/auth/calendar.events' not in info.json().get('scope','').split():raise G.GoogleError('Reconnect Google with calendar write permission, then review a fresh preview')
-            body={'id':'crayon'+ident,'summary':c['summary'],'start':{'dateTime':c['start'],'timeZone':c['timezone']},'end':{'dateTime':c['end'],'timeZone':c['timezone']},'visibility':'private'}
+            body={'id':'c0a'+ident,'summary':c['summary'],'start':{'dateTime':c['start'],'timeZone':c['timezone']},'end':{'dateTime':c['end'],'timeZone':c['timezone']},'visibility':'private'}
             r=client.post(URL,params={'sendUpdates':'none'},json=body,headers={'Authorization':'Bearer '+token})
             if r.status_code not in (200,201):raise G.GoogleError('Calendar create unconfirmed. Check Calendar before retrying.')
             data=r.json()
