@@ -55,7 +55,7 @@ def test_draft_is_review_only(monkeypatch):
     out=G.make_draft(11,'sam@example.com\nMeeting\nCan we meet Friday?')
     assert 'Draft only, not sent' in out and 'owner@example.com' in out and 'sam@example.com' in out
     assert '/email_send ' in out and 'Attachments: none' in out
-    assert len(rows)==2
+    assert len(rows)==3
 
 
 def test_draft_rejects_header_injection(monkeypatch):
