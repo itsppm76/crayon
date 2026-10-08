@@ -15,7 +15,6 @@ def extract(text):
     return [found[x] for x in ('IND','CHN','USA')],payload[0].get('lastupdated','not supplied')
 def run(ctx):
     import cr_tools as T,cr_artifacts as A
-    ctx['meta']['user_text']=ctx['meta'].get('user_text','')+' browser'
     res=T.computer_browse(ctx,URL)
     if not res.get('verified'):raise ValueError(res.get('error','Official source unavailable'))
     page=res['pages'][0]
