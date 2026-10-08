@@ -96,6 +96,8 @@ def main():
         log.error("TELEGRAM_BOT_TOKEN missing")
         threading.Event().wait()
     tg.set_commands()
+    import cr_sched
+    cr_sched.start()
     tg.poll_forever()
 
 
