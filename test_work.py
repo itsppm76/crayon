@@ -139,3 +139,18 @@ def test_uncertain_delivery_not_retried(monkeypatch):
         def send(self,*a,**k):self.calls+=1;raise TimeoutError()
     out=Out();W.tick(out,only_user=1);W.tick(out,only_user=1)
     assert out.calls==1 and any("delivery_state='uncertain'" in s for s in sqls)
+
+def test_callback_cross_user_private_gate(monkeypatch):
+    import cr_telegram as Tg
+    monkeypatch.setattr(Tg,'api',lambda *a,**k:None)
+    monkeypatch.setattr(W,'handle',lambda *a,**k:pytest.fail('wrong chat'))
+    Tg.handle_callback({'id':'test','data':'work:show:1','from':{'id':10},'message':{'chat':{'id':20}}},Tg.CaptureOut())
+
+def test_work_callback_routes_exact(monkeypatch):
+    import cr_telegram as Tg,contextlib
+    called=[]
+    monkeypatch.setattr(Tg,'api',lambda *a,**k:None)
+    monkeypatch.setattr(Tg.mem,'user_lock',lambda *a:contextlib.nullcontext())
+    monkeypatch.setattr(W,'handle',lambda *a:called.append(a))
+    Tg.handle_callback({'id':'test','data':'work:pause:12','from':{'id':10},'message':{'chat':{'id':10}}},Tg.CaptureOut())
+    assert called[0][0:3]==(10,10,'/work pause 12')
