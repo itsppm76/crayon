@@ -147,6 +147,7 @@ def test_review_button_exact_bound_fields(monkeypatch):
 
 
 def test_short_connection_no_open_redirect(monkeypatch):
+    monkeypatch.setattr(G.db,'kv_get',lambda *a:False)
     from urllib.parse import parse_qs,urlsplit
     monkeypatch.setattr(G,'configured',lambda:True)
     monkeypatch.setattr(G,'init',lambda:None)
