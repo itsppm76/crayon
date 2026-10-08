@@ -100,3 +100,12 @@ October 8 23:15 IST live follow-up:
 - No new live send for `send it`; local review-pointer/UID/expiry gates tested. No destructive delete or disconnect performed. Welcome needs a future add event. Reply-keyboard layout still needs pixel inspection with keyboard opened.
 - Privacy second-confirmation + Keep my data passed live, with unchanged-data acknowledgement. No destructive test.
 - Reply keyboard opened and visually inspected: all 6 choices legible in 2 columns. Natural calendar recheck uses readable day/date/time in 2.18.1.
+
+## Phase3 (October8-9, latest state supersedes earlier pending entries)
+- Public pasted example.com read verified in real Telegram. First deep-research comparison returned links and403 disclosure but uneven subjects; improved per-subject bounded search and citation instruction, second live proof pending.
+- Frankfurter10USD ->966.30INR dated2026-10-08/source verified. Fixed singular unit aliases and real1mile ->1.609344km passed.
+-2.20.1 natural 'Please connect my Google account' returned a real tappable connection link without reply-keyboard dependence.
+- Four Google tester addresses persist in Audience; External/Testing unchanged. No production publishing.
+- Current78 local tests include bounded CSV, formula escaping, chart validity, mocked sendDocument confirmation, text aliases, short-connect state-only fixed destination, used/expired rejection.
+-2.21.0 CSV/chart and short link are built/deployed; real transport/redirect proof is in progress. No claim of all live checks yet.
+-6workers is a code ceiling, not measured comfortable user capacity. Project-wide Gemini free quotas verified15/250k/500(primary),15/250k/500(fallback1),5/250k/20(fallback2). API requests are not chat replies.
