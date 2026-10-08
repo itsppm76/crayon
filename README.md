@@ -16,7 +16,7 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-112_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-117_passed-22A06B?style=for-the-badge)
 
 [**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
@@ -24,9 +24,44 @@
 
 ---
 
+## ✅ Tonight's release: v2.28.0
+
+117 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
+
+### Who gets what
+
+| Access tier | Available features | Limits |
+| :--- | :--- | :--- |
+| Everyone using the bot | Chat, personal memory/review/forget/wipe, notes, reminders, tracked tasks, goal plans, web search/page reading, bounded research, sandboxed maths, currency/unit conversion, CSV/charts, review-only message drafts, opt-in digests/nudges and quiet hours | Each person's private data stays separate. Free-host timing and model output are best-effort. |
+| Named Google test users who connect their own account | Gmail/calendar reads, encrypted reviewed email Send/Cancel, private primary-calendar preview/Cancel | Google OAuth is still in testing mode, not open to arbitrary accounts. Each user needs their own personal connection link. Calendar Create needs optional write-scope reconnect and an approved live test. |
+| Owner + approved computer testers | Computer status, arithmetic, public HTTPS browser screenshots; fixed World Bank research-to-chart demo | 5 execution jobs/tester/day, 20 owner/day, 30 total/day, failures included. Shared free machine must be awake. Tester access code-tested; another person's live test still pending. |
+| Owner only | Text-file create/read on the computer; lifecycle/setup controls; opt-in hourly email-watch beta | Mail watch is OFF and scheduled delivery is not yet live-proven. Owner files are not shared with testers. |
+
+### Live checks and UX
+
+- Public screenshots of the Python tutorial, Instagram login wall and signed-out YouTube were delivered and visually checked. This is public-site reading, not a general website operator.
+- The fixed World Bank 2024 GDP-per-capita demo returns checked India/China/US records, source screenshot, CSV, chart, findings and work log. Not arbitrary research automation.
+- Owner computer status, arithmetic and text-file create/read passed live tests.
+- Google mail/calendar reads, owner-reviewed email send, and calendar preview/Cancel passed live checks. No calendar event write claimed.
+- Group exact-tag replies and untagged-ignore passed live tests; add-welcome still needs a real add test.
+- 17-command Telegram menu, plain-text replies, reactions and progress messages are deployed.
+- PNG screenshots/charts use Telegram `sendPhoto` within photo dimensions; CSVs stay documents. Existing artifact limit is 2MB. A live test returned a Photo card; final downloaded inline pixels were not yet visually verified.
+
+### Still coming / not active
+
+| Feature | Exact status |
+| :--- | :--- |
+| Automatic computer wake | Disabled module deployed. GitHub lifecycle-token creation blocked; execution/scheduler integration, worker startup hook and live wake/idle-stop proof still required. Not shipped. |
+| Hourly email watch | Deployed owner-only opt-in beta, OFF. Bounded sender/subject/provider-snippet excerpts, quiet hours, no bodies or Gemini processing. Scheduled delivery still needs a live check. |
+| Calendar Create | Deployed, awaiting optional Google write-scope reconnect and exact owner-approved live Create. Private primary calendar only, no attendees/invitations/Meet. |
+| Group welcome / other-user computer proof | Code-tested; real group-add and tester-chat checks pending. |
+| Public form/booking interaction | Roadmap only. No forms, logins, commerce or payments implemented. |
+
+Safety remains: review before sends/writes, secret interception/redaction, per-user isolation, bounded jobs/tools/reads, untrusted-page handling, public-IP and sensitive-portal checks. Google mail/calendar results bypass Gemini. $0 budget guard unchanged; no payment initiated.
+
 ## 🟡 What Crayon can do
 
-Crayon lives in a Telegram chat at [`@crayon_v1_bot`](https://t.me/crayon_v1_bot), hosted at <https://crayon-v1.onrender.com/>. Everything below is live on the deployed bot.
+Crayon lives in a Telegram chat at [`@crayon_v1_bot`](https://t.me/crayon_v1_bot), hosted at <https://crayon-v1.onrender.com/>. The core capabilities below are deployed; release notes above separate live checks from inactive and code-tested features.
 
 | # | Capability | What it means in practice |
 | :-: | :--- | :--- |
@@ -266,7 +301,7 @@ Slash commands remain optional power controls: `/goal`, `/memory_review`, `/proa
 
 ### Computer and browser are a beta, not an unrestricted operator
 
-The owner's GitHub student allowance includes180core-hours, about90actual hours at2cores, and20GB-month storage. A$0 Codespaces budget with stop-usage was verified before creation. Compute is used while awake; storage while the Codespace exists. The outbound worker session stops after25minutes. Start the existing Codespace and worker manually; there is no automatic wake. Stop when finished. Never raise the budget as a workaround.
+The owner's GitHub student allowance includes180core-hours, about90actual hours at2cores, and20GB-month storage. A$0 Codespaces budget with stop-usage was verified before creation. Compute is used while awake; storage while the Codespace exists. The outbound worker session stops after25minutes. Start the existing Codespace and worker manually for now. A disabled auto-wake module is deployed, but token, integration, startup and live lifecycle proof remain. Stop when finished. Never raise the budget as a workaround.
 
 Browser can visit public HTTPS sites, including Instagram and YouTube. Login/access walls are captured honestly. Known banking, webmail, patient and transaction portals are blocked by hostname/path rules; this backstop is not a perfect category classifier. No imported account cookies, no forms, logins, posting, purchases, downloads or unrestricted scripts. Only approved testers can use browser/arithmetic. Owner files stay owner-only. Details: [COMPUTER_SETUP.md](COMPUTER_SETUP.md).
 
@@ -280,7 +315,7 @@ Each user requests their own short link in their own private Crayon chat. Never 
 
 Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.112 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is not active. Additional testers are not enabled until their Telegram IDs are verified.117 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
 
 ### Mail checks and private calendar previews (2.27.0)
 
@@ -288,4 +323,4 @@ Say `turn on email checks` to opt into hourly sender/subject/provider-snippet ch
 
 `/calendar_slot Title | ISO start with offset | ISO end with offset | IANA timezone` shows a private primary-calendar preview with Create/Cancel. Preview/Cancel live passed. Actual Create still needs optional `enable calendar booking` Google write-permission reconnect and owner approval. No attendees/invitations/Meet; conflicts rechecked, one-use review, no uncertain-write retry. No live event write claimed.
 
-The Telegram command menu now includes browse/computer/research/CSV/chart/mail/calendar/updates controls. Auto-wake is in progress, not shipped. Public-form interaction is design only.
+The Telegram command menu now includes browse/computer/research/CSV/chart/mail/calendar/updates controls. Auto-wake has a disabled module deployed, but token creation is blocked and integration/startup/live proof remain; not shipped. Public-form interaction is design only.
