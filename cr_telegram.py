@@ -24,6 +24,7 @@ What I do:
 - save notes, tell the time, answer questions
 
 Commands:
+/goal <goal> - plan and execute bounded multi-step work
 /memory - what I remember about you
 /forget <key> - remove one thing
 /delete_my_data - wipe everything I hold on you
@@ -124,6 +125,17 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         out.send(chat_id, f"Hi{' ' + name if name else ''}, I'm Crayon. I remember what matters about you now, even after restarts. Say hi, or try /help.")
     elif cmd == "/help":
         out.send(chat_id, HELP)
+    elif cmd == "/goal":
+        if not arg:
+            out.send(chat_id, "Use /goal followed by a concrete research or calculation goal.")
+        elif _over_cap(uid):
+            out.send(chat_id, "Today's free-tier message limit is reached.")
+        else:
+            out.typing(chat_id)
+            reply, meta = A.respond(uid, chat_id, arg, name, goal_mode=True)
+            if hasattr(out, "meta"):
+                out.meta = meta
+            out.send(chat_id, reply)
     elif cmd == "/memory":
         out.send(chat_id, mem.render_memory(uid))
     elif cmd == "/forget":
