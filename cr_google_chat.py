@@ -91,7 +91,7 @@ def handle(uid,chat,text,msg,out):
             # One-off metadata check only. Never enables or changes a scheduled watch.
             out.send(chat,'Checking recent inbox metadata for possible attention items...')
             result,_=W.scan(uid,{'email':row['email'],'since':int(time.time())-7*86400,'seen':[]})
-            out.send(chat,(result or 'No inbox messages returned for the past7days.')+'\nThis checks up to4 recent messages using labels, subjects and bounded excerpts, not a complete inbox/task audit. Nothing sent to Gemini; no actions taken.')
+            out.send(chat,(result or 'No inbox messages returned for the past7days.')+'\nPast7days, bounded excerpts only. Your mail never goes to Gemini.')
             return True
         intent=classify(text)
         action=intent.get('action')
