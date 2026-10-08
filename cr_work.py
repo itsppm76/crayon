@@ -119,7 +119,7 @@ def step_run(step):
 
 def tick(out,only_user=None):
     # Interrupted work is not retried automatically. Record a block, never invent done.
-    db.q("UPDATE work_jobs SET status='blocked',updated_at=now() WHERE status IN ('running','pausing') AND updated_at<now()-interval '5 minutes'",(),'none')
+    db.q("UPDATE work_jobs SET status='blocked',error='Interrupted or timed out. No automatic retry.',updated_at=now() WHERE status IN ('running','pausing') AND updated_at<now()-interval '5 minutes'",(),'none')
     cond=' AND user_id=%s' if only_user is not None else ' AND user_id>0'
     row=db.q("UPDATE work_jobs SET status='running',updated_at=now() WHERE id=(SELECT id FROM work_jobs WHERE status='queued'"+cond+" ORDER BY created_at LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *",(only_user,) if only_user is not None else (),'one')
     if row:
