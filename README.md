@@ -203,7 +203,7 @@ python main.py
 - The code sandbox has no network or file access by design, so it cannot fetch data.
 - Search quality depends on Tavily and its fallbacks; snippets can be wrong or stale.
 - The honesty guard and secret detector are heuristics, not proofs. Rotate any secret that was pasted into a chat.
-- Gmail, Calendar and other external writes are not part of the live bot. The Google OAuth code in `core/` is unused groundwork.
+- Google testing-mode integration is live: per-user OAuth, direct Gmail/primary Calendar reads and exact-content review-first email drafts. Public verification and real email-send proof are pending.
 - Test coverage in `tests/` is from the earlier prototype (see [`TEST_CHECKLIST.md`](TEST_CHECKLIST.md) for live checks) and mocks model responses. Live behaviour is checked through `/selftest` and the bot itself.
 
 See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) and [`ROADMAP.md`](ROADMAP.md) for older notes written before the milestones above; the sections in this README reflect the current deployed state.
@@ -225,7 +225,7 @@ Small assistant. Honest status. Room to grow.
 ## Phase 2: practical agent skills
 
 - `/goal <goal>`: saves a small plan, executes available tools, checks results, and reports remaining work. Maximum 12 calls with repeat/time limits. It cannot log into websites, buy things, or contact other people.
-- Photos, PDF/text/CSV documents and voice/audio: up to 4 MB, analyzed through the existing Gemini key. Uploads and media transcripts are not retained; only a placeholder enters chat history. Embedded instructions are treated as untrusted content. Do not upload secrets.
+- Files up to 20,000,000 bytes: photos/PDF/audio/video use Gemini; text/code and common Office documents have bounded extraction; archives are listed without execution; unknown formats get honest receipts. Raw uploads are not kept, but up to 3,000 characters of analysis enter follow-up history. Large binary/video uploads use temporary Gemini Files with deletion attempts. Embedded instructions are data, not commands. Do not upload secrets.
 - `/memory_review`: exact duplicate facts and evidence-backed preference suggestions for review. It never deletes facts or silently accepts inferred preferences.
 - Message drafting: ask for a draft with the recipient and facts. Drafts are review-only; no external message is sent.
 - `/proactive on|off`: optional daily check-in for a stale task or reminder due in the next two hours. Off by default.
@@ -234,6 +234,15 @@ Small assistant. Honest status. Room to grow.
 
 Free-host delivery remains best-effort, not guaranteed at an exact minute. Quiet hours postpone a digest only while its delivery window remains open. Digests are deterministic and do not spend model quota.
 
-The admin-only `/admin-test` form runs captured `/selftest` requests without exposing the admin token in a URL. Synthetic negative users are excluded from real scheduled senders. Never use a real user ID in tests.
+The admin-only `/admin-test` form runs captured `/selftest` requests without exposing the admin token in a URL. Synthetic negative users are excluded from real scheduled senders. Captured tests accept negative synthetic IDs only. Authorized live owner-chat tests are separate and have actual Telegram transport.
 
 Content-aware emoji reactions are chosen locally without model calls. Commands and YES/NO confirmations are skipped. Telegram reaction failures never block the reply.
+
+## Google beta and group replies
+
+- `/connect_google`, `/google_status`, `/disconnect_google`: each real private-chat user connects their own account. External/testing audience permits named testers only, lifetime user cap 100. Tokens can expire after seven days.
+- `/gmail <query>`, `/gmail_read <ID>`, `/calendar`: direct reads, no mailbox/calendar results sent to Gemini or personal memory. Primary calendar only, next seven days.
+- `/email_draft recipient | subject | body`: encrypted ten-minute draft. Review From, To, subject, body and no-CC/BCC/attachments before using the exact draft-specific `/email_send` command. `/email_cancel <ID>` removes a pending draft. No automatic send or uncertain-send retry. Real email sending remains untested.
+- Slow text responses send timed progress notices. The shorter prompt keeps replies direct and plain.
+- In groups, exact @crayon_v1_bot mentions route to a separate conversation-only answer path. No private memory, Google or personal tools. Untagged messages are ignored; group context is not stored in personal memory. BotFather privacy is ENABLED and says username mentions are delivered. Real group delivery remains untested.
+- Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope security assessment are pending, not approved certification. No paid assessment has been initiated.
