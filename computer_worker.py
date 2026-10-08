@@ -1,0 +1,52 @@
+"""Run in Codespaces. Outbound-only, fixed bounded operations, isolated data folder."""
+import ast,json,math,operator,os,pathlib,platform,time,urllib.request
+BASE=os.environ['CRAYON_BRIDGE_URL'].rstrip('/')
+TOKEN=os.environ['CRAYON_BRIDGE_TOKEN']
+ROOT=pathlib.Path.home()/'crayon-files';ROOT.mkdir(exist_ok=True)
+def arithmetic(text):
+    nodes=ast.parse(text,mode='eval');budget=[0]
+    ops={ast.Add:operator.add,ast.Sub:operator.sub,ast.Mult:operator.mul,ast.Div:operator.truediv,ast.Mod:operator.mod}
+    def calc(n):
+        budget[0]+=1
+        if budget[0]>80:raise ValueError('Too many terms')
+        if isinstance(n,ast.Constant) and type(n.value) in (int,float):v=n.value
+        elif isinstance(n,ast.UnaryOp) and isinstance(n.op,(ast.UAdd,ast.USub)):v=calc(n.operand)*(1 if isinstance(n.op,ast.UAdd) else -1)
+        elif isinstance(n,ast.BinOp) and type(n.op) in ops:v=ops[type(n.op)](calc(n.left),calc(n.right))
+        else:raise ValueError('Only basic arithmetic, no code execution')
+        if not math.isfinite(v) or abs(v)>1e15:raise ValueError('Number too large')
+        return v
+    return calc(nodes.body)
+def run(op,args):
+    import re
+    if op=='status':return {'ok':True,'verified':True,'system':platform.system(),'cpu':os.cpu_count(),'python':platform.python_version()}
+    if op=='calculate':return {'ok':True,'verified':True,'value':arithmetic(args['expression'])}
+    if op=='list_files':return {'ok':True,'verified':True,'files':[p.name for p in ROOT.iterdir() if p.is_file() and not p.is_symlink()][:100]}
+    name=args.get('filename','')
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,79}',name):raise ValueError('Invalid filename')
+    path=ROOT/name
+    if path.is_symlink():raise ValueError('Links are blocked')
+    if op=='write_text':
+        text=args['text']
+        if not isinstance(text,str) or len(text)>12000:raise ValueError('Too large')
+        # Never overwrite an existing file silently.
+        with path.open('x') as f:f.write(text)
+        return {'ok':True,'verified':path.read_text()==text,'filename':name,'characters':len(text)}
+    if op=='read_text':
+        if path.stat().st_size>20000:raise ValueError('Too large')
+        return {'ok':True,'verified':True,'filename':name,'text':path.read_text()[:12000]}
+    raise ValueError('Unsupported operation')
+def post(path,body):
+    req=urllib.request.Request(BASE+path,data=json.dumps(body).encode(),headers={'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'})
+    with urllib.request.urlopen(req,timeout=20) as r:return json.load(r)
+def main():
+    print('Crayon computer worker active. No public ports. Stop with Ctrl+C.',flush=True)
+    while True:
+        try:
+            job=post('/computer/next',run('status',{}))
+            if job:
+                try:result=run(job['operation'],job['args'])
+                except Exception as e:result={'ok':False,'verified':False,'error':str(e)[:160]}
+                post('/computer/result',{'id':job['id'],'result':result})
+        except Exception:pass
+        time.sleep(5)
+if __name__=='__main__':main()
