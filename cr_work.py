@@ -12,7 +12,13 @@ SCHEMA="""CREATE TABLE IF NOT EXISTS work_jobs(
  ALTER TABLE work_jobs ADD COLUMN IF NOT EXISTS delivery_state TEXT DEFAULT 'pending'; 
  CREATE INDEX IF NOT EXISTS work_queue ON work_jobs(status,created_at);"""
 OPS={'research','page','calculate','brief'}
-def init():db.q(SCHEMA,(),'none')
+_ready=False
+_init_lock=__import__('threading').Lock()
+def init():
+    global _ready
+    if _ready:return
+    with _init_lock:
+        if not _ready:db.q(SCHEMA,(),'none');_ready=True
 def parse(arg):
     chunks=[x.strip() for x in arg.split(' | ')]
     title=chunks.pop(0) if len(chunks)>1 else 'Internal work'
