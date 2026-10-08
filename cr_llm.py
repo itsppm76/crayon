@@ -32,8 +32,6 @@ def generate(contents, system="", tools=None, json_mode=False, temperature=0.6, 
         raise LLMError("auth", "no GEMINI_API_KEY")
     body = {"contents": contents,
             "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}}
-    if thinking_budget is not None:
-        body["generationConfig"]["thinkingConfig"] = {"thinkingBudget": thinking_budget}
     if system:
         body["systemInstruction"] = {"parts": [{"text": system}]}
     if tools:
@@ -44,7 +42,10 @@ def generate(contents, system="", tools=None, json_mode=False, temperature=0.6, 
     for model in (models or [C.GEMINI_MODEL] + C.GEMINI_FALLBACKS):
         for attempt in range(2):  # 429: wait and retry once, then next model
             try:
-                r = _post(model, body)
+                b = body
+                if thinking_budget is not None and "2.5" in model:  # newer models reject thinkingBudget
+                    b = {**body, "generationConfig": {**body["generationConfig"], "thinkingConfig": {"thinkingBudget": thinking_budget}}}
+                r = _post(model, b)
             except httpx.HTTPError as e:
                 errs.append(f"{model}:net:{type(e).__name__}")
                 time.sleep(1.0)
