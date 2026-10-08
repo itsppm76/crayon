@@ -83,6 +83,8 @@ def _loop():
             # Opt-in check-ins replace the old unsolicited per-task nudge.
             import cr_proactive, cr_telegram
             cr_proactive.tick(cr_telegram.Out())
+            import cr_wake
+            cr_wake.idle_stop()
             import cr_work
             cr_work.init()
             cr_work.tick(cr_telegram.Out())
