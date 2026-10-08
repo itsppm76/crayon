@@ -366,7 +366,7 @@ def computer_task(ctx,operation,args):
     return K.execute(ctx['uid'],operation,args)
 
 
-@tool("computer_browse", "Approved-tester fresh browser on the connected computer. Public documentation allowlist: docs.python.org, www.python.org, docs.github.com, www.notion.com, notion.com, obsidian.md, help.obsidian.md, example.com. No login/forms/purchases. One URL and optional visible link text to follow, maximum2 pages. Returns screenshot to Telegram and plain action log.",
+@tool("computer_browse", "Approved-tester fresh browser on the connected computer. Public HTTPS websites, including Instagram and YouTube. Sensitive account/transaction portals and private-network addresses are blocked. Login/access walls can be screenshotted, never signed into. No login/forms/purchases. One URL and optional visible link text to follow, maximum2 pages. Returns screenshot to Telegram and plain action log.",
       {"url":S,"follow_link_text":S},["url"])
 def computer_browse(ctx,url,follow_link_text=''):
     import cr_computer as K,base64
