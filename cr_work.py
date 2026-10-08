@@ -85,7 +85,8 @@ def control(uid,ident,op):
     if not row:raise ValueError('No such work in your account')
     allowed={'pause':('queued','running'),'resume':('paused',),'cancel':('queued','running','pausing','paused','blocked')}
     if op not in allowed or row['status'] not in allowed[op]:raise ValueError('That control does not apply to this work state.')
-    status={'pause':('pausing' if row['status']=='running' else 'paused'),'resume':'queued','cancel':'cancelled'}[op]
+    if op=='resume' and row.get('error'):raise ValueError('Paused step failed. Inspect the error and queue a new job; no automatic retry.')
+    status={'pause':('pausing' if row['status']=='running' else 'paused'),'resume':('done' if len(row.get('results') or [])==len(row['steps']) else 'queued'),'cancel':'cancelled'}[op]
     db.q('UPDATE work_jobs SET status=%s,updated_at=now() WHERE id=%s AND user_id=%s AND status=%s',(status,ident,uid,row['status']),'none')
     return get(uid,ident)
 
@@ -148,7 +149,7 @@ def tick(out,only_user=None):
             claimed=db.q("UPDATE work_jobs SET notified=true,delivery_state='sending' WHERE id=%s AND NOT notified RETURNING id",(item['id'],),'one')
             if not claimed:continue
             try:
-                out.send(item['chat_id'],view(fresh))
+                out.send(item['chat_id'],view(fresh),markup=controls_markup(fresh))
                 db.q("UPDATE work_jobs SET delivery_state='sent' WHERE id=%s",(item['id'],),'none')
             except Exception:
                 db.q("UPDATE work_jobs SET delivery_state='uncertain' WHERE id=%s",(item['id'],),'none')
