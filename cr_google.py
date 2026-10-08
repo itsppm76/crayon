@@ -259,7 +259,7 @@ def send_draft(uid, ident, short_hash):
         mid=r.json()["id"]
         db.q("DELETE FROM google_email_drafts WHERE id=%s AND user_id=%s",(ident,uid),"none")
         db.audit(uid,"google_email_sent",mid)
-        return "Google confirmed the email was sent. Message ID: "+mid
+        return "Sent. Google confirmed the email went through."
     except Exception:
         db.q("UPDATE google_email_drafts SET status='uncertain' WHERE id=%s AND user_id=%s",(ident,uid),"none")
         raise GoogleError("Send stopped or outcome is uncertain. Check Gmail Sent before creating another draft.") from None
