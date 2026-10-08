@@ -320,3 +320,13 @@ def draft_message(ctx, recipient, purpose, tone="plain and friendly"):
 def research_web(ctx,query):
     r=W.research(query[:500])
     return {"ok":bool(r['pages']),"verified":bool(r['pages']),**r}
+
+@tool('convert_units','Convert supported length/mass/volume/time/speed/temperature units with fixed Decimal arithmetic. Not currencies.',{'value':S,'source':S,'target':S},['value','source','target'])
+def convert_units(ctx,value,source,target):
+    import cr_utilities
+    return {'ok':True,'verified':True,**cr_utilities.convert(value,source,target)}
+
+@tool('currency_rate','Convert currencies using a dated central-bank reference rate. Never describe it as a live trading price. Fees excluded. Cite date and returned URL.',{'value':S,'source':S,'target':S},['value','source','target'])
+def currency_rate(ctx,value,source,target):
+    import cr_utilities
+    return {'ok':True,'verified':True,**cr_utilities.currency(value,source,target)}
