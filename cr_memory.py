@@ -169,6 +169,9 @@ def delete_all(uid):
     import cr_google
     cr_google.init()
     cr_google.disconnect(uid)
+    import cr_work
+    cr_work.init()
+    db.q("DELETE FROM work_jobs WHERE user_id=%s", (uid,), "none")
     db.q("DELETE FROM users WHERE user_id=%s", (uid,), "none")  # first: blocks late background writes
     for t in ("facts", "messages", "notes", "reminders"):
         db.q(f"DELETE FROM {t} WHERE user_id=%s", (uid,), "none")
