@@ -55,3 +55,15 @@ def test_connect_text_no_keyboard(monkeypatch,text):
     out=T.CaptureOut();T._handle_text(10,10,'Test',text,None,out)
     assert 'https://example.com/connect-test' in out.sent[-1]['text']
     assert 'even if' in out.sent[-1]['text']
+
+def test_plural_attention_tasks_private(monkeypatch,store):
+    import cr_mail_watch as W,cr_tools as tools
+    monkeypatch.setattr(H,'classify',lambda *a:pytest.fail('not model-routed'))
+    monkeypatch.setattr(H.G,'status',lambda uid:{'email':'owner@example.com'})
+    monkeypatch.setattr(tools,'list_tasks',lambda ctx:{'tasks':[]})
+    monkeypatch.setattr(W,'scan',lambda uid,state:('Private excerpt',state))
+    out=T.CaptureOut()
+    assert H.handle(10,10,'Check for any pending tasks and something that needs my attention from the emails',{},out)
+    assert any('No active tasks' in x['text'] for x in out.sent)
+    assert 'Private excerpt' in out.sent[-1]['text']
+    assert store=={}
