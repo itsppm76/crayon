@@ -27,3 +27,10 @@ def test_idle_busy_no_stop(monkeypatch):
     monkeypatch.setattr(W.db,'q',lambda *a:{'id':'busy'})
     monkeypatch.setattr(W,'call',lambda *a:pytest.fail('busy stop'))
     W.idle_stop()
+
+def test_idle_does_not_stop_busy(monkeypatch):
+    monkeypatch.setattr(W,'configured',lambda:True)
+    monkeypatch.setattr(W.db,'kv_get',lambda *a:1)
+    monkeypatch.setattr(W.db,'q',lambda *a:{'id':'busy'})
+    monkeypatch.setattr(W,'call',lambda *a:pytest.fail('busy stop'))
+    W.idle_stop()
