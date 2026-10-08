@@ -166,6 +166,9 @@ def render_memory(uid):
 
 
 def delete_all(uid):
+    import cr_google
+    cr_google.init()
+    cr_google.disconnect(uid)
     db.q("DELETE FROM users WHERE user_id=%s", (uid,), "none")  # first: blocks late background writes
     for t in ("facts", "messages", "notes", "reminders"):
         db.q(f"DELETE FROM {t} WHERE user_id=%s", (uid,), "none")
