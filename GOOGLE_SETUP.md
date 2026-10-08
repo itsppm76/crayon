@@ -29,4 +29,4 @@ Standard API usage is currently at no additional cost. Google's docs say excess-
 - https://developers.google.com/workspace/gmail/api/reference/quota
 - https://developers.google.com/workspace/calendar/api/guides/quota
 
-Remaining decisions: Cloud project owner, test-user-only pilot versus public rollout, and restricted-scope verification/security-assessment path. No connection is active.
+Public rollout and verification preparation are requested, with a hard stop on any paid security assessment. Cloud ownership is routed to the personal Gmail account. No connection is active. Per-user OAuth/state/encryption code is being built and is not enabled. Developer contacts, actual privacy/data practices and working integration must be verified before any submission.
