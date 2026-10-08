@@ -53,10 +53,13 @@ def handle(uid,chat,text,msg,out):
                 db.kv_set('google_compose_'+str(uid),None);out.send(chat,'Cancelled. No email sent.');return True
         intent=classify(text)
         action=intent.get('action')
-        if action=='none':return False
+        if action not in ('inbox','calendar','draft'):return False
         if action=='inbox':out.send(chat,'Checking your mail...');out.send(chat,G.inbox(uid,str(intent.get('query') or 'newer_than:1d')[:500],friendly=True))
         elif action=='calendar':out.send(chat,'Checking your calendar for the next 7 days...');out.send(chat,G.calendar(uid))
         elif action=='draft':
+            addresses=re.findall(r'[A-Za-z0-9.!#$%&\'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+',text)
+            if len(set(addresses))>1 or re.search(r'\b(cc|bcc|attach|attachment|attachments)\b',text,re.I):
+                out.send(chat,'I can draft one recipient at a time, without CC, BCC or attachments. Which single email should I draft?');return True
             to=str(intent.get('to') or '');subject=str(intent.get('subject') or '');body=str(intent.get('body') or '')
             if not subject or not body:out.send(chat,'What should the email say? Please include who it is for.');return True
             if not to or to not in text:
