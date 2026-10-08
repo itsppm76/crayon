@@ -219,7 +219,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     if __import__('re').fullmatch(r"(?:(?:please|plz|pls) )?(?:connect|link|reconnect)(?: to)?(?: my)? (?:google|gmail)(?: account)?(?: please)?[.!?]*",plain) or plain in ('how do i connect google','how to connect google','i want to connect google','connect my google account'):
         plain='connect google'
     text=aliases.get(plain,text)
-    if (not text.startswith('/') or text.startswith('/calendar_slot ')) and chat_id==uid:
+    if (not text.startswith('/') or text.startswith('/calendar_slot')) and chat_id==uid:
         import cr_google_chat
         if cr_google_chat.handle(uid,chat_id,text,None,out):return
     fields = text.split(None,1)
