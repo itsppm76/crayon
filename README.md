@@ -242,12 +242,19 @@ Content-aware emoji reactions are chosen locally without model calls. Commands a
 
 - `/connect_google`, `/google_status`, `/disconnect_google`: each real private-chat user connects their own account. External/testing audience permits named testers only, lifetime user cap 100. Tokens can expire after seven days.
 - `/gmail <query>`, `/gmail_read <ID>`, `/calendar`: direct reads, no mailbox/calendar results sent to Gemini or personal memory. Primary calendar only, next seven days.
-- `/email_draft recipient | subject | body`: encrypted ten-minute draft. Review From, To, subject, body and no-CC/BCC/attachments before using the exact draft-specific `/email_send` command. `/email_cancel <ID>` removes a pending draft. No automatic send or uncertain-send retry. Real email sending remains untested.
+- `/email_draft recipient | subject | body`: encrypted ten-minute draft. Review From, To, subject, body and no-CC/BCC/attachments before using the exact draft-specific `/email_send` command. `/email_cancel <ID>` removes a pending draft. No automatic send or uncertain-send retry. Owner natural draft and confirmed-send result observed in real Telegram.
 - Slow text responses send timed progress notices. The shorter prompt keeps replies direct and plain.
-- In groups, exact @crayon_v1_bot mentions route to a separate conversation-only answer path. No private memory, Google or personal tools. Untagged messages are ignored; group context is not stored in personal memory. BotFather privacy is ENABLED and says username mentions are delivered. Real group delivery remains untested.
+- In groups, exact @crayon_v1_bot mentions route to a separate conversation-only answer path. No private memory, Google or personal tools. Untagged messages are ignored; group context is not stored in personal memory. BotFather privacy is DISABLED; app still ignores untagged messages. Tagged reply and ignored untagged reply verified in real Telegram.
 - Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope security assessment are pending, not approved certification. No paid assessment has been initiated.
 
 ### Conversation-first controls (2.18)
 Say `help` for examples and buttons, `connect Google`, `any new mail from Alex?`, `what's on my calendar?`, or `email alex@example.com saying the meeting moved to 5`. A missing recipient address is requested, never guessed. Drafts show exact account, recipient, subject and body. Review, then tap Send or say `send it`; `cancel` discards. One current reviewed draft, ten-minute expiry, no CC/BCC/attachments. Old buttons cannot send a replaced draft. Commands remain optional power controls. Google results bypass the model and permanent memory; only the user's intent text is parsed by the model.
 
 Groups receive messages with Telegram privacy disabled, but the application discards untagged/non-command messages before model/private-state use. Group answers have no private memory, tools or account actions. Welcome is emitted when Crayon is newly added. Live tagged reply and ignored untagged reply proven; welcome-on-add is not yet real-chat proven.
+
+## Public tools (2.20.1)
+Paste a public link to read it before answering; say `go deep on ...` for bounded multi-source research. Source failures are returned, not hidden. No JavaScript, login, paywall bypass or browser automation is available. `Convert10 USD to INR` uses Frankfurter dated reference rates; fixed unit conversions use Decimal arithmetic. Weather remains source-grounded search.
+
+Type `connect Google`, `link my Gmail`, `please connect my Google account` or `/connect_google`. A direct tappable URL is sent in chat; Telegram's optional keyboard is not required. Google stays testing-only for named testers.
+
+Real phase3 chat checks: example.com read passed; dated currency passed; singular-unit fix retested with1 mile ->1.609344km. First research comparison exposed uneven source coverage, improved with bounded per-subject searches; post-fix live proof pending. CSV/chart delivery and virtual-computer integration are not shipped yet.
