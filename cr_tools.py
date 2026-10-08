@@ -351,3 +351,16 @@ def create_bar_chart(ctx,title,labels,values,unit=''):
     if len(artifacts)>=2:raise ValueError('at most two attachments per reply')
     artifacts.append({'filename':'crayon-chart.png','mime':'image/png','data':data})
     return {'ok':True,'verified':True,'bars':len(labels),'note':'Generated in memory, delivery will follow reply. Do not claim Telegram delivery yet. Supplied data not independently verified.'}
+
+
+@tool("computer_status", "Check owner's connected virtual computer. Other users cannot use it.")
+def computer_status(ctx):
+    import cr_computer as K
+    return K.status(ctx['uid'])
+
+@tool("computer_task", "Owner-only virtual computer: basic arithmetic, list/read text files, create a NEW text file. No shell, imports, secrets, private accounts, deletes or overwrites. Use only when user explicitly asks to use the computer.",
+      {"operation": S,"args":{"type":"object"}},["operation","args"])
+def computer_task(ctx,operation,args):
+    import cr_computer as K
+    if not re.search(r'(?i)\b(computer|codespace|virtual machine|vm)\b',ctx.get('meta',{}).get('user_text','')):return {'ok':False,'error':'Explicit computer request required'}
+    return K.execute(ctx['uid'],operation,args)
