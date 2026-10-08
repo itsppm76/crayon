@@ -20,7 +20,7 @@ def render(uid):
     if rows:
         lines+=['','INTERNAL WORK QUEUE']
         lines+=[f"#{r['id']} {r['status']}: {r['title']} ({len(r['results'])}/{len(r['steps'])})" for r in rows]
-    lines+=['','Use /tasks show ID or /tasks done ID STEP | result.','Use /work for bounded background research/maths.']
+    lines+=['','Add: /tasks add Title | step1 | step2','Export: /tasks export','Use /tasks show ID or /tasks done ID STEP | result.','Use /work for bounded background research/maths.']
     return '\n'.join(lines)
 
 def handle(uid,chat,text,out):
