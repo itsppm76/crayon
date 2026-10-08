@@ -74,3 +74,19 @@ def test_pause_running_cannot_resume(monkeypatch):
     W.control(1,1,'pause')
     assert row['status']=='pausing'
     with pytest.raises(ValueError):W.control(1,1,'resume')
+
+def test_task_add_deterministic(monkeypatch):
+    import cr_dashboard as D
+    called=[]
+    monkeypatch.setattr(D.T,'create_task',lambda ctx,title,steps:called.append((title,steps)) or {'verified':True})
+    monkeypatch.setattr(D,'render',lambda uid:'dashboard')
+    class Out:
+        def send(self,*a):pass
+    assert D.handle(1,1,'/tasks add Demo | Read | Write',Out())
+    assert called==[('Demo',['Read','Write'])]
+
+def test_startup_off_no_credential_access():
+    import subprocess,os
+    env={**os.environ,'CRAYON_COMPUTER_AUTOSTART':'off'}
+    r=subprocess.run(['sh','computer_start.sh'],env=env,capture_output=True)
+    assert r.returncode==0 and not r.stdout and not r.stderr
