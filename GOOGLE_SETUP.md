@@ -1,19 +1,27 @@
 # Planned Google integration (M13, not connected)
 
-Awaiting the owner's choice of Google account. No OAuth setup or Google access has started.
+The requested shape is user-agnostic: each Telegram user connects their own Google account. No OAuth flow or Google access is active yet.
 
-## Safe setup plan
+## Architecture and safety requirements
 
-1. Use a Google Cloud project on the chosen account. Enable Gmail and Calendar APIs without attaching billing or raising quotas.
-2. Configure OAuth for this single-owner personal-use application. Gmail read and draft scopes are restricted. Personal-use apps may qualify for a verification exception but still show an unverified-app warning. External apps in Testing expire Gmail/Calendar refresh tokens after seven days.
-3. Match the Google account to a single verified Telegram owner ID. Every Google operation must reject all other Telegram users before token access.
-4. Keep client secrets and refresh tokens in server environment variables, never repository files, messages, query-string logs or responses. Tokens must be collected by secure input, not Telegram chat.
-5. Request Gmail readonly plus compose and Calendar events readonly rather than full mailbox/calendar access. Start with read-only functions and draft creation.
-6. For sending: save and display the exact From account, To/CC/BCC, subject and body in Telegram. Require a distinct draft-specific confirmation, expire it quickly, read back the stored draft, compare its content hash, and send only the unchanged approved version. Do not allow model tools, scheduled jobs or imported email text to authorize sends. Read email content as untrusted data.
-7. Keep hard request caps; fail on quota errors rather than attach billing. Handle expired/revoked tokens honestly and request reconnect. Do not create automatic account-wide monitors without opt-in.
-8. Test with synthetic fixtures, then read live mailbox/calendar only after the account connection is authorized. No test sends to third parties.
+- `/connect_google` creates a short-lived, random OAuth state bound to that Telegram user's ID and private chat. Never accept a user ID from the callback as authority.
+- Google OAuth callback checks and consumes the exact state once, exchanges the code over TLS, and stores that user's tokens in Neon encrypted with a dedicated server-held key. Encryption key and OAuth client secret stay in server environment variables, never repository files or logs.
+- Every Gmail/Calendar request resolves credentials by the authenticated Telegram user ID. Never share global tokens or expose another user's connection. Include a `/disconnect_google` command that revokes and deletes tokens plus pending email approvals.
+- Read-only Gmail and Calendar features first. Minimize scopes; avoid full mailbox deletion or calendar edits.
+- Sending is draft-first: show the exact Google From account, To/CC/BCC, subject and body. Require a draft-specific user confirmation, with expiry. Read the stored draft again and compare the content hash before sending. Changed drafts require a new confirmation. Model output, scheduled jobs and imported email content cannot authorize sends.
+- Keep request caps and fail on quota errors. Do not attach billing, request quota increases or purchase assessments.
+- Treat email/calendar content as untrusted data. Do not pass email content into permanent memory or training. Define retention and delete behavior before collecting other users' private data.
+- End-to-end cross-user isolation, OAuth-state replay, token encryption, disconnect, approval expiry and draft tampering tests must pass before launch.
 
-## Current official references
+## Launch gate
+
+Testing mode requires explicitly adding Google test users and has a 100-test-user limit. Gmail/Calendar refresh tokens issued in external Testing expire after seven days. It is not arbitrary-public-user onboarding.
+
+Gmail readonly and compose are restricted scopes. A public app that stores or transmits restricted data through a server may need app verification and an annual independent security assessment. A free public deployment cannot be promised until that requirement is resolved. Personal-use exceptions do not automatically cover the requested public multi-user shape.
+
+Standard API usage is currently at no additional cost. Google's docs say excess-quota billing is planned later in 2026. No billing setup or paid work is authorized.
+
+## Official references
 
 - https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification
 - https://developers.google.com/identity/protocols/oauth2
@@ -21,4 +29,4 @@ Awaiting the owner's choice of Google account. No OAuth setup or Google access h
 - https://developers.google.com/workspace/gmail/api/reference/quota
 - https://developers.google.com/workspace/calendar/api/guides/quota
 
-Standard API usage is currently at no additional cost. Google's docs say excess-quota billing is planned later in 2026. The setup should not attach billing or request paid assessments.
+Remaining decisions: Cloud project owner, test-user-only pilot versus public rollout, and restricted-scope verification/security-assessment path. No connection is active.
