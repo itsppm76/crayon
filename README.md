@@ -2,11 +2,11 @@
 
 # 🖍️ Crayon v1
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=2800&pause=900&color=FFC97C&center=true&vCenter=true&width=720&lines=A+Telegram+assistant+that+remembers.;Searches+the+web.+Runs+code.+Keeps+reminders.;Tracks+multi-day+tasks.+Admits+what+it+didn't+do." alt="Animated Crayon introduction" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=2800&pause=900&color=FFC93C&center=true&vCenter=true&width=720&lines=A+Telegram+assistant+that+remembers.;Searches+the+web.+Runs+code.+Keeps+reminders.;Tracks+multi-day+tasks.+Admits+what+it+didn't+do." alt="Animated Crayon introduction" />
 
 **A personal assistant on Telegram with persistent memory, live web search, sandboxed code, reminders, tracked tasks and honest safety rails. Runs entirely on free tiers.**
 
-![MIT license](https://img.shields.io/badge/license-MIT-FFC97C?style=for-the-badge)
+![MIT license](https://img.shields.io/badge/license-MIT-FFC93C?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Telegram](https://img.shields.io/badge/Telegram-long_polling-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
@@ -14,7 +14,7 @@
 ![Render](https://img.shields.io/badge/Render-free_tier-46E3B7?style=for-the-badge&logo=render&logoColor=black)
 ![Cost](https://img.shields.io/badge/cost-%240_free_tiers-22A06B?style=for-the-badge)
 
-![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC97C?style=for-the-badge&logo=github)
+![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_docs_beta-2B2D31?style=for-the-badge&logo=googlechrome)
 ![Tests](https://img.shields.io/badge/local_tests-97_passed-22A06B?style=for-the-badge)
 
@@ -83,7 +83,7 @@ flowchart TD
     SCH[cr_sched: polling scheduler] --> MEM
     SCH -->|due reminders, jobs, daily nudges| TG
     HOST[main.py: /health, /selftest] --> MEM
-    classDef yellow fill:#FFC97C,color:#2B2D31,stroke:#2B2D31
+    classDef yellow fill:#FFC93C,color:#2B2D31,stroke:#2B2D31
     classDef blue fill:#DDF1FF,color:#2B2D31,stroke:#3776AB
     class AG,LLM yellow
     class TG,TOOLS,WEB,SCH,HOST blue
@@ -220,7 +220,7 @@ MIT © 2026 Crayon contributors. Read [`LICENSE`](LICENSE).
 
 <div align="center">
 
-**Crayon Yellow `#FFC97C` · Charcoal `#2B2D31` · Slate `#6B7280`**
+**Crayon Yellow `#FFC93C` · Charcoal `#2B2D31` · Slate `#6B7280`**
 
 Small assistant. Honest status. Room to grow.
 
@@ -274,4 +274,4 @@ Each user requests their own short link in their own private Crayon chat. Never 
 
 Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
 
-Tester release2.24.0: owner+Sibi UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Uttiya not enabled until verified Telegram ID.97 local tests, tester behavior code-tested, not impersonated/live-tested as Sibi.
+Tester release2.24.0: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.97 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
