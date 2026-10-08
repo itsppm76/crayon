@@ -30,6 +30,7 @@ def handle(uid,chat,text,out):
         parts=text.split(None,3)
         if len(parts)==1:out.send(chat,render(uid))
         elif parts[1]=='add':
+            T.mem.touch_user(uid)
             fields=[x.strip() for x in text[len('/tasks add '):].split(' | ')]
             if not 2<=len(fields)<=9 or any(not x for x in fields):raise ValueError('Use /tasks add Title | step1 | step2 (up to8 steps).')
             r=T.create_task({'uid':uid,'chat_id':chat},fields[0],fields[1:])
