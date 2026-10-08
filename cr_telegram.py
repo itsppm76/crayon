@@ -124,6 +124,10 @@ def handle_update(upd, out=None):
         name = (msg["from"].get("first_name") or "").strip()
         if msg["chat"].get("type") in ("group","supergroup"):
             import cr_group
+            log.info("group update chat=%s message=%s tagged=%s service=%s",chat_id,msg.get("message_id"),cr_group.mentioned(msg),bool(msg.get("new_chat_members")))
+            if any(x.get("username", "").lower()==cr_group.BOT_USERNAME for x in msg.get("new_chat_members", [])):
+                out.send(chat_id,"Hi, I'm Crayon. Tag @crayon_v1_bot to chat. Personal memory and actions stay in your private chat.")
+                return
             if not cr_group.mentioned(msg):return
             finished=threading.Event()
             def group_progress():
