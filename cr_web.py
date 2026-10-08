@@ -109,9 +109,21 @@ def _wiki(query, n=5):
     return [{"title": x["title"], "url": "https://en.wikipedia.org/wiki/" + x["title"].replace(" ", "_"), "snippet": _strip(x.get("snippet", ""))} for x in r.json()["query"]["search"]]
 
 
+def _tavily(query, n=5):
+    key = C.env("TAVILY_API_KEY", "")
+    if not key:
+        raise RuntimeError("no TAVILY_API_KEY")
+    news = bool(re.search(r"\b(news|latest|today|yesterday|breaking|score|scores|price|results?|live|this week)\b", query, re.I))
+    body = {"query": query[:400], "max_results": n, "topic": "news" if news else "general", "search_depth": "basic"}
+    r = _c.post("https://api.tavily.com/search", json=body, headers={"Authorization": "Bearer " + key}, timeout=15.0)
+    if r.status_code != 200:
+        raise RuntimeError(f"tavily HTTP {r.status_code}")
+    return [{"title": x.get("title", "")[:150], "url": x.get("url", ""), "snippet": (x.get("content") or "")[:400]} for x in r.json().get("results", []) if x.get("url")]
+
+
 def search(query, n=5):
     errs = []
-    for name, fn in (("duckduckgo", _ddg), ("mojeek", _mojeek), ("wikipedia", _wiki)):
+    for name, fn in (("tavily", _tavily), ("duckduckgo", _ddg), ("mojeek", _mojeek), ("wikipedia", _wiki)):
         try:
             res = fn(query, n)
             if res:
