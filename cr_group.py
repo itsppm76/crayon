@@ -7,10 +7,11 @@ BOT_USERNAME='crayon_v1_bot'
 
 def mentioned(msg):
     text=msg.get('text','')
-    return bool(re.search(r'(?<![\w@])@'+re.escape(BOT_USERNAME)+r'\b',text,re.I))
+    return bool(re.fullmatch(r'/[a-z_]+(?:@'+re.escape(BOT_USERNAME)+r')?(?:\s.*)?',text,re.I) or re.search(r'(?<![\w@])@'+re.escape(BOT_USERNAME)+r'\b',text,re.I))
 
 def answer(msg):
     text=re.sub(r'@'+re.escape(BOT_USERNAME)+r'\b','',msg.get('text',''),flags=re.I).strip()
+    if text.lower().strip('!.') in ('hi','hello','hey','heyy'):return 'Hey! What can I help with?'
     if not text:return 'Hey. Tag me with a question and I can join in.'
     if looks_like_secret(text):return "That looks like a secret. I won't process it. Delete it and rotate it if it was real."
     if text.startswith('/'):
