@@ -53,11 +53,11 @@ def handle(uid,chat,text,out):
             t=r['task'];lines=[f"TASK #{t['id']}: {t['title']}",t['goal']]
             for s in t['steps']:lines+=['',f"{s['n']}. {s['title']} [{s['status']}]",s['result']]
             out.send(chat,'\n'.join(lines))
-        elif parts[1]=='done':
-            if len(parts)<4 or ' | ' not in parts[3]:raise ValueError('Use /tasks done ID STEP | your completion note. Only mark work you actually finished.')
+        elif parts[1] in ('done','doing','blocked','todo'):
+            if len(parts)<4 or ' | ' not in parts[3]:raise ValueError('Use /tasks done/doing/blocked/todo ID STEP | your status note. Only mark done when finished.')
             step,note=parts[3].split(' | ',1)
             if not note.strip():raise ValueError('Add a completion note.')
-            r=T.update_step({'uid':uid},int(parts[2]),int(step),'done',note[:600])
+            r=T.update_step({'uid':uid},int(parts[2]),int(step),parts[1],note[:600])
             if not r['verified']:raise ValueError(r.get('error','Update unverified'))
             out.send(chat,'Your completion note was saved. This is your reported result, not independently checked.\n\n'+render(uid))
         else:raise ValueError('Use /tasks, add Title | steps, export, show ID, or done ID STEP | result.')
