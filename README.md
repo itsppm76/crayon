@@ -184,6 +184,7 @@ Set these environment variables (a local `.env` works; never commit it):
 | `CRAYON_PUBLIC_URL` | no | Public URL used for keep-warm |
 | `CRAYON_DAILY_CAP` | no | Messages per user per day, default 80 |
 | `CRAYON_HISTORY_TURNS` | no | Chat turns kept in context, default 14 |
+| `CRAYON_VERIFY` | no | `1` (default) runs a one-pass self-check on factual answers; `0` turns it off |
 
 Run it:
 
@@ -203,7 +204,7 @@ python main.py
 - Search quality depends on Tavily and its fallbacks; snippets can be wrong or stale.
 - The honesty guard and secret detector are heuristics, not proofs. Rotate any secret that was pasted into a chat.
 - Gmail, Calendar and other external writes are not part of the live bot. The Google OAuth code in `core/` is unused groundwork.
-- Test coverage in `tests/` is from the earlier prototype and mocks model responses. Live behaviour is checked through `/selftest` and the bot itself.
+- Test coverage in `tests/` is from the earlier prototype (see [`TEST_CHECKLIST.md`](TEST_CHECKLIST.md) for live checks) and mocks model responses. Live behaviour is checked through `/selftest` and the bot itself.
 
 See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) and [`ROADMAP.md`](ROADMAP.md) for older notes written before the milestones above; the sections in this README reflect the current deployed state.
 
