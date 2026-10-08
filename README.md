@@ -221,3 +221,17 @@ MIT © 2026 Crayon contributors. Read [`LICENSE`](LICENSE).
 Small assistant. Honest status. Room to grow.
 
 </div>
+
+## Phase 2: practical agent skills
+
+- `/goal <goal>`: saves a small plan, executes available tools, checks results, and reports remaining work. Maximum 12 calls with repeat/time limits. It cannot log into websites, buy things, or contact other people.
+- Photos, PDF/text/CSV documents and voice/audio: up to 4 MB, analyzed through the existing Gemini key. Uploads and media transcripts are not retained; only a placeholder enters chat history. Embedded instructions are treated as untrusted content. Do not upload secrets.
+- `/memory_review`: exact duplicate facts and evidence-backed preference suggestions for review. It never deletes facts or silently accepts inferred preferences.
+- Message drafting: ask for a draft with the recipient and facts. Drafts are review-only; no external message is sent.
+- `/proactive on|off`: optional daily check-in for a stale task or reminder due in the next two hours. Off by default.
+- `/digest morning|evening|both|off`: optional task, reminder and recently completed task summaries. Off by default. Morning window 09-12, evening 18-21 local time.
+- `/digest_now`: immediate summary. `/quiet_hours 21 9`: silence proactive messages and scheduled digests between those hours. Explicit reminders are not silenced.
+
+Free-host delivery remains best-effort, not guaranteed at an exact minute. Quiet hours postpone a digest only while its delivery window remains open. Digests are deterministic and do not spend model quota.
+
+The admin-only `/admin-test` form runs captured `/selftest` requests without exposing the admin token in a URL. Synthetic negative users are excluded from real scheduled senders. Never use a real user ID in tests.
