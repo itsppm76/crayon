@@ -62,6 +62,33 @@ def build_system(uid, extra=""):
     return SYSTEM.format(now=n.strftime("%A, %d %B %Y, %I:%M %p"), tz=str(n.tzinfo), memory=memory) + extra
 
 
+YES_RE = re.compile(r"^\s*(yes|y|yep|yeah|confirm|confirmed|do it|go ahead|sure)\W*$", re.I)
+NO_RE = re.compile(r"^\s*(no|n|nope|cancel|stop|don'?t|never ?mind)\W*$", re.I)
+
+
+def handle_confirmation(uid, chat_id, text):
+    """Resolve a pending irreversible action. Returns reply text, or None if text isn't a yes/no to one."""
+    yes, no = YES_RE.match(text), NO_RE.match(text)
+    if not (yes or no):
+        return None
+    p = db.q("SELECT id,action,args,label FROM pending_actions WHERE user_id=%s AND status='pending' AND expires_at > now() ORDER BY created_at DESC LIMIT 1", (uid,), "one")
+    if not p:
+        return None
+    if no:
+        db.q("UPDATE pending_actions SET status='cancelled' WHERE id=%s", (p["id"],), "none")
+        db.audit(uid, "confirmation_declined", p["label"])
+        return f"Okay, I did not do it: {p['label']}."
+    db.q("UPDATE pending_actions SET status='running' WHERE id=%s AND status='pending'", (p["id"],), "none")
+    args = p["args"] if isinstance(p["args"], dict) else json.loads(p["args"] or "{}")
+    res = T.run(p["action"], args, {"uid": uid, "chat_id": chat_id, "meta": {}, "confirmed": True})
+    done = bool(res.get("ok") and res.get("verified"))
+    db.q("UPDATE pending_actions SET status=%s WHERE id=%s", ("done" if done else "failed", p["id"]), "none")
+    db.audit(uid, "confirmed_action", f"{p['action']} done={done}")
+    if done:
+        return f"Done and checked: {p['label']}."
+    return f"I tried to do this ({p['label']}) but couldn't confirm it worked. Nothing is guaranteed; please check."
+
+
 def respond(uid, chat_id, text, name=""):
     """Handle one user message. Returns (reply_text, meta)."""
     meta = {"tools": [], "failed": [], "model": "", "user_text": text}
@@ -69,6 +96,11 @@ def respond(uid, chat_id, text, name=""):
     try:
         mem.touch_user(uid, name)
         mem.add_message(uid, "user", text)
+        conf = handle_confirmation(uid, chat_id, text)
+        if conf is not None:
+            mem.add_message(uid, "assistant", conf)
+            meta["confirmation"] = True
+            return conf, meta
         contents = _history_contents(uid)
     except Exception as e:
         log.warning("memory unavailable: %s", redact(str(e))[:200])
@@ -93,8 +125,13 @@ def respond(uid, chat_id, text, name=""):
                 calls_used += 1
                 res = T.run(c["name"], c["args"], ctx) if calls_used <= MAX_TOOL_CALLS else {"ok": False, "error": "tool budget exhausted"}
                 meta["tools"].append(c["name"])
-                if not res.get("ok") or not res.get("verified", False):
+                if res.get("needs_confirmation"):
+                    meta["confirm"] = res.get("label", "")
+                elif not res.get("ok") or not res.get("verified", False):
                     meta["failed"].append(c["name"])
+                    meta.setdefault("errors", []).append(f'{c["name"]}: {str(res.get("error", ""))[:120]}')
+                else:
+                    meta["failed"] = [x for x in meta["failed"] if x != c["name"]]  # a later success supersedes an earlier failure
                 resp_parts.append({"functionResponse": {"name": c["name"], "response": {"result": json.loads(json.dumps(res, default=str))}}})
             contents.append({"role": "user", "parts": resp_parts})
         if not reply:
@@ -102,6 +139,8 @@ def respond(uid, chat_id, text, name=""):
         if not degraded and needs_check(text, reply, meta) and C.env("CRAYON_VERIFY", "1") == "1":
             reply = verify_answer(uid, text, reply, contents, system, meta)
         reply = honesty_guard(reply, meta)
+        if meta.get("confirm"):
+            reply = f"{meta['confirm']}? This can't be undone. Reply YES to confirm or NO to cancel (valid for 10 minutes)."
     except llm.LLMError as e:
         log.error("llm failure: %s", redact(str(e)))
         reply = friendly_llm_error(e)
