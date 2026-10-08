@@ -52,3 +52,16 @@ def test_dashboard_no_invented_done(monkeypatch):
     monkeypatch.setattr(D.db,'q',lambda *a:[])
     text=D.render(1)
     assert 'Blocked: Review' in text and 'Next 2: Write' in text and '0/2' in text
+
+def test_brief_rejects_invented_link(monkeypatch):
+    import cr_web,cr_llm
+    monkeypatch.setattr(cr_web,'research',lambda *a:{'pages':[{'url':'https://example.com','text':'Evidence'}]})
+    monkeypatch.setattr(cr_llm,'ask_json',lambda *a,**k:{'points':[{'claim':'fake','url':'https://evil.invalid'}]})
+    with pytest.raises(ValueError):W.step_run({'op':'brief','input':'topic'})
+
+def test_brief_source_bound(monkeypatch):
+    import cr_web,cr_llm
+    monkeypatch.setattr(cr_web,'research',lambda *a:{'pages':[{'url':'https://example.com','text':'Evidence'}]})
+    monkeypatch.setattr(cr_llm,'ask_json',lambda *a,**k:{'answer':'Draft','points':[{'claim':'point','url':'https://example.com'}],'outline':['Intro'],'gaps':['Check']})
+    r=W.step_run({'op':'brief','input':'topic'})
+    assert r['draft'] and 'check before using' in r['text'] and 'https://example.com' in r['text']
