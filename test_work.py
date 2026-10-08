@@ -111,3 +111,31 @@ def test_decimal_calculation():
     from decimal import Decimal
     assert W.calculate('0.1+0.2')==Decimal('0.3')
     assert str(W.calculate('1/3'))=='0.3333333333333333333333333333'
+
+def test_work_buttons_state_scoped():
+    paused=W.controls_markup({'id':12,'status':'paused','results':[]})
+    flat=[b['callback_data'] for row in paused['inline_keyboard'] for b in row]
+    assert 'work:resume:12' in flat and 'work:pause:12' not in flat
+    done=W.controls_markup({'id':12,'status':'done','results':[{}]})
+    flat=[b['callback_data'] for row in done['inline_keyboard'] for b in row]
+    assert 'work:export:12' in flat and 'work:cancel:12' not in flat
+
+def test_uncertain_delivery_not_retried(monkeypatch):
+    from datetime import datetime
+    import contextlib
+    row={'id':1,'user_id':1,'chat_id':1,'status':'done','notified':False,'title':'Demo','steps':[{'op':'calculate','input':'2+2'}],'results':[{'text':'4'}]}
+    sqls=[]
+    def q(sql,args=(),fetch='all'):
+        sqls.append(sql)
+        if sql.startswith('SELECT * FROM work_jobs'):return [row] if not row['notified'] else []
+        if 'RETURNING id' in sql and 'notified=true' in sql:row['notified']=True;return {'id':1}
+        return None
+    monkeypatch.setattr(W.db,'q',q);monkeypatch.setattr(W,'get',lambda *a:row.copy())
+    monkeypatch.setattr(W.P,'settings',lambda uid:{'quiet_start':21,'quiet_end':9})
+    monkeypatch.setattr(W.P.T,'now_local',lambda uid:datetime(2026,10,9,12))
+    monkeypatch.setattr(W.P.mem,'user_lock',lambda uid:contextlib.nullcontext())
+    class Out:
+        calls=0
+        def send(self,*a,**k):self.calls+=1;raise TimeoutError()
+    out=Out();W.tick(out,only_user=1);W.tick(out,only_user=1)
+    assert out.calls==1 and any("delivery_state='uncertain'" in s for s in sqls)
