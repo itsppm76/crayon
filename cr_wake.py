@@ -31,6 +31,6 @@ def idle_stop():
     with lock:
         at=db.kv_get('computer_last_activity',0)
         if not at or time.time()-at<600:return
-        busy=db.q("SELECT id FROM computer_jobs WHERE status IN ('pending','running') AND created_at>now()-interval '5 minutes' LIMIT 1",(),'one')
+        busy=db.q("SELECT id FROM computer_jobs WHERE status IN ('pending','running')  LIMIT 1",(),'one')
         if busy:return
         call('stop');db.kv_set('computer_last_activity',0)
