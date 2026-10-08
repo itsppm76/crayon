@@ -25,8 +25,8 @@ def tool(name, description, props=None, required=None, risk=RISK_SAFE):
     return deco
 
 
-def declarations():
-    return [{"functionDeclarations": [t["decl"] for t in TOOLS.values()]}]
+def declarations(readonly=False):
+    return [{"functionDeclarations": [t["decl"] for t in TOOLS.values() if not readonly or t["risk"]==RISK_SAFE and not t["decl"]["name"].startswith(("create_","computer_","draft_"))]}]
 
 
 def user_tz(uid):
@@ -283,6 +283,8 @@ def _ask_confirmation(name, args, ctx):
 
 def run(name, args, ctx):
     t = TOOLS.get(name)
+    if ctx.get("readonly") and t and (t["risk"]!=RISK_SAFE or name.startswith(("create_","computer_","draft_"))):
+        return {"ok":False,"verified":False,"error":"Scheduled work is read-only; changes need a direct user request."}
     if not t:
         return {"ok": False, "verified": False, "error": f"unknown tool {name}"}
     if needs_confirm(name, args) and not ctx.get("confirmed"):
