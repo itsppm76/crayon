@@ -94,6 +94,9 @@ def run(body):
         cr_work.init()
         rows=db.q("SELECT * FROM work_jobs WHERE user_id=%s ORDER BY id",(uid,))
         results.append({"work_probe":[cr_work.view(r) for r in rows]})
+    if body.get("work_probe"):
+        rows=db.q("SELECT status,notified FROM work_jobs WHERE user_id=%s ORDER BY id",(uid,))
+        results.append({"work_notification_states":rows})
     if body.get("work_export"):
         import cr_work
         rows=db.q("SELECT id FROM work_jobs WHERE user_id=%s ORDER BY id DESC LIMIT 1",(uid,))
