@@ -103,20 +103,22 @@ October 8 23:15 IST live follow-up:
 
 ## Phase3 (October8-9, latest state supersedes earlier pending entries)
 - Public pasted example.com read verified in real Telegram. First deep-research comparison returned links and403 disclosure but uneven subjects; improved per-subject bounded search and citation instruction, second live proof pending.
-- Frankfurter10USD ->966.30INR dated2026-10-08/source verified. Fixed singular unit aliases and real1mile ->1.609444km passed.
+- Frankfurter10USD ->966.30INR dated2026-10-08/source verified. Fixed singular unit aliases and real1mile ->1.609744km passed.
 -2.20.1 natural 'Please connect my Google account' returned a real tappable connection link without reply-keyboard dependence.
 - Four Google tester addresses persist in Audience; External/Testing unchanged. No production publishing.
 - Current78 local tests include bounded CSV, formula escaping, chart validity, mocked sendDocument confirmation, text aliases, short-connect state-only fixed destination, used/expired rejection.
 -2.21.0 CSV/chart and short link are built/deployed; real transport/redirect proof is in progress. No claim of all live checks yet.
 -6workers is a code ceiling, not measured comfortable user capacity. Project-wide Gemini free quotas verified15/250k/500(primary),15/250k/500(fallback1),5/250k/20(fallback2). API requests are not chat replies.
 
-2.21.1 incident follow-up: owner forwarded own Google link; live DB/status confirmed Sibi Google under owner1898030949. Owner approved disconnect; bot confirmed Google revocation, credentials/drafts removal, independent DB empty +status none. Later7555366869 independently connected Sibi Google; untouched. No mailbox/calendar content retrieved for diagnosis. Historical 'Plz connect to my Google' missed deterministic alias and got a false general-model denial; added plz/pls/to variants and tests.81 tests pass. Short link live issuance and Google fixed-client redirect passed; invalid state400 passed. No new OAuth consent performed by agent. Files/research post-fix live proof remains pending due to incident priority.
+2.21.1 incident follow-up: owner forwarded own Google link; live DB/status confirmed Sibi Google under owner1898030979. Owner approved disconnect; bot confirmed Google revocation, credentials/drafts removal, independent DB empty +status none. Later7555366869 independently connected Sibi Google; untouched. No mailbox/calendar content retrieved for diagnosis. Historical 'Plz connect to my Google' missed deterministic alias and got a false general-model denial; added plz/pls/to variants and tests.81 tests pass. Short link live issuance and Google fixed-client redirect passed; invalid state400 passed. No new OAuth consent performed by agent. Files/research post-fix live proof remains pending due to incident priority.
 
 ## Phase3 computer/browser and closure (Oct9,00:47IST)
--2.23.1 live health;94 local tests pass, including progress race, owner-only computer/path/arithmetic checks and browser denylist cases.
+-2.23.1 live health;97 local tests pass, including progress race, owner-only computer/path/arithmetic checks and browser denylist cases.
 - M19: CSV50B/chart15.3KB received in owner Telegram. Delivered chart inspected at full size: Maths3/Finance5/Strategy2, clean labels, units and supplied-data disclaimer.
 - M17: initial retest still searched unrelated Obsidian Energy/Notion-vs-Monday. Fixed compared-name extraction preserving purpose context and official-source preference. Subsequent real retest uses Notion education/help and Obsidian/help. Model claim/citation synthesis remains fallible.
 - M20: GitHub Pro student, fresh Codespaces budget$0/Stop usageYes, consumed/billable$0 checked before creation. Created2-core Southeast Asia Linux Codespace, no public ports. Outbound worker dedicated bridge token, owner-only fixed operations,25-minute session cap, no auto-restart.
 - Real computer status +20*(3+2)/4 returned25. Real Chromium Python tutorial task delivered159KB crayon-browser.png and URL log to owner Telegram at00:47. Full delivered-image pixels inspected: readable Python tutorial and sidebar.
 - Browser initial bridge failures produced fake model '(screenshot attached)' text with no attachment. Deterministic screenshot routing now requires verified result AND PNG bytes; fail-closed errors instead.
 - Remaining: real group welcome-on-add, real computer file create/read (initial operation error fail-closed; schema enum fixed, retest pending), README rendered final phase table inspection. Public Google verification still pending, no paid assessment initiated.
+
+Tester release2.24.0: owner+Sibi UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Uttiya not enabled until verified Telegram ID.97 local tests, tester behavior code-tested, not impersonated/live-tested as Sibi.
