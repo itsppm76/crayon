@@ -38,6 +38,8 @@ def execute(uid,operation,args):
     return {'ok':False,'verified':False,'error':'No completion confirmed. Do not retry writes automatically.'}
 
 def next_job(info):
+    # Browser payloads and task text are transient, not durable memory.
+    db.q("DELETE FROM computer_jobs WHERE created_at<now()-interval '30 minutes'",(),'none')
     db.kv_set('computer_heartbeat',{'at':time.time(),'info':info})
     return db.q("UPDATE computer_jobs SET status='running' WHERE id=(SELECT id FROM computer_jobs WHERE status='pending' AND created_at>now()-interval '40 seconds' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id,operation,args",(),'one')
 
