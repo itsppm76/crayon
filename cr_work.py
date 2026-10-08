@@ -8,6 +8,7 @@ SCHEMA="""CREATE TABLE IF NOT EXISTS work_jobs(
  title TEXT NOT NULL,steps JSONB NOT NULL,status TEXT NOT NULL DEFAULT 'queued',
  results JSONB NOT NULL DEFAULT '[]'::jsonb,created_at TIMESTAMPTZ DEFAULT now(),
  updated_at TIMESTAMPTZ DEFAULT now(),notified BOOLEAN DEFAULT false,error TEXT DEFAULT '');
+ ALTER TABLE work_jobs ADD COLUMN IF NOT EXISTS error TEXT DEFAULT ''; 
  CREATE INDEX IF NOT EXISTS work_queue ON work_jobs(status,created_at);"""
 OPS={'research','page','calculate'}
 def init():db.q(SCHEMA,(),'none')
@@ -127,7 +128,7 @@ def tick(out,only_user=None):
     return row['id'] if row else None
 
 def handle(uid,chat,text,out):
-    if not text.startswith('/work'):return False
+    if not (text=='/work' or text.startswith('/work ')):return False
     bits=text.split(None,2);op=bits[1] if len(bits)>1 else 'list'
     try:
         init()
