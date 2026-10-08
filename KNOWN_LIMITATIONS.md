@@ -1,14 +1,14 @@
 # Known limitations
 
-Status is intentionally conservative.
+Status is intentionally conservative. This file reflects the deployed bot (`cr_*.py` modules, Neon Postgres, Render free tier).
 
-- **Colab sessions time out:** long polling stops when the runtime sleeps or disconnects; there is no persistence in the included in-memory implementation.
-- **Persistence wiring is incomplete:** `db/schema.sql` is ready, but a Supabase repository and token encryption adapter are **UNTESTED**.
-- **Google integrations are incomplete:** OAuth helper and read-only scopes exist; `/connect`, Calendar reads, Gmail summaries, and token storage are **UNTESTED**.
-- **Model availability varies:** `gemma4:e4b` may not be available in every Ollama registry/runtime. The router fallback is tested only with mocked HTTP responses.
-- **Free-tier limits apply:** OpenRouter free models can impose 20 requests/minute, daily caps, queueing, and 429 responses; Gemini quotas also vary. Rotation is implemented, but production quota behavior is **UNTESTED**.
-- **Small-model mistakes:** local models can misunderstand dates, tool arguments, or malicious content. Keep approval gates and review outputs.
-- **Telegram/Google verification:** Google OAuth verification and publishing requirements may apply before public release.
-- **No production webhook:** Telegram runs long polling in the prototype; webhook deployment is a future step.
-- **No external writes:** approval buttons are scaffolded, but current code does not send mail, create events, or contact third parties.
-- **Not free:** a continuously running reliable host, production database usage beyond free limits, paid model quotas, and Google verification-related operational work may cost money. Free alternatives are Colab, Ollama, Supabase free tier, OpenRouter `:free` models, and Gemini free tier subject to limits.
+- **Free hosting:** Render's free instance sleeps when idle and can be slow on a cold start. A keep-warm ping reduces this but does not guarantee uptime.
+- **Reminder timing:** reminders and jobs are delivered by an in-process polling scheduler. Delivery is close to the due time, not exact, and is delayed if the host is down.
+- **Free-tier quotas:** Gemini, Tavily and Neon have free-tier limits. A per-user daily message cap (default 80) is in place to stay inside them.
+- **Search quality:** results depend on Tavily and its fallbacks. Snippets can be stale or wrong, and page text is treated as untrusted data.
+- **Code sandbox:** no network, files or access to user data, by design. It is for exact math and checks, not data fetching.
+- **Heuristic safety:** secret detection and the honesty guard are pattern-based checks, not guarantees. If a real secret is pasted into a chat, rotate it.
+- **Model mistakes:** the model can misread dates, time zones or intent. Confirm reminders and task details when they matter.
+- **No external writes:** the live bot does not send email, create calendar events or contact third parties.
+- **Google integrations:** the OAuth helper in `core/` is unused and not wired into the bot.
+- **Prototype leftovers:** `core/`, `adapters/`, `tools/`, `db/schema.sql` and the Colab notebook are from the first prototype. The offline tests in `tests/` cover that code and mock model calls.
