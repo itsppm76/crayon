@@ -26,11 +26,11 @@ def test_mail_metadata_only_dedup(monkeypatch):
     def req(uid,url,params):
         calls.append((url,params))
         if url.endswith('/messages'):return {'messages':[{'id':'a'},{'id':'b'}]}
-        return {'labelIds':['IMPORTANT'] if url.endswith('a') else [],'payload':{'headers':[{'name':'From','value':'external@example.com'},{'name':'Subject','value':'Deadline' if url.endswith('a') else 'Newsletter'}]}}
+        return {'snippet':'Bounded source excerpt','labelIds':['IMPORTANT'] if url.endswith('a') else [],'payload':{'headers':[{'name':'From','value':'external@example.com'},{'name':'Subject','value':'Deadline' if url.endswith('a') else 'Newsletter'}]}}
     monkeypatch.setattr(G,'request',req)
     state={'email':'me@example.com','since':100,'seen':[]}
     text,state=W.scan(W.OWNER,state)
-    assert 'May need attention' in text and 'FYI:' in text
+    assert 'May need attention' in text and 'FYI:' in text and 'Excerpt: Bounded source excerpt' in text
     assert all(p.get('format')=='metadata' for u,p in calls if not u.endswith('/messages'))
     assert W.scan(W.OWNER,state)[0]==''
 def test_mail_quiet_and_off(monkeypatch):
