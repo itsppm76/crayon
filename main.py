@@ -98,6 +98,17 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(raw or b"{}")
         except Exception:
             body = {}
+        if self.path in ('/computer/next','/computer/result'):
+            import hmac,cr_computer as K
+            token=C.env('CRAYON_BRIDGE_TOKEN')
+            got=self.headers.get('Authorization','').removeprefix('Bearer ')
+            if not token or not hmac.compare_digest(got,token):return self._send(403,'forbidden')
+            if n>25000:return self._send(413,'too large')
+            try:
+                if self.path=='/computer/next':result=K.next_job(body)
+                else:K.complete(body['id'],body['result']);result={'ok':True}
+                return self._send(200,json.dumps(result),'application/json')
+            except Exception:return self._send(400,'invalid request')
         if self.path == "/admin-test":
             from urllib.parse import parse_qs
             import html, hmac
@@ -142,6 +153,8 @@ def main():
         db.init()
         import cr_google
         cr_google.init()
+        import cr_computer
+        cr_computer.init()
     except Exception as e:
         log.error("database init failed (running without persistence): %s", redact(str(e))[:200])
     if not C.TELEGRAM_TOKEN:
