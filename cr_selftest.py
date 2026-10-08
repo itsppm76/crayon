@@ -7,7 +7,9 @@ import cr_telegram as tg
 
 def run(body):
     uid = int(body.get("uid", -4242))
-    texts = body.get("texts") or [body.get("text", "hello")]
+    if uid >= 0:
+        return {"ok": False, "error": "selftest only accepts negative synthetic users"}
+    texts = body["texts"] if "texts" in body else [body.get("text", "hello")]
     results = []
     if body.get("reset"):
         mem.delete_all(uid)
