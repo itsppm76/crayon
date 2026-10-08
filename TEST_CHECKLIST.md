@@ -57,5 +57,7 @@ curl -X POST https://crayon-v1.onrender.com/selftest \
 
 M7: `/goal <concrete research/calculation goal>` saves a 2-4 step plan and executes with up to 12 tools, repeat-call limits, and a time budget. Local runtime tests pass. Verified live: /goal calculated 17 x 23 with sandbox output, saved a note, updated both steps, and cleaned up the synthetic user. Admin form `/admin-test` uses captured output and requires the existing admin token. Selftest rejects real user IDs; scheduler excludes negative test users.
 
-M8: photo/PDF/text/audio ingestion, 4 MB limit, untrusted-content analysis, no raw upload retention. Live testing pending.
-M9: /memory_review returns exact duplicate groups and evidence-backed preference suggestions, changes no facts. Live testing pending.
+M8: photo/PDF/text/audio ingestion, 4 MB limit, untrusted-content analysis, no raw upload retention. Live image fixture verified; Telegram downloads and PDF/audio remain untested.
+M9: /memory_review returns exact duplicate groups and evidence-backed preference suggestions, changes no facts. Verified live duplicate detection with two stored facts; no deletion.
+
+M10 draft_message: review only, no external sender. M11 /proactive on|off: at most one stale-task or upcoming-reminder check-in daily. M12 /digest morning|evening|both|off and /digest_now: deterministic summaries. Defaults off, quiet hours 21-09 local; free-host delivery best-effort. Live tests pending.
