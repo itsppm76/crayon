@@ -71,6 +71,14 @@ def run(body):
         results.append({"reminders": [dict(r) for r in rows]})
     if body.get("probe") == "facts":
         results.append({"facts": [dict(key=f["key"], value=f["value"]) for f in mem.facts(uid)]})
+    if body.get("task_states"):
+        import cr_tools,cr_dashboard
+        rows=db.q("SELECT id FROM tasks WHERE user_id=%s ORDER BY id DESC LIMIT 1",(uid,))
+        if rows:
+            ident=rows[0]['id'];states=[]
+            for step,status in body['task_states']:
+                states.append(cr_tools.update_step({'uid':uid},ident,int(step),status,'Synthetic status proof'))
+            results.append({'task_states':states,'dashboard':cr_dashboard.render(uid)})
     if body.get("work_controls"):
         import cr_work
         cr_work.init();out=tg.CaptureOut()
