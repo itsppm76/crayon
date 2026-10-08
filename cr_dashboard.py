@@ -16,7 +16,7 @@ def render(uid):
         lines+=['','UPCOMING REMINDERS']
         for r in reminders[:5]:lines+=[r['due_local']+' - '+r['text']]
     import cr_work
-    cr_work.init();rows=db.q("SELECT * FROM work_jobs WHERE user_id=%s AND status IN ('queued','running','paused','blocked') ORDER BY created_at LIMIT 5",(uid,))
+    cr_work.init();rows=db.q("SELECT * FROM work_jobs WHERE user_id=%s AND status IN ('queued','running','pausing','paused','blocked') ORDER BY created_at LIMIT 5",(uid,))
     if rows:
         lines+=['','INTERNAL WORK QUEUE']
         lines+=[f"#{r['id']} {r['status']}: {r['title']} ({len(r['results'])}/{len(r['steps'])})" for r in rows]
