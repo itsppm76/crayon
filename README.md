@@ -243,8 +243,8 @@ Small assistant. Honest status. Room to grow.
 | 🔎 Deep research | Bounded multi-source reads; comparison subject/context searches | Official Notion/Obsidian comparison retested; citations/model synthesis remain fallible |
 | 🧮 Conversions | Dated Frankfurter currency and Decimal unit conversion | Real currency/unit tests passed; not a live FX quote, fees excluded |
 | 📎 File output | CSV and non-negative bar chart PNG from supplied/checked data | Both received in real Telegram; delivered chart pixels checked |
-| 💻 Computer beta | Owner-only2-core Codespace, outbound bridge, bounded arithmetic/text-file tasks | Provisioned; no shared-user shell, no paid budget or auto-restart |
-| 📸 Browser beta | Fresh public Chromium, allowlist, two-page limit, screenshot and URL log | Built/deployed; end-to-end Telegram screenshot test in progress |
+| 💻 Computer beta | Owner-only2-core Codespace, outbound bridge, bounded arithmetic/text-file tasks | Live status/calculation passed; no shared-user shell, no paid budget or auto-restart |
+| 📸 Browser beta | Fresh public Chromium, allowlist, two-page limit, screenshot and URL log | Real Python tutorial screenshot received in Telegram and visually inspected |
 
 ### Try it in plain language
 
