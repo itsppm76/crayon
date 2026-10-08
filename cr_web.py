@@ -108,10 +108,13 @@ def research(query):
     query=re.sub(r'(?i)^(?:go deep on|research deeply|deep research)\s*','',query).strip()
     query=query.split('. Give ')[0].split('. Please ')[0][:400]
     queries=[query]
-    # Balanced coverage for explicit A-and-B comparisons, still bounded.
-    if ' and ' in query.lower():
-        parts=re.split(r'(?i)\s+and\s+',query,maxsplit=1)
-        if all(3<len(p)<250 for p in parts):queries=parts
+    # Extract compared names, retaining purpose words for each search.
+    match=re.search(r'(?i)(?:comparison of|compare)\s+(.+?)\s+(?:and|with|versus|vs\.?)\s+(.+?)(?:\s+for\s+(.+?))?(?:\.|$)',query)
+    if match:
+        left,right,context=match.groups()
+        queries=[left.strip()+' '+(context or ''),right.strip()+' '+(context or '')]
+    official=bool(re.search(r'(?i)\b(official|first.party)\b',query))
+    if official:queries=[q+' official documentation' for q in queries]
     results=[];pages=[];failures=[]
     for q in queries[:2]:
         for r in search(q,3):
