@@ -9,7 +9,7 @@ UNITS={'m':('length','1'),'km':('length','1000'),'cm':('length','.01'),'mm':('le
 'kg':('mass','1'),'g':('mass','.001'),'lb':('mass','.45359237'),'oz':('mass','.028349523125'),
 'l':('volume','1'),'ml':('volume','.001'),'s':('time','1'),'min':('time','60'),'h':('time','3600'),
 'm/s':('speed','1'),'km/h':('speed','0.2777777777777777777777777778'),'mph':('speed','.44704')}
-ALIASES={'meters':'m','metres':'m','kilometers':'km','kilometres':'km','feet':'ft','inches':'in','miles':'mi','pounds':'lb','kilograms':'kg','grams':'g','liters':'l','litres':'l','hours':'h','minutes':'min','seconds':'s','celsius':'c','fahrenheit':'f','kelvin':'k'}
+ALIASES={'meter':'m','metre':'m','kilometer':'km','kilometre':'km','centimeter':'cm','centimetre':'cm','millimeter':'mm','millimetre':'mm','mile':'mi','foot':'ft','inch':'in','yard':'yd','yards':'yd','pound':'lb','kilogram':'kg','gram':'g','ounce':'oz','ounces':'oz','liter':'l','litre':'l','milliliter':'ml','millilitre':'ml','milliliters':'ml','millilitres':'ml','hour':'h','minute':'min','second':'s','meters':'m','metres':'m','kilometers':'km','kilometres':'km','feet':'ft','inches':'in','miles':'mi','pounds':'lb','kilograms':'kg','grams':'g','liters':'l','litres':'l','hours':'h','minutes':'min','seconds':'s','celsius':'c','fahrenheit':'f','kelvin':'k'}
 
 def number(value):
     n=Decimal(str(value))
