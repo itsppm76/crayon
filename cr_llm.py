@@ -42,7 +42,7 @@ def generate(contents, system="", tools=None, json_mode=False, temperature=0.6, 
         body["generationConfig"]["responseMimeType"] = "application/json"
     errs = []
     for model in (models or [C.GEMINI_MODEL] + C.GEMINI_FALLBACKS):
-        for attempt in range(2):
+        for attempt in range(2):  # 429: wait and retry once, then next model
             try:
                 r = _post(model, body)
             except httpx.HTTPError as e:
@@ -63,7 +63,7 @@ def generate(contents, system="", tools=None, json_mode=False, temperature=0.6, 
                 return {"text": text.strip(), "calls": calls, "parts": parts, "model": model, "raw": data}
             if r.status_code == 429:
                 errs.append(f"{model}:429")
-                time.sleep(1.5 if attempt == 0 else 0)
+                time.sleep(4.0 if attempt == 0 else 0)
                 continue
             if r.status_code in (401, 403):
                 raise LLMError("auth", f"HTTP {r.status_code}")
