@@ -87,12 +87,14 @@ def complete(state, code):
             raise GoogleError("Google did not complete the connection")
         tokens=r.json()
         granted=set(tokens.get("scope","").split())
-        if not set(SCOPES).issubset(granted) or not tokens.get("refresh_token"):
+        required={x for x in SCOPES if x.startswith("https://")}
+        if not required.issubset(granted) or not tokens.get("refresh_token"):
             raise GoogleError("Required read-only permissions or refresh token were not granted")
         profile=client.get("https://openidconnect.googleapis.com/v1/userinfo",headers={"Authorization":"Bearer "+tokens["access_token"]})
         if profile.status_code!=200 or not profile.json().get("email_verified"):
             raise GoogleError("Could not verify the connected Google account")
         email=profile.json()["email"]
+    tokens["client_id"]=C.env("GOOGLE_CLIENT_ID")
     db.q("INSERT INTO google_connections(user_id,email,encrypted_tokens) VALUES(%s,%s,%s) ON CONFLICT(user_id) DO UPDATE SET email=EXCLUDED.email,encrypted_tokens=EXCLUDED.encrypted_tokens,connected_at=now()",(uid,email,encrypt(uid,tokens)),"none")
     return {"user_id":uid,"email":email}
 
@@ -104,6 +106,8 @@ def _access(uid):
     if not row:
         raise GoogleError("Connect your own Google account first")
     tokens=decrypt(uid,row["encrypted_tokens"])
+    if tokens.get("client_id") != C.env("GOOGLE_CLIENT_ID"):
+        raise GoogleError("OAuth app changed; reconnect your Google account")
     with httpx.Client(timeout=20) as client:
         r=client.post("https://oauth2.googleapis.com/token",data={"client_id":C.env("GOOGLE_CLIENT_ID"),"client_secret":C.env("GOOGLE_CLIENT_SECRET"),"refresh_token":tokens["refresh_token"],"grant_type":"refresh_token"})
     if r.status_code!=200:
