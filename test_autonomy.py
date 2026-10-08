@@ -74,3 +74,35 @@ def test_write_scope_only_explicit_oauth(monkeypatch):
     monkeypatch.setattr(G.db,'kv_get',lambda *a:True)
     scope=parse_qs(urlsplit(G.authorization_url('a'*43)).query)['scope'][0]
     assert 'calendar.events.readonly' not in scope and 'calendar.events' in scope
+def test_calendar_create_readback_exact(monkeypatch):
+    import json,hashlib
+    c=content();digest=hashlib.sha256(json.dumps(c,sort_keys=True).encode()).hexdigest()
+    queries=[]
+    def q(sql,*a,**kw):
+        queries.append(sql)
+        return {'encrypted_content':'x','content_hash':digest} if 'RETURNING encrypted_content' in sql else None
+    monkeypatch.setattr(K.db,'q',q)
+    monkeypatch.setattr(K.db,'kv_get',lambda *a:['a1b2c3',digest[:12]])
+    monkeypatch.setattr(G,'decrypt',lambda *a:c)
+    monkeypatch.setattr(G,'status',lambda *a:{'email':c['account']})
+    monkeypatch.setattr(G,'request',lambda *a:{'items':[]})
+    monkeypatch.setattr(G,'_access',lambda *a:'fake')
+    class Resp:
+        status_code=200
+        def __init__(self,data):self.data=data
+        def json(self):return self.data
+    class Client:
+        body=None;posts=0
+        def __init__(self,**kw):pass
+        def __enter__(self):return self
+        def __exit__(self,*a):pass
+        def get(self,url,**kw):
+            if url.endswith('tokeninfo'):return Resp({'scope':'https://www.googleapis.com/auth/calendar.events'})
+            return Resp({**Client.body,'htmlLink':'https://calendar.google.com/test-fixture'})
+        def post(self,url,**kw):
+            Client.posts+=1;Client.body=kw['json'];assert kw['params']=={'sendUpdates':'none'}
+            assert 'attendees' not in Client.body and 'conferenceData' not in Client.body
+            return Resp(Client.body)
+    monkeypatch.setattr(G.httpx,'Client',Client)
+    assert 'read back' in K.create(10,'a1b2c3',digest[:12]);assert Client.posts==1
+    assert any(x.startswith('DELETE FROM google_calendar_drafts WHERE id') for x in queries)
