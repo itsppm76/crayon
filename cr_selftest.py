@@ -17,7 +17,7 @@ def run(body):
         out = tg.CaptureOut()
         upd = {"message": {"message_id": 1, "chat": {"id": uid}, "from": {"id": uid, "first_name": body.get("name", "SelfTest")}, "text": t}}
         tg.handle_update(upd, out)
-        results.append({"in": t, "out": [m["text"] for m in out.sent], "meta": out.meta})
+        results.append({"in": t, "out": [m["text"] for m in out.sent], "meta": out.meta, "reactions": out.reactions})
     if body.get("media_fixture"):
         import cr_media, base64
         fixture = body["media_fixture"]
