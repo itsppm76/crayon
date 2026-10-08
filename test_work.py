@@ -90,3 +90,19 @@ def test_startup_off_no_credential_access():
     env={**os.environ,'CRAYON_COMPUTER_AUTOSTART':'off'}
     r=subprocess.run(['sh','computer_start.sh'],env=env,capture_output=True)
     assert r.returncode==0 and not r.stdout and not r.stderr
+
+def test_quiet_hours_defer(monkeypatch):
+    from datetime import datetime
+    row={'id':1,'user_id':1,'chat_id':1,'status':'done','notified':False,'title':'Demo','steps':[{'op':'calculate','input':'2+2'}],'results':[{'text':'4'}]}
+    calls=[]
+    def q(sql,args=(),fetch='all'):
+        calls.append(sql)
+        if sql.startswith('SELECT * FROM work_jobs'):return [row]
+        return None
+    monkeypatch.setattr(W.db,'q',q)
+    monkeypatch.setattr(W.P,'settings',lambda uid:{'quiet_start':21,'quiet_end':9})
+    monkeypatch.setattr(W.P.T,'now_local',lambda uid:datetime(2026,10,9,2))
+    class Out:
+        def send(self,*a):pytest.fail('quiet ping')
+    W.tick(Out(),only_user=1)
+    assert not any('notified=true' in x for x in calls)
