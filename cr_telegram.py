@@ -22,9 +22,11 @@ What I do:
 - remember you across restarts (see /memory)
 - set reminders that actually fire ("remind me tomorrow 8am to ...")
 - save notes, tell the time, answer questions
+- read photos, PDFs/text files and voice notes (up to 4 MB)
 
 Commands:
 /goal <goal> - plan and execute bounded multi-step work
+/memory_review - duplicates and reviewable preference suggestions
 /memory - what I remember about you
 /forget <key> - remove one thing
 /delete_my_data - wipe everything I hold on you
@@ -99,7 +101,8 @@ def handle_update(upd, out=None):
         name = (msg["from"].get("first_name") or "").strip()
         text = msg.get("text")
         if not text:
-            out.send(chat_id, "I can only read text messages for now. Type it out and I'll help.")
+            with mem.user_lock(uid):
+                _handle_media(uid, chat_id, name, msg, out)
             return
         with mem.user_lock(uid):
             _handle_text(uid, chat_id, name, text, msg.get("message_id"), out)
@@ -136,6 +139,13 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             if hasattr(out, "meta"):
                 out.meta = meta
             out.send(chat_id, reply)
+    elif cmd == "/memory_review":
+        import json
+        mem.touch_user(uid, name)
+        review = mem.review_memory(uid)
+        out.send(chat_id, "Memory review (no facts changed):\n" + json.dumps(review, ensure_ascii=False, indent=2))
+        if hasattr(out, "meta"):
+            out.meta = {"memory_review": review}
     elif cmd == "/memory":
         out.send(chat_id, mem.render_memory(uid))
     elif cmd == "/forget":
@@ -215,3 +225,55 @@ def poll_forever(stop=None):
         except Exception as e:
             log.warning("poll error: %s", redact(f"{type(e).__name__}: {e}")[:200])
             time.sleep(3)
+
+
+def _handle_media(uid, chat_id, name, msg, out):
+    import cr_media
+    item, mime = None, ""
+    if msg.get("photo"):
+        item, mime = msg["photo"][-1], "image/jpeg"
+    elif msg.get("voice"):
+        item, mime = msg["voice"], "audio/ogg"
+    elif msg.get("audio"):
+        item = msg["audio"]
+        mime = item.get("mime_type", "audio/mpeg")
+    elif msg.get("document"):
+        item = msg["document"]
+        mime = item.get("mime_type", "")
+    if not item:
+        out.send(chat_id, "Send text, a photo, PDF/text document, or a voice note.")
+        return
+    caption = msg.get("caption", "")
+    if looks_like_secret(caption):
+        out.delete(chat_id, msg.get("message_id"))
+        out.send(chat_id, "The caption appears to contain a secret. I did not process or save it.")
+        return
+    try:
+        mem.touch_user(uid, name)
+        if _over_cap(uid):
+            out.send(chat_id, "Today's free-tier message limit is reached.")
+            return
+        if item.get("file_size", 0) > cr_media.MAX_BYTES or mime not in cr_media.ALLOWED:
+            raise ValueError("Supported uploads up to 4 MB: photos, PDF/text/CSV and voice/audio.")
+        out.typing(chat_id)
+        f = api("getFile", file_id=item["file_id"])
+        path = f.get("file_path", "")
+        if not path or ".." in path or path.startswith("/"):
+            raise ValueError("Could not get the upload safely.")
+        if f.get("file_size", 0) > cr_media.MAX_BYTES:
+            raise ValueError("Upload exceeds the 4 MB limit.")
+        data = bytearray()
+        with _http.stream("GET", f"https://api.telegram.org/file/bot{C.TELEGRAM_TOKEN}/{path}") as r:
+            r.raise_for_status()
+            for chunk in r.iter_bytes():
+                data.extend(chunk)
+                if len(data) > cr_media.MAX_BYTES:
+                    raise ValueError("Upload exceeds the 4 MB limit.")
+        reply = cr_media.analyze(bytes(data), mime, caption)
+        mem.add_message(uid, "user", "[User sent media: " + mime + "] " + redact(caption))
+        mem.add_message(uid, "assistant", reply)
+        if hasattr(out, "meta"):
+            out.meta = {"media": mime, "bytes": len(data), "verified": bool(reply)}
+        out.send(chat_id, reply or "I couldn't read that clearly.")
+    except Exception as e:
+        out.send(chat_id, "I couldn't read that upload: " + redact(str(e))[:200])
