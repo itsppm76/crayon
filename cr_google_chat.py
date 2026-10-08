@@ -22,6 +22,8 @@ def show_draft(uid,chat,out,arg):
 
 def handle(uid,chat,text,msg,out):
     if text.strip().lower()=='enable calendar booking':
+        if msg and any(msg.get(k) for k in ('forward_origin','forward_from','via_bot')):
+            out.send(chat,'Calendar permission needs a direct owner request.');return True
         out.send(chat,'Reconnect only if you want calendar write permission. Review Google permissions: '+G.begin(uid,calendar_write=True)+'\nPrivate solo events only, exact preview before Create. Do not forward this account-bound link.')
         return True
     if re.fullmatch(r'(?i)(?:turn (?:on|off) email checks|email checks (?:on|off))',text.strip()):
