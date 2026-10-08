@@ -7,6 +7,7 @@ URL='https://www.googleapis.com/calendar/v3/calendars/primary/events'
 def init():
     db.q("CREATE TABLE IF NOT EXISTS google_calendar_drafts(id TEXT PRIMARY KEY,user_id BIGINT NOT NULL,encrypted_content TEXT NOT NULL,content_hash TEXT NOT NULL,status TEXT DEFAULT 'pending',expires_at TIMESTAMPTZ NOT NULL)",fetch='none')
 def validate(content):
+    if not isinstance(content,dict):raise G.GoogleError('Invalid calendar preview')
     if set(content)!={'account','summary','start','end','timezone'}:raise G.GoogleError('Unexpected calendar fields')
     if not isinstance(content['summary'],str) or not content['summary'].strip() or len(content['summary'])>100:raise G.GoogleError('Use a title of1-100 characters')
     from zoneinfo import ZoneInfo
