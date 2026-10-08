@@ -2,11 +2,11 @@
 
 # 🖍️ Crayon v1
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=2800&pause=900&color=FFC94C&center=true&vCenter=true&width=720&lines=A+Telegram+assistant+that+remembers.;Searches+the+web.+Runs+code.+Keeps+reminders.;Tracks+multi-day+tasks.+Admits+what+it+didn't+do." alt="Animated Crayon introduction" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=2800&pause=900&color=FFC97C&center=true&vCenter=true&width=720&lines=A+Telegram+assistant+that+remembers.;Searches+the+web.+Runs+code.+Keeps+reminders.;Tracks+multi-day+tasks.+Admits+what+it+didn't+do." alt="Animated Crayon introduction" />
 
 **A personal assistant on Telegram with persistent memory, live web search, sandboxed code, reminders, tracked tasks and honest safety rails. Runs entirely on free tiers.**
 
-![MIT license](https://img.shields.io/badge/license-MIT-FFC94C?style=for-the-badge)
+![MIT license](https://img.shields.io/badge/license-MIT-FFC97C?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Telegram](https://img.shields.io/badge/Telegram-long_polling-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
@@ -14,9 +14,9 @@
 ![Render](https://img.shields.io/badge/Render-free_tier-46E3B7?style=for-the-badge&logo=render&logoColor=black)
 ![Cost](https://img.shields.io/badge/cost-%240_free_tiers-22A06B?style=for-the-badge)
 
-![Codespaces](https://img.shields.io/badge/Codespaces-owner_beta-FFC94C?style=for-the-badge&logo=github)
+![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC97C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_docs_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-94_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-97_passed-22A06B?style=for-the-badge)
 
 [**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
@@ -83,7 +83,7 @@ flowchart TD
     SCH[cr_sched: polling scheduler] --> MEM
     SCH -->|due reminders, jobs, daily nudges| TG
     HOST[main.py: /health, /selftest] --> MEM
-    classDef yellow fill:#FFC94C,color:#2B2D31,stroke:#2B2D31
+    classDef yellow fill:#FFC97C,color:#2B2D31,stroke:#2B2D31
     classDef blue fill:#DDF1FF,color:#2B2D31,stroke:#3776AB
     class AG,LLM yellow
     class TG,TOOLS,WEB,SCH,HOST blue
@@ -220,7 +220,7 @@ MIT © 2026 Crayon contributors. Read [`LICENSE`](LICENSE).
 
 <div align="center">
 
-**Crayon Yellow `#FFC94C` · Charcoal `#2B2D31` · Slate `#6B7280`**
+**Crayon Yellow `#FFC97C` · Charcoal `#2B2D31` · Slate `#6B7280`**
 
 Small assistant. Honest status. Room to grow.
 
@@ -243,7 +243,7 @@ Small assistant. Honest status. Room to grow.
 | 🔎 Deep research | Bounded multi-source reads; comparison subject/context searches | Official Notion/Obsidian comparison retested; citations/model synthesis remain fallible |
 | 🧮 Conversions | Dated Frankfurter currency and Decimal unit conversion | Real currency/unit tests passed; not a live FX quote, fees excluded |
 | 📎 File output | CSV and non-negative bar chart PNG from supplied/checked data | Both received in real Telegram; delivered chart pixels checked |
-| 💻 Computer beta | Owner-only2-core Codespace, outbound bridge, bounded arithmetic/text-file tasks | Live status/calculation passed; no shared-user shell, no paid budget or auto-restart |
+| 💻 Computer beta | Approved-tester2-core Codespace, outbound bridge, bounded arithmetic/text-file tasks | Live status/calculation passed; no shared-user shell, no paid budget or auto-restart |
 | 📸 Browser beta | Fresh public Chromium, allowlist, two-page limit, screenshot and URL log | Real Python tutorial screenshot received in Telegram and visually inspected |
 
 ### Try it in plain language
@@ -266,10 +266,12 @@ Slash commands remain optional power controls: `/goal`, `/memory_review`, `/proa
 
 The owner's GitHub student allowance includes180core-hours, about90actual hours at2cores, and20GB-month storage. A$0 Codespaces budget with stop-usage was verified before creation. Compute is used while awake; storage while the Codespace exists. The outbound worker session stops after25minutes. Start the existing Codespace and worker manually; there is no automatic wake. Stop when finished. Never raise the budget as a workaround.
 
-Browser starts with public docs hosts only: Python, GitHub Docs, Notion, Obsidian and example.com. No imported account cookies, no forms, logins, posting, purchases, downloads or unrestricted scripts. Other bot users cannot borrow the owner's computer. Details: [COMPUTER_SETUP.md](COMPUTER_SETUP.md).
+Browser starts with public docs hosts only: Python, GitHub Docs, Notion, Obsidian and example.com. No imported account cookies, no forms, logins, posting, purchases, downloads or unrestricted scripts. Only approved testers can use browser/arithmetic. Owner files stay owner-only. Details: [COMPUTER_SETUP.md](COMPUTER_SETUP.md).
 
 ### Google connection rules
 
 Each user requests their own short link in their own private Crayon chat. Never forward an account-bound connection link. Choose your own named tester email and review Google's permissions. Invalid/used/expired states fail closed. `/disconnect_google` removes stored credentials and pending drafts and attempts Google revocation.
 
 Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
+
+Tester release2.24.0: owner+Sibi UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Uttiya not enabled until verified Telegram ID.97 local tests, tester behavior code-tested, not impersonated/live-tested as Sibi.
