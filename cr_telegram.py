@@ -126,6 +126,9 @@ def handle_update(upd, out=None):
             db.kv_set("tg_latest_"+str(uid), {"chat_id":chat_id,"message_id":msg.get("message_id"),
                 "media":any(msg.get(k) for k in ("photo","voice","audio","document","video","video_note","animation","sticker"))})
         text = msg.get("text")
+        if text and text.startswith(("/email_send", "/email_draft", "/connect_google")) and (msg.get("forward_origin") or msg.get("forward_from") or msg.get("via_bot")):
+            out.send(chat_id, "Google actions need a direct command from you, not forwarded content.")
+            return
         if any(msg.get(k) for k in ("photo","voice","audio","document","video","video_note","animation","sticker")) or not text:
             with mem.user_lock(uid):
                 _handle_media(uid, chat_id, name, msg, out)
