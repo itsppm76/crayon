@@ -59,7 +59,7 @@ def handle(uid,chat,text,out):
             if not note.strip():raise ValueError('Add a completion note.')
             r=T.update_step({'uid':uid},int(parts[2]),int(step),parts[1],note[:600])
             if not r['verified']:raise ValueError(r.get('error','Update unverified'))
-            out.send(chat,'Your completion note was saved. This is your reported result, not independently checked.\n\n'+render(uid))
+            out.send(chat,'Your status note was saved. This is your reported result, not independently checked.\n\n'+render(uid))
         else:raise ValueError('Use /tasks, add Title | steps, export, show ID, or done ID STEP | result.')
     except Exception as e:out.send(chat,'Task request not completed: '+str(e)[:200])
     return True
