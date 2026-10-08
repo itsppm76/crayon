@@ -246,3 +246,8 @@ Content-aware emoji reactions are chosen locally without model calls. Commands a
 - Slow text responses send timed progress notices. The shorter prompt keeps replies direct and plain.
 - In groups, exact @crayon_v1_bot mentions route to a separate conversation-only answer path. No private memory, Google or personal tools. Untagged messages are ignored; group context is not stored in personal memory. BotFather privacy is ENABLED and says username mentions are delivered. Real group delivery remains untested.
 - Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope security assessment are pending, not approved certification. No paid assessment has been initiated.
+
+### Conversation-first controls (2.18)
+Say `help` for examples and buttons, `connect Google`, `any new mail from Alex?`, `what's on my calendar?`, or `email alex@example.com saying the meeting moved to 5`. A missing recipient address is requested, never guessed. Drafts show exact account, recipient, subject and body. Review, then tap Send or say `send it`; `cancel` discards. One current reviewed draft, ten-minute expiry, no CC/BCC/attachments. Old buttons cannot send a replaced draft. Commands remain optional power controls. Google results bypass the model and permanent memory; only the user's intent text is parsed by the model.
+
+Groups receive messages with Telegram privacy disabled, but the application discards untagged/non-command messages before model/private-state use. Group answers have no private memory, tools or account actions. Welcome is emitted when Crayon is newly added. Live tagged reply and ignored untagged reply proven; welcome-on-add is not yet real-chat proven.
