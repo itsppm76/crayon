@@ -25,6 +25,14 @@ def run(body):
         if len(data) > cr_media.MAX_BYTES:
             return {"ok": False, "error": "fixture too large"}
         results.append({"media": fixture["mime"], "out": cr_media.analyze(data, fixture["mime"], fixture.get("caption", ""))})
+    if body.get("reaction_fixture"):
+        from unittest.mock import patch
+        out = tg.CaptureOut()
+        for text in ("Please build this", "Lets gooo", "thank you", "lol haha", "yes", "/help"):
+            upd = {"message":{"message_id":1,"chat":{"id":uid},"from":{"id":uid},"text":text}}
+            with patch.object(tg.A, "respond", return_value=("Captured test reply", {})):
+                tg.handle_update(upd,out)
+        results.append({"reactions":out.reactions,"note":"real transport is captured; no Telegram API calls"})
     if body.get("draft_fixture"):
         import cr_tools
         results.append({"draft": cr_tools.draft_message({"uid":uid}, "Sam", "Ask to reschedule a meeting; new time not chosen yet")})
