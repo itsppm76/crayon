@@ -111,3 +111,12 @@ October 8 23:15 IST live follow-up:
 -6workers is a code ceiling, not measured comfortable user capacity. Project-wide Gemini free quotas verified15/250k/500(primary),15/250k/500(fallback1),5/250k/20(fallback2). API requests are not chat replies.
 
 2.21.1 incident follow-up: owner forwarded own Google link; live DB/status confirmed Sibi Google under owner1898030949. Owner approved disconnect; bot confirmed Google revocation, credentials/drafts removal, independent DB empty +status none. Later7555366869 independently connected Sibi Google; untouched. No mailbox/calendar content retrieved for diagnosis. Historical 'Plz connect to my Google' missed deterministic alias and got a false general-model denial; added plz/pls/to variants and tests.81 tests pass. Short link live issuance and Google fixed-client redirect passed; invalid state400 passed. No new OAuth consent performed by agent. Files/research post-fix live proof remains pending due to incident priority.
+
+## Phase3 computer/browser and closure (Oct9,00:47IST)
+-2.23.1 live health;93 local tests pass, including progress race, owner-only computer/path/arithmetic checks and browser denylist cases.
+- M19: CSV50B/chart15.3KB received in owner Telegram. Delivered chart inspected at full size: Maths3/Finance5/Strategy2, clean labels, units and supplied-data disclaimer.
+- M17: initial retest still searched unrelated Obsidian Energy/Notion-vs-Monday. Fixed compared-name extraction preserving purpose context and official-source preference. Subsequent real retest uses Notion education/help and Obsidian/help. Model claim/citation synthesis remains fallible.
+- M20: GitHub Pro student, fresh Codespaces budget$0/Stop usageYes, consumed/billable$0 checked before creation. Created2-core Southeast Asia Linux Codespace, no public ports. Outbound worker dedicated bridge token, owner-only fixed operations,25-minute session cap, no auto-restart.
+- Real computer status +20*(3+2)/4 returned25. Real Chromium Python tutorial task delivered159KB crayon-browser.png and URL log to owner Telegram at00:47. Full delivered-image inspection pending.
+- Browser initial bridge failures produced fake model '(screenshot attached)' text with no attachment. Deterministic screenshot routing now requires verified result AND PNG bytes; fail-closed errors instead.
+- Remaining: real group welcome-on-add, real computer file create/read, full delivered browser pixel check, README rendered final inspection. Public Google verification still pending, no paid assessment initiated.
