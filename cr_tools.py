@@ -139,6 +139,87 @@ def cancel_reminder(ctx, id):
     return {"ok": ok, "verified": ok, "error": "" if ok else "no such pending reminder"}
 
 
+STEP_STATES = ("todo", "doing", "done", "blocked")
+
+
+def _task_view(uid, tid):
+    t = db.q("SELECT id,title,goal,status FROM tasks WHERE id=%s AND user_id=%s", (tid, uid), "one")
+    if not t:
+        return None
+    subs = db.q("SELECT pos,title,status,result FROM subtasks WHERE task_id=%s ORDER BY pos", (tid,))
+    return {"id": t["id"], "title": t["title"], "goal": t["goal"], "status": t["status"],
+            "steps": [{"n": x["pos"], "title": x["title"], "status": x["status"], "result": x["result"]} for x in subs],
+            "done": sum(1 for x in subs if x["status"] == "done"), "total": len(subs)}
+
+
+@tool("create_task",
+      "Start tracking a bigger goal as a task with ordered steps (subtasks) that persist across days. Break the goal into 2-8 concrete steps. Use when the user gives a multi-step goal or project.",
+      {"title": S, "goal": S, "steps": {"type": "array", "items": {"type": "string"}}}, ["title", "steps"], RISK_WRITE)
+def create_task(ctx, title, steps, goal=""):
+    steps = [str(x).strip()[:200] for x in (steps or []) if str(x).strip()][:8]
+    if not steps:
+        return {"ok": False, "verified": False, "error": "need at least one step"}
+    n = db.q("SELECT count(*) AS n FROM tasks WHERE user_id=%s AND status='active'", (ctx["uid"],), "one")["n"]
+    if n >= 10:
+        return {"ok": False, "verified": False, "error": "10 active tasks already; close one first"}
+    t = db.q("INSERT INTO tasks(user_id,chat_id,title,goal) VALUES(%s,%s,%s,%s) RETURNING id", (ctx["uid"], ctx["chat_id"], title.strip()[:150], goal.strip()[:500]), "one")
+    for i, st in enumerate(steps, 1):
+        db.q("INSERT INTO subtasks(task_id,pos,title) VALUES(%s,%s,%s)", (t["id"], i, st), "none")
+    v = _task_view(ctx["uid"], t["id"])
+    ok = bool(v and v["total"] == len(steps))
+    return {"ok": ok, "verified": ok, "task": v}
+
+
+@tool("list_tasks", "List the user's active tracked tasks with step status. Pass task_id for one task, or include_closed to see finished ones.",
+      {"task_id": {"type": "integer"}, "include_closed": {"type": "boolean"}})
+def list_tasks(ctx, task_id=None, include_closed=False):
+    if task_id:
+        v = _task_view(ctx["uid"], int(task_id))
+        return {"ok": bool(v), "verified": bool(v), "task": v, "error": "" if v else "no such task"}
+    rows = db.q("SELECT id FROM tasks WHERE user_id=%s" + ("" if include_closed else " AND status='active'") + " ORDER BY id DESC LIMIT 15", (ctx["uid"],))
+    return {"ok": True, "verified": True, "tasks": [_task_view(ctx["uid"], r["id"]) for r in rows]}
+
+
+@tool("update_step", "Update one step of a tracked task. status: todo, doing, done, blocked. Add a short 'result' note (what was found or decided). When all steps are done, the task is marked done automatically.",
+      {"task_id": {"type": "integer"}, "step": {"type": "integer"}, "status": S, "result": S}, ["task_id", "step", "status"], RISK_WRITE)
+def update_step(ctx, task_id, step, status, result=""):
+    if status not in STEP_STATES:
+        return {"ok": False, "verified": False, "error": "status must be todo, doing, done or blocked"}
+    t = db.q("SELECT id FROM tasks WHERE id=%s AND user_id=%s", (int(task_id), ctx["uid"]), "one")
+    if not t:
+        return {"ok": False, "verified": False, "error": "no such task"}
+    db.q("UPDATE subtasks SET status=%s, result=CASE WHEN %s<>'' THEN %s ELSE result END, updated_at=now() WHERE task_id=%s AND pos=%s",
+         (status, result.strip()[:500], result.strip()[:500], int(task_id), int(step)), "none")
+    db.q("UPDATE tasks SET updated_at=now() WHERE id=%s", (int(task_id),), "none")
+    v = _task_view(ctx["uid"], int(task_id))
+    s = next((x for x in v["steps"] if x["n"] == int(step)), None)
+    ok = bool(s and s["status"] == status)
+    if ok and v["total"] and v["done"] == v["total"] and v["status"] == "active":
+        db.q("UPDATE tasks SET status='done', updated_at=now() WHERE id=%s", (int(task_id),), "none")
+        v["status"] = "done"
+    return {"ok": ok, "verified": ok, "task": v, "error": "" if ok else "no such step"}
+
+
+@tool("close_task", "Close a tracked task as 'done' or 'cancelled'.", {"task_id": {"type": "integer"}, "status": S}, ["task_id", "status"], RISK_WRITE)
+def close_task(ctx, task_id, status):
+    if status not in ("done", "cancelled"):
+        return {"ok": False, "verified": False, "error": "status must be done or cancelled"}
+    db.q("UPDATE tasks SET status=%s, updated_at=now() WHERE id=%s AND user_id=%s", (status, int(task_id), ctx["uid"]), "none")
+    v = _task_view(ctx["uid"], int(task_id))
+    ok = bool(v and v["status"] == status)
+    return {"ok": ok, "verified": ok, "task": v}
+
+
+def open_tasks_block(uid):
+    rows = db.q("SELECT id,title FROM tasks WHERE user_id=%s AND status='active' ORDER BY id DESC LIMIT 6", (uid,))
+    out = []
+    for r in rows:
+        v = _task_view(uid, r["id"])
+        nxt = next((x for x in v["steps"] if x["status"] != "done"), None)
+        out.append(f"- #{r['id']} {r['title']} ({v['done']}/{v['total']} done" + (f"; next: step {nxt['n']} {nxt['title']} [{nxt['status']}]" if nxt else "") + ")")
+    return "\n".join(out)
+
+
 import cr_web as W
 
 
