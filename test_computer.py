@@ -23,3 +23,8 @@ def test_file_no_overwrite(tmp_path,monkeypatch):
     assert W.run('write_text',{'filename':'proof.txt','text':'hello'})['verified']
     assert W.run('read_text',{'filename':'proof.txt'})['text']=='hello'
     with pytest.raises(FileExistsError):W.run('write_text',{'filename':'proof.txt','text':'bad'})
+
+def test_browser_allowlist():
+    from computer_browser import allowed
+    for url in ('http://example.com','https://127.0.0.1','https://accounts.google.com','https://docs.github.com/login','https://docs.python.org:1234','https://example.com@evil.com'):
+        with pytest.raises(ValueError):allowed(url)
