@@ -122,6 +122,12 @@ def respond(uid, chat_id, text, name="", goal_mode=False):
             "\nUse tools to do the work, not merely describe it. Update a step as done only after a verified result "
             "supports its work. Mark impossible work blocked. Cite observed URLs. Never create reminders or jobs "
             "unless the original user asked for them. Stop at any confirmation. End with results and what remains.")
+    if re.fullmatch(r'(?i)(?:run )?world bank research chart demo[.!]?',text.strip()):
+        import cr_research_chart as RC
+        try:reply=RC.run(ctx);meta['tools'].append('world_bank_chart_chain')
+        except Exception as e:reply='Research chart not completed: '+str(e)[:180]
+        mem.add_message(uid,'assistant',reply)
+        return reply,meta
     if re.search(r'(?i)\b(browser|browse|screenshot)\b',text) and re.search(r'(?:https://[^\s<>]+|\b(?:[a-zA-Z0-9-]+\.)+(?:com|org|md)(?:/[^\s<>]*)?)',text):
         url=re.search(r'(?:https://[^\s<>]+|\b(?:[a-zA-Z0-9-]+\.)+(?:com|org|md)(?:/[^\s<>]*)?)',text).group().rstrip('.,);]')
         if not url.startswith('https://'):url='https://'+url
