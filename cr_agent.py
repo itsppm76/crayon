@@ -1,6 +1,7 @@
 """The agent loop: memory-aware prompt, native tool calling, honest failure handling."""
 import json
 import logging
+import re
 from datetime import datetime
 
 import cr_config as C
@@ -88,6 +89,9 @@ def respond(uid, chat_id, text, name=""):
             contents.append({"role": "user", "parts": resp_parts})
         if not reply:
             reply = "I got stuck producing an answer. Could you rephrase or try again?"
+        if not degraded and needs_check(text, reply, meta) and C.env("CRAYON_VERIFY", "1") == "1":
+            reply = verify_answer(uid, text, reply, contents, system, meta)
+        reply = honesty_guard(reply, meta)
     except llm.LLMError as e:
         log.error("llm failure: %s", redact(str(e)))
         reply = friendly_llm_error(e)
@@ -102,10 +106,61 @@ def respond(uid, chat_id, text, name=""):
     try:
         if not degraded:
             mem.add_message(uid, "assistant", reply)
-            mem.extract_async(uid, text, reply)
+            if 'remember' not in meta['tools']:
+                mem.extract_async(uid, text, reply)
     except Exception:
         pass
     return reply, meta
+
+
+CLAIM_RE = re.compile(r"\b(i(?:'ve| have)? (?:saved|set|created|added|deleted|removed|cancelled|canceled|scheduled|updated|remembered|noted)|(?:saved|set|scheduled|done|deleted|removed|cancelled)\b.*\b(reminder|note|task|memory))", re.I)
+FACT_Q_RE = re.compile(r"\b(how|what|why|when|where|who|which|explain|difference|steps?|best way|is it|are there|can i|should i|does|do you know|latest|price|cost|version|how many|how much)\b", re.I)
+
+CRITIC_PROMPT = """You are a strict fact-checker for a chat assistant. Question and draft answer follow.
+Judge ONLY: does the draft contain claims that are likely wrong, outdated, invented (fake names, numbers, URLs, quotes) or overconfident?
+Return JSON: {"verdict":"ok|revise|unsure","issues":"one short sentence","fix":"what a correct answer should do differently"}
+- ok: correct or opinion/chit-chat/creative, nothing checkable looks wrong.
+- revise: you are confident something is wrong; say what.
+- unsure: depends on current/live facts or specifics you cannot verify.
+
+QUESTION: {q}
+DRAFT: {a}"""
+
+
+def needs_check(text, reply, meta):
+    if meta["tools"] or len(reply) < 40 or len(text) < 18:
+        return False
+    return bool(FACT_Q_RE.search(text)) or "?" in text
+
+
+def verify_answer(uid, text, reply, contents, system, meta):
+    """Cheap self-check before sending a factual/how-to answer. One critic call, at most one revision."""
+    v = llm.ask_json(CRITIC_PROMPT.replace("{q}", text[:1200]).replace("{a}", reply[:2500]), default=None)
+    if not isinstance(v, dict):
+        meta["verify"] = "skipped"
+        return reply
+    verdict = str(v.get("verdict", "ok")).lower()
+    meta["verify"] = verdict
+    if verdict == "revise":
+        note = f"\n\nSelf-check found a problem with your draft: {v.get('issues','')} {v.get('fix','')}\nWrite a corrected answer. If you cannot be sure, say so plainly instead of guessing."
+        try:
+            out = llm.generate(contents + [llm.model_msg(reply), llm.user("Revise your last answer." + note)], system=system, thinking_budget=0)
+            return out["text"] or reply
+        except llm.LLMError:
+            return reply + "\n\n(Heads-up: my self-check flagged part of this as possibly wrong, so treat it with caution.)"
+    if verdict == "unsure":
+        return reply + "\n\n(I couldn't verify this against a live source, so double-check anything important.)"
+    return reply
+
+
+def honesty_guard(reply, meta):
+    """Never let a reply claim an action that no verified tool result backs."""
+    if meta["failed"]:
+        names = ", ".join(sorted(set(meta["failed"])))
+        return reply + f"\n\n(Heads-up: {names} did not complete or could not be verified, so don't count on it.)"
+    if not meta["tools"] and CLAIM_RE.search(reply):
+        return "I haven't actually done anything yet, no action ran on my side. " + "Tell me exactly what to save or set and I'll do it and confirm."
+    return reply
 
 
 def friendly_llm_error(e):
