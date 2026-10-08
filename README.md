@@ -15,8 +15,8 @@
 ![Cost](https://img.shields.io/badge/cost-%240_free_tiers-22A06B?style=for-the-badge)
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
-![Browser](https://img.shields.io/badge/Chromium-public_docs_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-97_passed-22A06B?style=for-the-badge)
+![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
+![Tests](https://img.shields.io/badge/local_tests-102_passed-22A06B?style=for-the-badge)
 
 [**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
@@ -244,7 +244,7 @@ Small assistant. Honest status. Room to grow.
 | 🧮 Conversions | Dated Frankfurter currency and Decimal unit conversion | Real currency/unit tests passed; not a live FX quote, fees excluded |
 | 📎 File output | CSV and non-negative bar chart PNG from supplied/checked data | Both received in real Telegram; delivered chart pixels checked |
 | 💻 Computer beta | Approved-tester2-core Codespace, outbound bridge, bounded arithmetic/text-file tasks | Live status/calculation passed; no shared-user shell, no paid budget or auto-restart |
-| 📸 Browser beta | Fresh public Chromium, allowlist, two-page limit, screenshot and URL log | Real Python tutorial screenshot received in Telegram and visually inspected |
+| 📸 Browser beta | Fresh public Chromium, public-IP checks, sensitive-portal backstop, two-page limit, screenshot and URL log | Python tutorial, Instagram login wall and signed-out YouTube screenshots received in Telegram and visually inspected |
 
 ### Try it in plain language
 
@@ -258,6 +258,8 @@ Go deep on a comparison of Notion and Obsidian for student notes.
 Convert10 USD to INR.
 Create a CSV and chart using Maths3, Finance5, Strategy2 hours.
 On my computer browser, open https://docs.python.org/3/tutorial/ and send a screenshot.
+Visit https://www.instagram.com and send a screenshot of the login wall.
+Run world bank research chart demo.
 ```
 
 Slash commands remain optional power controls: `/goal`, `/memory_review`, `/proactive`, `/digest`, `/quiet_hours`, `/connect_google`, `/google_status`, `/disconnect_google`, `/gmail`, `/gmail_read`, `/calendar` and review-only email commands.
@@ -266,7 +268,11 @@ Slash commands remain optional power controls: `/goal`, `/memory_review`, `/proa
 
 The owner's GitHub student allowance includes180core-hours, about90actual hours at2cores, and20GB-month storage. A$0 Codespaces budget with stop-usage was verified before creation. Compute is used while awake; storage while the Codespace exists. The outbound worker session stops after25minutes. Start the existing Codespace and worker manually; there is no automatic wake. Stop when finished. Never raise the budget as a workaround.
 
-Browser starts with public docs hosts only: Python, GitHub Docs, Notion, Obsidian and example.com. No imported account cookies, no forms, logins, posting, purchases, downloads or unrestricted scripts. Only approved testers can use browser/arithmetic. Owner files stay owner-only. Details: [COMPUTER_SETUP.md](COMPUTER_SETUP.md).
+Browser can visit public HTTPS sites, including Instagram and YouTube. Login/access walls are captured honestly. Known banking, webmail, patient and transaction portals are blocked by hostname/path rules; this backstop is not a perfect category classifier. No imported account cookies, no forms, logins, posting, purchases, downloads or unrestricted scripts. Only approved testers can use browser/arithmetic. Owner files stay owner-only. Details: [COMPUTER_SETUP.md](COMPUTER_SETUP.md).
+
+### Official-source research-to-chart demo
+
+`Run world bank research chart demo` reads the official World Bank API for India, China and the United States,2024 GDP per capita in current US dollars. It validates country/year/indicator/value before generating a CSV and chart, then returns source screenshot, findings and an action log. Real Telegram chain passed. This is one fixed recipe, not arbitrary research automation. Missing, duplicate or mismatched records fail closed. Nominal GDP per person is not personal income, purchasing power or a living-standard ranking. Requires the computer to be awake.
 
 ### Google connection rules
 
@@ -274,4 +280,4 @@ Each user requests their own short link in their own private Crayon chat. Never 
 
 Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
 
-Tester release2.24.0: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.97 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.102 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
