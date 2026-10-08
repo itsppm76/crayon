@@ -30,7 +30,7 @@ def test_mail_metadata_only_dedup(monkeypatch):
     monkeypatch.setattr(G,'request',req)
     state={'email':'me@example.com','since':100,'seen':[]}
     text,state=W.scan(W.OWNER,state)
-    assert 'May need attention' in text and 'FYI:' in text and 'Excerpt: Bounded source excerpt' in text
+    assert 'POSSIBLE ATTENTION' in text and 'OTHER RECENT MAIL' in text and 'Bounded source excerpt' in text
     assert all(p.get('format')=='metadata' for u,p in calls if not u.endswith('/messages'))
     assert W.scan(W.OWNER,state)[0]==''
 def test_mail_quiet_and_off(monkeypatch):
