@@ -20,7 +20,7 @@ def _strip(s):
 
 
 def _ddg(query, n=5):
-    r = _c.get("https://html.duckduckgo.com/html/", params={"q": query}, headers=BROWSER_UA)
+    r = _c.get("https://html.duckduckgo.com/html/", params={"q": query}, headers=BROWSER_UA, timeout=5.0)
     if r.status_code != 200:
         raise RuntimeError(f"search provider HTTP {r.status_code}")
     out = []
@@ -88,7 +88,7 @@ def run_code(task):
 
 
 def _mojeek(query, n=5):
-    r = _c.get("https://www.mojeek.com/search", params={"q": query}, headers=BROWSER_UA)
+    r = _c.get("https://www.mojeek.com/search", params={"q": query}, headers=BROWSER_UA, timeout=5.0)
     if r.status_code != 200:
         raise RuntimeError(f"mojeek HTTP {r.status_code}")
     out = []
