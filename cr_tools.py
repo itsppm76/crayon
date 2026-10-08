@@ -353,12 +353,12 @@ def create_bar_chart(ctx,title,labels,values,unit=''):
     return {'ok':True,'verified':True,'bars':len(labels),'note':'Generated in memory, delivery will follow reply. Do not claim Telegram delivery yet. Supplied data not independently verified.'}
 
 
-@tool("computer_status", "Check owner's connected virtual computer. Other users cannot use it.")
+@tool("computer_status", "Check owner's connected virtual computer. Approved testers see only awake/asleep, not machine details.")
 def computer_status(ctx):
     import cr_computer as K
     return K.status(ctx['uid'])
 
-@tool("computer_task", "Owner-only virtual computer: basic arithmetic (calculate), list_files, read_text, write_text to create a NEW text file. Use these exact operation names. No shell, imports, secrets, private accounts, deletes or overwrites. Use only when user explicitly asks to use the computer.",
+@tool("computer_task", "Computer beta: text files owner-only, approved testers browser/arithmetic only: basic arithmetic (calculate), list_files, read_text, write_text to create a NEW text file. Use these exact operation names. No shell, imports, secrets, private accounts, deletes or overwrites. Use only when user explicitly asks to use the computer.",
       {"operation":{"type":"string","enum":["status","calculate","write_text","read_text","list_files"],"description":"Exact operation name. write_text requires filename and text; read_text requires filename; calculate requires expression."},"args":{"type":"object","properties":{"filename":S,"text":S,"expression":S}}},["operation","args"])
 def computer_task(ctx,operation,args):
     import cr_computer as K
@@ -366,7 +366,7 @@ def computer_task(ctx,operation,args):
     return K.execute(ctx['uid'],operation,args)
 
 
-@tool("computer_browse", "Owner-only fresh browser on the connected computer. Public documentation allowlist: docs.python.org, www.python.org, docs.github.com, www.notion.com, notion.com, obsidian.md, help.obsidian.md, example.com. No login/forms/purchases. One URL and optional visible link text to follow, maximum2 pages. Returns screenshot to Telegram and plain action log.",
+@tool("computer_browse", "Approved-tester fresh browser on the connected computer. Public documentation allowlist: docs.python.org, www.python.org, docs.github.com, www.notion.com, notion.com, obsidian.md, help.obsidian.md, example.com. No login/forms/purchases. One URL and optional visible link text to follow, maximum2 pages. Returns screenshot to Telegram and plain action log.",
       {"url":S,"follow_link_text":S},["url"])
 def computer_browse(ctx,url,follow_link_text=''):
     import cr_computer as K,base64
