@@ -25,10 +25,25 @@ def run(body):
         if len(data) > cr_media.MAX_BYTES:
             return {"ok": False, "error": "fixture too large"}
         results.append({"media": fixture["mime"], "out": cr_media.analyze(data, fixture["mime"], fixture.get("caption", ""))})
+    if body.get("seed_reminder"):
+        from datetime import datetime, timezone, timedelta
+        mem.touch_user(uid)
+        db.q("INSERT INTO reminders(user_id,chat_id,text,due_at) VALUES(%s,%s,%s,%s)",
+            (uid,uid,"Synthetic reminder",datetime.now(timezone.utc)+timedelta(minutes=60)),"none")
     if body.get("proactive_tick"):
         import cr_proactive
         out = tg.CaptureOut()
-        sent = cr_proactive.tick(out, only_user=uid)
+        # Controlled synthetic clock lets digest windows be verified without touching a real user.
+        from unittest.mock import patch
+        from datetime import datetime
+        import cr_tools
+        clock = body.get("synthetic_hour")
+        if clock is not None and 0 <= int(clock) <= 23:
+            n = cr_tools.now_local(uid).replace(hour=int(clock))
+            with patch.object(cr_tools, "now_local", return_value=n):
+                sent = cr_proactive.tick(out, only_user=uid)
+        else:
+            sent = cr_proactive.tick(out, only_user=uid)
         results.append({"proactive_sent": sent, "out": [m["text"] for m in out.sent]})
     if body.get("tick"):
         import cr_sched
