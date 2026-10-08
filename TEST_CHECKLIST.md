@@ -71,3 +71,9 @@ Runtime tests cover goal execution, invalid-tool handling, media size/type limit
 - Local tests: 20 MB rejection boundary, unknown format receipt, safe ZIP listing, DOCX XML extraction, entity rejection, secret blocking, text truncation disclosure, video/caption routing, and final plain-text cleanup.
 - Live verified in owner Telegram chat: new Yooooo fire reaction; photo red square + CRAYON TEST 42; immediate receipt and both timed progress lines; clean plain text; DOCX OCEAN 73; 5,880,039-byte text file LARGE 81 with truncation notice; later photo follow-up answered CRAYON TEST 42.
 - Still pending live: video/large-binary Files API upload and confirmed deletion, exact 20 MB boundary, more formats. A real 15-second user MP4 (3,666,841 bytes) was read successfully through Files API; its event-ad text and summary were delivered at 22:47 IST. Independent provider deletion check remains pending.
+
+M13 Google beta, October 8:
+- 37 local tests pass, including user-bound encryption, replay, wrong-user draft access, tamper, timeout-no-retry and private-chat gate.
+- Cloud client created; API enablement, scopes, Render secrets and live OAuth/read/disconnect verification still pending.
+- Real email send is NOT tested; requires owner review of final recipient/content before any live send.
+- Public verification and security assessment are NOT complete. No paid assessment authorized.
