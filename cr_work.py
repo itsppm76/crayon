@@ -8,7 +8,8 @@ SCHEMA="""CREATE TABLE IF NOT EXISTS work_jobs(
  title TEXT NOT NULL,steps JSONB NOT NULL,status TEXT NOT NULL DEFAULT 'queued',
  results JSONB NOT NULL DEFAULT '[]'::jsonb,created_at TIMESTAMPTZ DEFAULT now(),
  updated_at TIMESTAMPTZ DEFAULT now(),notified BOOLEAN DEFAULT false,error TEXT DEFAULT '');
- ALTER TABLE work_jobs ADD COLUMN IF NOT EXISTS error TEXT DEFAULT ''; 
+ ALTER TABLE work_jobs ADD COLUMN IF NOT EXISTS error TEXT DEFAULT '';
+ ALTER TABLE work_jobs ADD COLUMN IF NOT EXISTS delivery_state TEXT DEFAULT 'pending'; 
  CREATE INDEX IF NOT EXISTS work_queue ON work_jobs(status,created_at);"""
 OPS={'research','page','calculate','brief'}
 def init():db.q(SCHEMA,(),'none')
@@ -74,6 +75,7 @@ def view(row):
     for i,step in enumerate(row['steps'],1):
         lines.append(f"{i}. {step['op']}: {step['input']}"+(' [receipt saved]' if i<=len(results) else ' [not completed]'))
     if row.get('error'):lines+=['Failure: '+row['error']]
+    if row.get('delivery_state') in ('sending','uncertain'):lines+=['Notification delivery uncertain. Results remain available with /work show ID; no automatic resend.']
     for i,result in enumerate(results,1):lines+=['Step '+str(i)+' evidence:',result['text']]
     if row.get('status')=='blocked':lines+=['Stopped without retry. Inspect the failure, then queue a new job only if needed.']
     return '\n'.join(lines)[:14500]
@@ -143,9 +145,24 @@ def tick(out,only_user=None):
         with P.mem.user_lock(uid):
             fresh=get(uid,item['id'])
             if not fresh or fresh['notified']:continue
-            out.send(item['chat_id'],view(fresh))
-            db.q('UPDATE work_jobs SET notified=true WHERE id=%s',(item['id'],),'none')
+            claimed=db.q("UPDATE work_jobs SET notified=true,delivery_state='sending' WHERE id=%s AND NOT notified RETURNING id",(item['id'],),'one')
+            if not claimed:continue
+            try:
+                out.send(item['chat_id'],view(fresh))
+                db.q("UPDATE work_jobs SET delivery_state='sent' WHERE id=%s",(item['id'],),'none')
+            except Exception:
+                db.q("UPDATE work_jobs SET delivery_state='uncertain' WHERE id=%s",(item['id'],),'none')
+                # A transport timeout may already have sent it. Never repeat automatically.
     return row['id'] if row else None
+
+def controls_markup(row):
+    ident=str(row['id']);status=row['status']
+    buttons=[{'text':'Show results','callback_data':'work:show:'+ident}]
+    if status in ('queued','running'):buttons.append({'text':'Pause','callback_data':'work:pause:'+ident})
+    if status=='paused':buttons.append({'text':'Resume','callback_data':'work:resume:'+ident})
+    if status in ('queued','running','pausing','paused','blocked'):buttons.append({'text':'Cancel work','callback_data':'work:cancel:'+ident})
+    if row.get('results'):buttons.append({'text':'Export report','callback_data':'work:export:'+ident})
+    return {'inline_keyboard':[buttons[i:i+2] for i in range(0,len(buttons),2)]}
 
 def handle(uid,chat,text,out):
     if text.strip().lower() in ('my work queue','show my work queue'):text='/work list'
@@ -157,8 +174,9 @@ def handle(uid,chat,text,out):
         init()
         if op in ('research','page','calculate','brief','plan'):
             arg=(text[len('/work plan '):] if op=='plan' else text[len('/work '):])
-            row=create(uid,chat,arg);out.send(chat,view(row)+'\nQueued for bounded internal work. Completion respects quiet hours. Use /work pause ID, resume ID, cancel ID or show ID.')
-        elif op in ('pause','resume','cancel'):out.send(chat,view(control(uid,int(bits[2]),op)))
+            row=create(uid,chat,arg);out.send(chat,view(row)+'\nQueued for bounded internal work. Completion respects quiet hours.',markup=controls_markup(row))
+        elif op in ('pause','resume','cancel'):
+            row=control(uid,int(bits[2]),op);out.send(chat,view(row),markup=controls_markup(row))
         elif op=='export':
             row=get(uid,int(bits[2]))
             if not row:raise ValueError('No such work in your account')
@@ -173,7 +191,7 @@ def handle(uid,chat,text,out):
         elif op=='show':
             row=get(uid,int(bits[2]))
             if not row:raise ValueError('No such work in your account')
-            out.send(chat,view(row))
+            out.send(chat,view(row),markup=controls_markup(row))
         elif op=='list':
             rows=db.q('SELECT * FROM work_jobs WHERE user_id=%s ORDER BY created_at DESC LIMIT 8',(uid,))
             out.send(chat,'Your work queue:\n'+('\n'.join(f"#{r['id']} {r['status']}: {r['title']} ({len(r['results'])}/{len(r['steps'])})" for r in rows) if rows else 'No work queued.')+'\nTry /work brief a public assignment topic, /work calculate 20*(3+2)/4 or /work research a public topic. Multi-step: /work plan Title | research topic | calculate 2+2. Results are source receipts or exact arithmetic, not a general autonomous agent.')
