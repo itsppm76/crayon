@@ -1,9 +1,22 @@
 # Roadmap
 
-1. Replace `InMemoryMemory` with a Supabase repository using encrypted token storage and explicit RLS tests.
-2. Complete OAuth callback plus Calendar/Gmail read-only tools and live integration tests with a test Google account.
-3. Add durable scheduler for reminders and optional morning summaries.
-4. Add structured native tool-call parsing, rate limiting, audit log, and strict five-call loop enforcement.
-5. Finish draft objects and approval replay protection; only then consider narrowly scoped writes.
-6. Move long polling from Colab to an always-on free/low-cost host; keep a local Ollama or free API fallback.
-7. Build a web adapter that calls `core.Agent` without changing business logic.
+## Done and live (milestones M1-M6)
+
+- [x] Telegram bot hosted on Render (free tier), long polling
+- [x] Persistent memory in Neon Postgres: facts, preferences and projects recalled across chats
+- [x] Gemini 2.5 Flash as the model, with Flash-Lite as fallback
+- [x] Web search through Tavily, with DuckDuckGo, Mojeek and Wikipedia fallbacks, plus a page reader
+- [x] Sandboxed Python code execution
+- [x] Reminders and scheduled self-running jobs, delivered by a polling scheduler
+- [x] Multi-day tracked tasks with subtasks, progress injection and daily check-in nudges
+- [x] Confirmation before irreversible actions, secret auto-deletion, honesty guard against unbacked "done" claims
+- [x] `/health` and token-protected `/selftest` endpoints
+- [x] Per-user daily message cap and audit log
+
+## Not built yet
+
+- [ ] Read-only Gmail and Calendar tools (the OAuth helper in `core/` is unused groundwork)
+- [ ] Any external write action (sending mail, creating events) with draft and approval flow
+- [ ] A web adapter that shares the same agent core
+- [ ] Webhook mode (polling is the deliberate current choice)
+- [ ] Automated CI for the test suite
