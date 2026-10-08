@@ -80,7 +80,9 @@ def _loop():
     while True:
         try:
             tick()
-            nudge()
+            # Opt-in check-ins replace the old unsolicited per-task nudge.
+            import cr_proactive, cr_telegram
+            cr_proactive.tick(cr_telegram.Out())
         except Exception as e:
             log.warning("tick failed: %s", redact(f"{type(e).__name__}: {e}")[:200])
         time.sleep(20)
