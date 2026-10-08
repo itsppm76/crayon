@@ -24,9 +24,9 @@ def test_file_no_overwrite(tmp_path,monkeypatch):
     assert W.run('read_text',{'filename':'proof.txt'})['text']=='hello'
     with pytest.raises(FileExistsError):W.run('write_text',{'filename':'proof.txt','text':'bad'})
 
-def test_browser_allowlist():
+def test_browser_public_safety():
     from computer_browser import allowed
-    for url in ('http://example.com','https://127.0.0.1','https://accounts.google.com','https://docs.github.com/login','https://docs.python.org:1234','https://example.com@evil.com'):
+    for url in ('http://example.com','https://127.0.0.1','https://accounts.google.com','https://paypal.com','https://docs.python.org:1234','https://example.com@evil.com'):
         with pytest.raises(ValueError):allowed(url)
 
 
@@ -54,3 +54,12 @@ def test_execution_cap_failclosed(monkeypatch):
     monkeypatch.setattr(K,'status',lambda uid:{'ok':True})
     monkeypatch.setattr(K,'reserve',lambda uid:False)
     assert not K.execute(7555366869,'calculate',{'expression':'2+2'})['ok']
+
+
+def test_public_social_and_login_walls_allowed(monkeypatch):
+    import computer_browser as B
+    monkeypatch.setattr(B.socket,'getaddrinfo',lambda *a:[(0,0,0,'',('1.1.1.1',443))])
+    for url in ('https://www.instagram.com/accounts/login/','https://www.youtube.com','https://docs.github.com/login'):
+        assert B.allowed(url)==url
+    for url in ('https://mail.google.com','https://chase.com','https://x.com/checkout','https://example.com/patient'):
+        with pytest.raises(ValueError):B.allowed(url)
