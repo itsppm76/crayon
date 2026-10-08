@@ -93,6 +93,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         n = int(self.headers.get("Content-Length") or 0)
+        if n>1500000:return self._send(413,"too large")
         raw = self.rfile.read(n) if n else b""
         try:
             body = json.loads(raw or b"{}")
@@ -103,7 +104,7 @@ class Handler(BaseHTTPRequestHandler):
             token=C.env('CRAYON_BRIDGE_TOKEN')
             got=self.headers.get('Authorization','').removeprefix('Bearer ')
             if not token or not hmac.compare_digest(got,token):return self._send(403,'forbidden')
-            if n>25000:return self._send(413,'too large')
+            if n>1500000:return self._send(413,'too large')
             try:
                 if self.path=='/computer/next':result=K.next_job(body)
                 else:K.complete(body['id'],body['result']);result={'ok':True}
