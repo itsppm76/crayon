@@ -55,7 +55,7 @@ def build_system(uid, extra=""):
 
 def respond(uid, chat_id, text, name=""):
     """Handle one user message. Returns (reply_text, meta)."""
-    meta = {"tools": [], "failed": [], "model": ""}
+    meta = {"tools": [], "failed": [], "model": "", "user_text": text}
     degraded = False
     try:
         mem.touch_user(uid, name)
@@ -128,7 +128,12 @@ QUESTION: {q}
 DRAFT: {a}"""
 
 
+RECALL_RE = re.compile(r"\b(discuss|discussed|chat|chatted|talk|talked|said|told|earlier|so far|recap|summar|remind me what|conversation|history|yesterday|today we)\b", re.I)
+
+
 def needs_check(text, reply, meta):
+    if RECALL_RE.search(text):
+        return False
     if meta["tools"] or len(reply) < 40 or len(text) < 18:
         return False
     return bool(FACT_Q_RE.search(text)) or "?" in text
@@ -145,7 +150,7 @@ def verify_answer(uid, text, reply, contents, system, meta):
     if verdict == "revise":
         note = f"\n\nSelf-check found a problem with your draft: {v.get('issues','')} {v.get('fix','')}\nWrite a corrected answer. If you cannot be sure, say so plainly instead of guessing."
         try:
-            out = llm.generate(contents + [llm.model_msg(reply), llm.user("The user has NOT seen your draft. Write the final answer to their last question now, as if for the first time, without mentioning any draft or revision." + note)], system=system, thinking_budget=0)
+            out = llm.generate(contents + [llm.model_msg(reply), llm.user("The user has NOT seen your draft. Write the final answer to their last question now, using the whole conversation above, without mentioning any draft or revision." + note)], system=system, thinking_budget=0)
             return out["text"] or reply
         except llm.LLMError:
             return reply + "\n\n(Heads-up: my self-check flagged part of this as possibly wrong, so treat it with caution.)"
@@ -159,7 +164,7 @@ def honesty_guard(reply, meta):
     if meta["failed"]:
         names = ", ".join(sorted(set(meta["failed"])))
         return reply + f"\n\n(Heads-up: {names} did not complete or could not be verified, so don't count on it.)"
-    if not meta["tools"] and CLAIM_RE.search(reply):
+    if not meta["tools"] and CLAIM_RE.search(reply) and not RECALL_RE.search(meta.get("user_text", "")):
         return "I haven't actually done anything yet, no action ran on my side. " + "Tell me exactly what to save or set and I'll do it and confirm."
     return reply
 
