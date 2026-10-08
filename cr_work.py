@@ -82,7 +82,7 @@ def control(uid,ident,op):
     allowed={'pause':('queued','running'),'resume':('paused',),'cancel':('queued','running','pausing','paused','blocked')}
     if op not in allowed or row['status'] not in allowed[op]:raise ValueError('That control does not apply to this work state.')
     status={'pause':('pausing' if row['status']=='running' else 'paused'),'resume':'queued','cancel':'cancelled'}[op]
-    db.q('UPDATE work_jobs SET status=%s,updated_at=now() WHERE id=%s AND user_id=%s',(status,ident,uid),'none')
+    db.q('UPDATE work_jobs SET status=%s,updated_at=now() WHERE id=%s AND user_id=%s AND status=%s',(status,ident,uid,row['status']),'none')
     return get(uid,ident)
 
 def step_run(step):
