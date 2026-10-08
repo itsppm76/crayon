@@ -188,6 +188,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     aliases={"help":"/help","connect google":"/connect_google","disconnect google":"/disconnect_google","google status":"/google_status","what do you remember about me?":"/memory","what do you remember about me":"/memory","show my memory":"/memory","memory review":"/memory_review","turn on daily check-ins":"/proactive on","turn off daily check-ins":"/proactive off","morning digest":"/digest morning","evening digest":"/digest evening","turn off digests":"/digest off","my digest":"/digest_now"}
     if plain=="privacy options":
         out.send(chat_id,"You can say 'show my memory' to review saved facts, or ask me to forget a specific fact. To remove all stored personal data and Google access, use the delete option below.",markup={"inline_keyboard":[[{"text":"Review memory","callback_data":"ux:memory"},{"text":"Delete my data","callback_data":"ux:delete_review"}]]});return
+    if __import__('re').fullmatch(r"(?:please )?(?:connect|link|reconnect)(?: my)? (?:google|gmail)(?: account)?(?: please)?[.!?]*",plain) or plain in ('how do i connect google','how to connect google','i want to connect google','connect my google account'):
+        plain='connect google'
     text=aliases.get(plain,text)
     if not text.startswith('/') and chat_id==uid:
         import cr_google_chat
@@ -199,7 +201,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     arg = arg.strip()
     if cmd == "/start":
         mem.touch_user(uid, name)
-        out.send(chat_id, f"Hi{' ' + name if name else ''}, I'm Crayon. I remember what matters about you now, even after restarts. Just tell me what you need, or say 'help'.")
+        out.send(chat_id, f"Hi{' ' + name if name else ''}, I'm Crayon. I remember what matters about you now, even after restarts. Just tell me what you need, or say 'help'. To link your account, type 'connect Google'. No button needed.")
     elif cmd == "/help":
         out.send(chat_id, HELP, markup={"keyboard":[[{"text":"My reminders"},{"text":"My tasks"}],[{"text":"Show my memory"},{"text":"Privacy options"}],[{"text":"Connect Google"},{"text":"Help"}]],"resize_keyboard":True,"one_time_keyboard":True})
     elif cmd == "/goal":
@@ -222,7 +224,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             if cmd != "/disconnect_google" and not G.configured():
                 raise G.GoogleError("Google setup is not active yet")
             if cmd == "/connect_google":
-                out.send(chat_id, "Google testing mode: only named test users can connect; reconnect after 7 days. Read the privacy policy before connecting: " + C.PUBLIC_URL + "/privacy\nMailbox/calendar results are shown in this private Telegram chat, not sent to the AI model or permanent memory. Tokens are encrypted. Sending always needs an exact draft confirmation.\nConnect your own account: " + G.begin(uid))
+                out.send(chat_id, "Open this link to connect your own Google account:\n" + G.begin(uid) + "\n\nChoose your whitelisted Google email, then review Google's permissions. This link works even if you don't see a Connect Google button.\n\nCrayon is in testing mode: only approved tester emails can connect, and access may need renewing after 7 days. Mail/calendar results stay in this private chat and aren't sent to the AI model or permanent memory. Tokens are encrypted. I show each email draft before you approve sending.\n\nPrivacy: " + C.PUBLIC_URL + "/privacy\nYou can always type 'connect Google' or /connect_google to get a fresh link.")
             elif cmd == "/disconnect_google":
                 r=G.disconnect(uid)
                 out.send(chat_id, "Stored Google credentials and pending drafts removed. " + ("Google revocation confirmed." if r["revoked"] else "Google revocation was not confirmed; remove Crayon access in your Google account too."))
