@@ -29,4 +29,4 @@ def test_group_tools_disabled(monkeypatch):
         assert 'no private memory' in system
         return {'text':'Hi'}
     monkeypatch.setattr(G.llm,'generate',gen)
-    assert G.answer({'text':'@crayon_v1_bot hi'})=='Hi'
+    assert G.answer({'text':'@crayon_v1_bot explain gravity'})=='Hi'
