@@ -122,6 +122,21 @@ def handle_update(upd, out=None):
         chat_id = msg["chat"]["id"]
         uid = msg["from"]["id"]
         name = (msg["from"].get("first_name") or "").strip()
+        if msg["chat"].get("type") in ("group","supergroup"):
+            import cr_group
+            if not cr_group.mentioned(msg):return
+            finished=threading.Event()
+            def group_progress():
+                for delay,line in ((12,"On it. Give me a moment."),(25,"Still working on it. I'll send the answer when it's ready.")):
+                    if finished.wait(delay):return
+                    try:out.send(chat_id,line)
+                    except Exception:pass
+            threading.Thread(target=group_progress,daemon=True).start()
+            try:
+                out.typing(chat_id)
+                out.send(chat_id,cr_group.answer(msg))
+            finally:finished.set()
+            return
         if uid > 0:
             db.kv_set("tg_latest_"+str(uid), {"chat_id":chat_id,"message_id":msg.get("message_id"),
                 "media":any(msg.get(k) for k in ("photo","voice","audio","document","video","video_note","animation","sticker"))})
@@ -134,7 +149,16 @@ def handle_update(upd, out=None):
                 _handle_media(uid, chat_id, name, msg, out)
             return
         with mem.user_lock(uid):
-            _handle_text(uid, chat_id, name, text, msg.get("message_id"), out)
+            finished=threading.Event()
+            def progress():
+                for delay,line in ((12,"On it. Give me a moment."),(25,"Still working on it. I'll send the answer when it's ready."),(35,"This is taking longer than usual. I'm still checking.")):
+                    if finished.wait(delay):return
+                    try:out.send(chat_id,line)
+                    except Exception:pass
+            threading.Thread(target=progress,daemon=True).start()
+            try:
+                _handle_text(uid, chat_id, name, text, msg.get("message_id"), out)
+            finally:finished.set()
     except Exception as e:
         log.exception("handle_update failed")
         try:
