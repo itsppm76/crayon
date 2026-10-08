@@ -71,6 +71,16 @@ def begin(uid):
     db.q("DELETE FROM google_oauth_states WHERE expires_at<now()",fetch="none")
     db.q("DELETE FROM google_email_drafts WHERE expires_at<now() AND status='pending'",fetch="none")
     db.q("INSERT INTO google_oauth_states(state_hash,user_id,expires_at) VALUES(%s,%s,now()+interval '10 minutes')",(hashed,uid),"none")
+    return C.PUBLIC_URL.rstrip('/')+"/google/connect?state="+state
+
+
+def authorization_url(state):
+    """Resolve a valid existing state only to our fixed Google authorization URL."""
+    if not configured() or not re.fullmatch(r'[A-Za-z0-9_-]{30,100}',state):
+        raise GoogleError('Invalid or expired connection link')
+    hashed=hashlib.sha256(state.encode()).hexdigest()
+    row=db.q("SELECT user_id FROM google_oauth_states WHERE state_hash=%s AND used=false AND expires_at>now()",(hashed,),"one")
+    if not row:raise GoogleError('Invalid or expired connection link')
     return "https://accounts.google.com/o/oauth2/v2/auth?"+urlencode({
         "client_id":C.env("GOOGLE_CLIENT_ID"),"redirect_uri":redirect_uri(),"response_type":"code",
         "scope":" ".join(SCOPES),"access_type":"offline","prompt":"consent","state":state})
