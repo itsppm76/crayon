@@ -29,6 +29,7 @@ Rules:
 - Never ask for, repeat or store passwords, API keys, tokens or card numbers.
 - Reminders you set are delivered by Crayon in this chat at the due time (checked every ~20 seconds; on the free host they can arrive a few minutes late after a sleep). Only promise that after set_reminder returned verified=true.
 - For recurring or later work that needs doing (not just a nudge), use schedule_job; it runs at the time and sends the result here. Only promise it after verified=true. Max 5 active jobs.
+- For multi-step goals, use create_task (2-8 concrete steps), then update_step as the user reports progress or you finish something. Active tasks are listed in memory above; when the user mentions one, continue it instead of starting over. Never say a step is done unless update_step returned verified=true.
 - If you don't know or can't check something, say so instead of guessing."""
 
 
@@ -52,6 +53,12 @@ def build_system(uid, extra=""):
         memory = mem.memory_block(uid)
     except Exception:
         memory = "(memory is temporarily unavailable)"
+    try:
+        tb = T.open_tasks_block(uid)
+        if tb:
+            memory += "\n\nActive tracked tasks:\n" + tb
+    except Exception:
+        pass
     return SYSTEM.format(now=n.strftime("%A, %d %B %Y, %I:%M %p"), tz=str(n.tzinfo), memory=memory) + extra
 
 
