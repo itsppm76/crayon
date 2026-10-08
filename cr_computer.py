@@ -46,13 +46,18 @@ def execute(uid,operation,args):
     if not permitted(uid):return {'ok':False,'error':'Approved tester-only computer beta'}
     if uid!=OWNER and operation not in ('status','calculate','browse'):return {'ok':False,'error':'Text files are private to the owner. Testers can use public browser and arithmetic only.'}
     validate(operation,args)
-    if not status(uid)['ok']:return {'ok':False,'error':'Computer is asleep or not connected. Owner must start it in GitHub Codespaces.'}
+    import cr_wake as wake
+    if not status(uid)['ok']:
+        try:awake=wake.ensure(lambda:status(uid)['ok'])
+        except Exception as e:return {'ok':False,'verified':False,'error':str(e)[:180]}
+        if not awake:return {'ok':False,'error':'Computer is asleep or not connected. Automatic wake is not configured; owner must start it in GitHub Codespaces.'}
+    wake.touch()
     if not reserve(uid):return {'ok':False,'error':'Daily computer beta cap reached.5 jobs per tester,20 owner,30 total. No automatic wake.'}
     job=uuid.uuid4().hex
     db.q('INSERT INTO computer_jobs(id,operation,args) VALUES(%s,%s,%s::jsonb)',(job,operation,json.dumps(args)),'none')
     for _ in range(85 if operation=='browse' else 25):
         row=db.q('SELECT status,result FROM computer_jobs WHERE id=%s',(job,),'one')
-        if row and row['status']=='done':return row['result']
+        if row and row['status']=='done':wake.touch();return row['result']
         time.sleep(1)
     db.q("UPDATE computer_jobs SET status='expired' WHERE id=%s AND status='pending'",(job,),'none')
     return {'ok':False,'verified':False,'error':'No completion confirmed. Do not retry writes automatically.'}
