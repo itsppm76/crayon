@@ -58,7 +58,10 @@ def test_conflict_and_scope_no_write(monkeypatch):
 def test_calendar_preview_route(monkeypatch):
     import cr_google_chat as H,cr_telegram as T
     monkeypatch.setattr(K,'preview',lambda *a:{'id':'id','hash':'hash','text':'Preview only'})
-    out=T.CaptureOut();H.handle(10,10,'/calendar_slot Study | 2099-01-01T10:00:00+05:30 | 2099-01-01T11:00:00+05:30 | Asia/Calcutta',{},out)
+    class Out:
+        def __init__(self):self.sent=[]
+        def send(self,chat,text,markup=None):self.sent.append({'text':text,'markup':markup})
+    out=Out();H.handle(10,10,'/calendar_slot Study | 2099-01-01T10:00:00+05:30 | 2099-01-01T11:00:00+05:30 | Asia/Calcutta',{},out)
     assert out.sent[0]['markup']['inline_keyboard'][0][0]['text']=='Create'
 def test_write_scope_only_explicit_oauth(monkeypatch):
     from urllib.parse import urlsplit,parse_qs
