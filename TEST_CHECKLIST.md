@@ -88,3 +88,5 @@ October 8 23:15 IST live follow-up:
 - Slow text response delivered progress before clean final answer; revised prompt inspected on one HTTP/HTTPS sample, not a quality benchmark.
 - BotFather says privacy ENABLED, with username mentions delivered. Left unchanged. Real group delivery not yet tested; no group chosen or messaged.
 - Public Google verification not submitted; testing status remains. No payment/assessment initiated.
+
+2.17.2: live health good, exact-content draft buttons visually inspected, Cancel callback passed in owner DM without send. Search Console URL-prefix ownership verification succeeded by homepage HTML tag. This is not OAuth app approval. Verification submission remains pending its end-to-end sanitized demo. No production publish, paid assessment or real test send initiated. His separately entered draft was left untouched.
