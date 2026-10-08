@@ -25,6 +25,11 @@ def run(body):
         if len(data) > cr_media.MAX_BYTES:
             return {"ok": False, "error": "fixture too large"}
         results.append({"media": fixture["mime"], "out": cr_media.analyze(data, fixture["mime"], fixture.get("caption", ""))})
+    if body.get("proactive_tick"):
+        import cr_proactive
+        out = tg.CaptureOut()
+        sent = cr_proactive.tick(out, only_user=uid)
+        results.append({"proactive_sent": sent, "out": [m["text"] for m in out.sent]})
     if body.get("tick"):
         import cr_sched
         out = tg.CaptureOut()
