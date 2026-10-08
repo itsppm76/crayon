@@ -65,7 +65,8 @@ class Out:
             api("setMessageReaction", chat_id=chat_id, message_id=message_id,
                 reaction=[{"type":"emoji", "emoji":emoji}], is_big=False)
             return True
-        except Exception:
+        except Exception as e:
+            log.warning("reaction failed: %s", redact(str(e))[:180])
             return False
 
     def typing(self, chat_id):
@@ -116,8 +117,11 @@ def handle_update(upd, out=None):
         chat_id = msg["chat"]["id"]
         uid = msg["from"]["id"]
         name = (msg["from"].get("first_name") or "").strip()
+        if uid > 0:
+            db.kv_set("tg_latest_"+str(uid), {"chat_id":chat_id,"message_id":msg.get("message_id"),
+                "media":any(msg.get(k) for k in ("photo","voice","audio","document"))})
         text = msg.get("text")
-        if not text:
+        if any(msg.get(k) for k in ("photo","voice","audio","document")) or not text:
             with mem.user_lock(uid):
                 _handle_media(uid, chat_id, name, msg, out)
             return
@@ -140,7 +144,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     import cr_reactions
     emoji = cr_reactions.choose(text)
     if emoji and message_id and hasattr(out, "react"):
-        out.react(chat_id, message_id, emoji)
+        reaction_ok = out.react(chat_id, message_id, emoji)
+        db.audit(uid,"telegram_reaction",f"message_id={message_id} emoji={emoji} accepted={reaction_ok}")
     cmd, _, arg = text.partition(" ")
     cmd = cmd.split("@")[0].lower()
     arg = arg.strip()
@@ -316,10 +321,12 @@ def _handle_media(uid, chat_id, name, msg, out):
                 if len(data) > cr_media.MAX_BYTES:
                     raise ValueError("Upload exceeds the 4 MB limit.")
         reply = cr_media.analyze(bytes(data), mime, caption)
+        db.audit(uid,"media_processed", f"mime={mime} bytes={len(data)}")
         mem.add_message(uid, "user", "[User sent media: " + mime + "] " + redact(caption))
         mem.add_message(uid, "assistant", "[Media analysis delivered; raw contents not retained]")
         if hasattr(out, "meta"):
             out.meta = {"media": mime, "bytes": len(data), "verified": bool(reply)}
         out.send(chat_id, reply or "I couldn't read that clearly.")
     except Exception as e:
+        log.warning("media handling failed: %s",redact(str(e))[:180])
         out.send(chat_id, "I couldn't read that upload: " + redact(str(e))[:200])
