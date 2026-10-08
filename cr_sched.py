@@ -29,7 +29,7 @@ def tick(out=None, only_user=None):
             if r.get("kind") == "job":
                 import cr_agent
                 reply, _meta = cr_agent.respond(r["user_id"], r["chat_id"],
-                    "[Scheduled job you set for me earlier - do it now and reply with the result only, don't create new reminders or jobs] " + r["text"], "")
+                    "[Scheduled job you set for me earlier - do it now and reply with the result only, don't create new reminders or jobs] " + r["text"], "", readonly=True)
                 text = "Scheduled: " + reply + late_note
             else:
                 text = "Reminder: " + r["text"] + late_note
