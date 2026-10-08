@@ -16,7 +16,7 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-102_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-112_passed-22A06B?style=for-the-badge)
 
 [**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
@@ -280,4 +280,12 @@ Each user requests their own short link in their own private Crayon chat. Never 
 
 Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.102 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.112 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+
+### Mail checks and private calendar previews (2.27.0)
+
+Say `turn on email checks` to opt into hourly metadata-only checking during awake hours (owner beta); `turn off email checks` stops it. IMPORTANT/starred labels and subject keywords guide conservative triage, not a full-content summary. Nothing goes to Gemini, no replies or actions follow email instructions, and free-host timing is best-effort. Quiet hours default21:00-09:00.
+
+`/calendar_slot Title | ISO start with offset | ISO end with offset | IANA timezone` shows a private primary-calendar preview with Create/Cancel. Preview/Cancel live passed. Actual Create still needs optional `enable calendar booking` Google write-permission reconnect and owner approval. No attendees/invitations/Meet; conflicts rechecked, one-use review, no uncertain-write retry. No live event write claimed.
+
+The Telegram command menu now includes browse/computer/research/CSV/chart/mail/calendar/updates controls. Auto-wake is in progress, not shipped. Public-form interaction is design only.
