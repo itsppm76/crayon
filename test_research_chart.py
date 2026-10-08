@@ -12,3 +12,15 @@ def test_source_mismatch_failclosed():
 def test_duplicate_failclosed():
     f=fixture();f[1][1]=f[1][0]
     with pytest.raises(ValueError):R.extract(json.dumps(f))
+def test_recipe_scope(monkeypatch):
+    import cr_tools as T,cr_computer as K
+    calls=[]
+    monkeypatch.setattr(K,'execute',lambda *a:calls.append(a) or {'ok':False})
+    ctx={'uid':K.OWNER,'meta':{'user_text':'run world bank research chart demo'}}
+    T.computer_browse(ctx,R.URL)
+    assert len(calls)==1
+    assert ctx['meta']['user_text']=='run world bank research chart demo'
+    assert not T.computer_browse(ctx,'https://example.com')['ok']
+    assert len(calls)==1
+    assert not T.computer_browse(ctx,R.URL,'Other page')['ok']
+    assert len(calls)==1
