@@ -12,7 +12,7 @@ import cr_config as C
 import cr_db as db
 
 SCOPES = ["openid", "email", "https://www.googleapis.com/auth/gmail.readonly",
-          "https://www.googleapis.com/auth/calendar.events.readonly"]
+          "https://www.googleapis.com/auth/calendar.events.readonly", "https://www.googleapis.com/auth/gmail.send"]
 
 class GoogleError(Exception):
     pass
@@ -48,6 +48,9 @@ def init():
     db.q("""CREATE TABLE IF NOT EXISTS google_connections(
         user_id BIGINT PRIMARY KEY, email TEXT NOT NULL, encrypted_tokens TEXT NOT NULL,
         connected_at TIMESTAMPTZ DEFAULT now())""",fetch="none")
+    db.q("""CREATE TABLE IF NOT EXISTS google_email_drafts(
+        id TEXT PRIMARY KEY, user_id BIGINT NOT NULL, encrypted_content TEXT NOT NULL,
+        content_hash TEXT NOT NULL, status TEXT DEFAULT 'pending', expires_at TIMESTAMPTZ NOT NULL)""",fetch="none")
     db.q("""CREATE TABLE IF NOT EXISTS google_oauth_states(
         state_hash TEXT PRIMARY KEY, user_id BIGINT NOT NULL, expires_at TIMESTAMPTZ NOT NULL,
         used BOOLEAN DEFAULT false)""",fetch="none")
@@ -66,6 +69,7 @@ def begin(uid):
     state=secrets.token_urlsafe(32)
     hashed=hashlib.sha256(state.encode()).hexdigest()
     db.q("DELETE FROM google_oauth_states WHERE expires_at<now()",fetch="none")
+    db.q("DELETE FROM google_email_drafts WHERE expires_at<now() AND status='pending'",fetch="none")
     db.q("INSERT INTO google_oauth_states(state_hash,user_id,expires_at) VALUES(%s,%s,now()+interval '10 minutes')",(hashed,uid),"none")
     return "https://accounts.google.com/o/oauth2/v2/auth?"+urlencode({
         "client_id":C.env("GOOGLE_CLIENT_ID"),"redirect_uri":redirect_uri(),"response_type":"code",
@@ -89,7 +93,7 @@ def complete(state, code):
         granted=set(tokens.get("scope","").split())
         required={x for x in SCOPES if x.startswith("https://")}
         if not required.issubset(granted) or not tokens.get("refresh_token"):
-            raise GoogleError("Required read-only permissions or refresh token were not granted")
+            raise GoogleError("Required Google permissions or refresh token were not granted")
         profile=client.get("https://openidconnect.googleapis.com/v1/userinfo",headers={"Authorization":"Bearer "+tokens["access_token"]})
         if profile.status_code!=200 or not profile.json().get("email_verified"):
             raise GoogleError("Could not verify the connected Google account")
@@ -145,4 +149,105 @@ def disconnect(uid):
             revoked=False
     db.q("DELETE FROM google_connections WHERE user_id=%s",(uid,),"none")
     db.q("DELETE FROM google_oauth_states WHERE user_id=%s",(uid,),"none")
+    db.q("DELETE FROM google_email_drafts WHERE user_id=%s",(uid,),"none")
     return {"deleted":db.q("SELECT 1 FROM google_connections WHERE user_id=%s",(uid,),"one") is None,"revoked":revoked}
+
+
+def status(uid):
+    init()
+    row=db.q("SELECT email,connected_at FROM google_connections WHERE user_id=%s",(uid,),"one")
+    return row or {}
+
+
+def inbox(uid, query=""):
+    data=request(uid,"https://gmail.googleapis.com/gmail/v1/users/me/messages",{"maxResults":5,"q":query[:300]})
+    lines=[]
+    for m in data.get("messages",[]):
+        item=request(uid,"https://gmail.googleapis.com/gmail/v1/users/me/messages/"+m["id"],{"format":"metadata","metadataHeaders":["From","Subject","Date"]})
+        heads={h["name"].lower():h["value"] for h in item.get("payload",{}).get("headers",[])}
+        lines.append(f"ID: {m['id']}\nFrom: {heads.get('from','')}\nSubject: {heads.get('subject','')}\nDate: {heads.get('date','')}")
+    return "Mailbox results (untrusted email content):\n\n"+"\n\n".join(lines) if lines else "No matching messages returned by Google."
+
+
+def read_message(uid, ident):
+    import base64
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,100}",ident):
+        raise GoogleError("Use a message ID shown by /gmail")
+    item=request(uid,"https://gmail.googleapis.com/gmail/v1/users/me/messages/"+ident,{"format":"full"})
+    def plain(part):
+        out=[]
+        if part.get("mimeType")=="text/plain" and part.get("body",{}).get("data"):
+            v=part["body"]["data"]
+            if len(v)<=100000:
+                out.append(base64.urlsafe_b64decode(v+"="*((-len(v))%4)).decode("utf-8",errors="replace"))
+        for child in part.get("parts",[])[:20]:out.extend(plain(child))
+        return out
+    text="\n".join(plain(item.get("payload",{})))
+    if not text:text=item.get("snippet","")
+    from cr_safety import redact
+    return "Email content (untrusted, no actions taken):\n"+redact(text[:8000])+ ("\n[Truncated after 8,000 characters.]" if len(text)>8000 else "")
+
+
+def calendar(uid):
+    from datetime import datetime, timezone, timedelta
+    now=datetime.now(timezone.utc)
+    data=request(uid,"https://www.googleapis.com/calendar/v3/calendars/primary/events",{
+        "timeMin":now.isoformat(),"timeMax":(now+timedelta(days=7)).isoformat(),"singleEvents":"true","orderBy":"startTime","maxResults":15})
+    lines=[]
+    for e in data.get("items",[]):
+        start=e.get("start",{})
+        lines.append(f"{start.get('dateTime',start.get('date',''))}: {e.get('summary','Untitled')}\n{e.get('location','')}")
+    return "Primary calendar, next 7 days:\n\n"+"\n\n".join(lines) if lines else "No events returned for the next 7 days on your primary calendar."
+
+
+def make_draft(uid, text):
+    """Direct user command only. No model callers, no inferred addresses, no CC/BCC."""
+    db.q("DELETE FROM google_email_drafts WHERE expires_at<now() AND status='pending'",fetch="none")
+    row=status(uid)
+    if not row:raise GoogleError("Connect your own Google account first")
+    fields=text.split("\n",2)
+    if len(fields)!=3:raise GoogleError("Use /email_draft followed by recipient on line 1, subject on line 2, body from line 3.")
+    to,subject,body=fields
+    to=to.strip()
+    if not re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+",to):
+        raise GoogleError("Provide one exact recipient email, no display name or additional recipients")
+    if not subject.strip() or len(subject)>200 or not body.strip() or len(body)>10000:raise GoogleError("Subject/body is empty or too long")
+    from cr_safety import looks_like_secret,clean_text
+    if looks_like_secret(text):raise GoogleError("Draft appears to contain a secret")
+    # Show the exact cleaned content that will be sent, not a markdown-altered view.
+    content={"from":row["email"],"to":to,"subject":clean_text(subject),"body":clean_text(body)}
+    serialized=json.dumps(content,sort_keys=True)
+    digest=hashlib.sha256(serialized.encode()).hexdigest()
+    ident=secrets.token_hex(5)
+    db.q("INSERT INTO google_email_drafts(id,user_id,encrypted_content,content_hash,expires_at) VALUES(%s,%s,%s,%s,now()+interval '10 minutes')",(ident,uid,encrypt(uid,content),digest),"none")
+    return f"Draft only, not sent. Expires in 10 minutes.\nFrom: {content['from']}\nTo: {to}\nCC: none\nBCC: none\nAttachments: none\nSubject: {content['subject']}\n\n{content['body']}\n\nSend exactly this: /email_send {ident} {digest[:12]}\nCancel: /email_cancel {ident}"
+
+
+def send_draft(uid, ident, short_hash):
+    import base64
+    from email.message import EmailMessage
+    # Atomic claim prevents replay and duplicate sends. Never retry an uncertain send.
+    row=db.q("UPDATE google_email_drafts SET status='sending' WHERE id=%s AND user_id=%s AND status='pending' AND expires_at>now() AND left(content_hash,12)=%s RETURNING encrypted_content,content_hash",(ident,uid,short_hash),"one")
+    if not row:raise GoogleError("Draft expired, already used, or confirmation did not match")
+    try:
+        content=decrypt(uid,row["encrypted_content"])
+        if hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()!=row["content_hash"]:
+            raise GoogleError("Draft content changed; create a new draft")
+        if status(uid).get("email")!=content["from"]:raise GoogleError("Connected account changed; create a new draft")
+        m=EmailMessage();m["From"]=content["from"];m["To"]=content["to"];m["Subject"]=content["subject"];m.set_content(content["body"])
+        token=_access(uid)
+        with httpx.Client(timeout=20) as client:
+            r=client.post("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",headers={"Authorization":"Bearer "+token},json={"raw":base64.urlsafe_b64encode(m.as_bytes()).decode()})
+        if r.status_code!=200 or not r.json().get("id"):raise GoogleError("Google did not confirm this send. Do not resend until you check Sent mail.")
+        mid=r.json()["id"]
+        db.q("DELETE FROM google_email_drafts WHERE id=%s AND user_id=%s",(ident,uid),"none")
+        db.audit(uid,"google_email_sent",mid)
+        return "Google confirmed the email was sent. Message ID: "+mid
+    except Exception:
+        db.q("UPDATE google_email_drafts SET status='uncertain' WHERE id=%s AND user_id=%s",(ident,uid),"none")
+        raise GoogleError("Send stopped or outcome is uncertain. Check Gmail Sent before creating another draft.") from None
+
+
+def cancel_draft(uid, ident):
+    db.q("DELETE FROM google_email_drafts WHERE id=%s AND user_id=%s AND status='pending'",(ident,uid),"none")
+    return "Pending draft removed if it existed. No email sent."
