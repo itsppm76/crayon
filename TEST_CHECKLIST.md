@@ -128,3 +128,10 @@ Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 o
 - Owner Telegram Instagram screenshot281KB, full pixels checked: blank login fields; no sign-in. YouTube screenshot18.7KB full pixels checked: signed-out search/sign-in/try-searching homepage. No search/playback claim.
 -2.26.0 World Bank API three-country2024 nominal GDP per capita -> exact-record validation -> source screenshot45.3KB, CSV466B, chart21.9KB -> findings/source/action log. Delivered real Telegram at01:19; full chart pixels checked. Source updated2026-10-08.
 -102 local tests include exact source values, missing/mismatched/duplicate records, and narrowly scoped recipe browser intent. Synthetic tests are not live proof.
+
+## Google autonomy and menu (Oct9,01:34IST)
+-2.27.0 deployed,112 local tests. Owner mail watch opt-in remains off; no scheduled Gmail check live proof yet.
+- Private primary calendar preview + Cancel live Telegram proof passed; no Create clicked, no event written, owner write-scope reconnect remains needed.
+-17-command menu rendered/read back in Telegram, actual popup pixels inspected.
+- Owner text-file create/read followed by independent read-only request returned exact test contents. Test prompts agent-authored under general testing request, not user approvals.
+- Computer restarted for owner active testing, heartbeat awake verified, owner eikcai.com screenshot493.4KB delivered. Auto-wake token creation blocked by GitHub error, no token yet.
