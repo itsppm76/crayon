@@ -17,4 +17,4 @@ MODE = env("CRAYON_MODE", "polling")  # polling | webhook
 PUBLIC_URL = env("CRAYON_PUBLIC_URL", "https://crayon-v1.onrender.com")
 HISTORY_TURNS = int(env("CRAYON_HISTORY_TURNS", "14"))
 DAILY_MESSAGE_CAP = int(env("CRAYON_DAILY_CAP", "80"))
-VERSION = "2.9"
+VERSION = "2.12"
