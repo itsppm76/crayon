@@ -124,6 +124,7 @@ def respond(uid, chat_id, text, name="", goal_mode=False):
             "unless the original user asked for them. Stop at any confirmation. End with results and what remains.")
     if re.search(r'(?i)\b(browser|browse|screenshot)\b',text) and re.search(r'(?:https://[^\s<>]+|\b(?:[a-zA-Z0-9-]+\.)+(?:com|org|md)(?:/[^\s<>]*)?)',text):
         url=re.search(r'(?:https://[^\s<>]+|\b(?:[a-zA-Z0-9-]+\.)+(?:com|org|md)(?:/[^\s<>]*)?)',text).group().rstrip('.,);]')
+        if not url.startswith('https://'):url='https://'+url
         result=T.run('computer_browse',{'url':url},ctx)
         meta['tools'].append('computer_browse')
         if result.get('verified') and meta.get('artifacts'):
