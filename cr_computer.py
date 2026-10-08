@@ -51,8 +51,8 @@ def execute(uid,operation,args):
         try:awake=wake.ensure(lambda:status(uid)['ok'])
         except Exception as e:return {'ok':False,'verified':False,'error':str(e)[:180]}
         if not awake:return {'ok':False,'error':'Computer is asleep or not connected. Automatic wake is not configured; owner must start it in GitHub Codespaces.'}
-    wake.touch()
     if not reserve(uid):return {'ok':False,'error':'Daily computer beta cap reached.5 jobs per tester,20 owner,30 total. No automatic wake.'}
+    wake.touch()
     job=uuid.uuid4().hex
     db.q('INSERT INTO computer_jobs(id,operation,args) VALUES(%s,%s,%s::jsonb)',(job,operation,json.dumps(args)),'none')
     for _ in range(85 if operation=='browse' else 25):
