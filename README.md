@@ -235,3 +235,5 @@ Small assistant. Honest status. Room to grow.
 Free-host delivery remains best-effort, not guaranteed at an exact minute. Quiet hours postpone a digest only while its delivery window remains open. Digests are deterministic and do not spend model quota.
 
 The admin-only `/admin-test` form runs captured `/selftest` requests without exposing the admin token in a URL. Synthetic negative users are excluded from real scheduled senders. Never use a real user ID in tests.
+
+Content-aware emoji reactions are chosen locally without model calls. Commands and YES/NO confirmations are skipped. Telegram reaction failures never block the reply.
