@@ -2,6 +2,7 @@
 import json
 import logging
 import re
+import time
 from datetime import datetime
 
 import cr_config as C
@@ -89,7 +90,7 @@ def handle_confirmation(uid, chat_id, text):
     return f"I tried to do this ({p['label']}) but couldn't confirm it worked. Nothing is guaranteed; please check."
 
 
-def respond(uid, chat_id, text, name=""):
+def respond(uid, chat_id, text, name="", goal_mode=False):
     """Handle one user message. Returns (reply_text, meta)."""
     meta = {"tools": [], "failed": [], "model": "", "user_text": text}
     degraded = False
@@ -110,20 +111,48 @@ def respond(uid, chat_id, text, name=""):
         contents.append(llm.user(text))
     system = build_system(uid) if not degraded else SYSTEM.format(now=datetime.now().strftime("%c"), tz="", memory="(memory is temporarily unavailable)")
     ctx = {"uid": uid, "chat_id": chat_id, "meta": meta}
+    if goal_mode:
+        plan = llm.ask_json("Make 2-4 concrete steps for this goal using only Crayon's available tools. "
+            "No external messages, purchases, accounts or imaginary tools. Return JSON {\"steps\":[\"...\"]}. "
+            "Goal: " + text[:2000], default={})
+        steps = plan.get("steps", []) if isinstance(plan, dict) else []
+        if not isinstance(steps, list) or not 2 <= len(steps) <= 4:
+            return "I couldn't make a safe plan. Try a narrower goal.", meta
+        created = T.run("create_task", {"title": text[:100], "goal": text[:500], "steps": steps}, ctx)
+        if not created.get("verified"):
+            return "I couldn't save the plan, so I haven't started the goal.", meta
+        meta["tools"].append("create_task")
+        meta["plan"] = steps
+        meta["task_id"] = created["task"]["id"]
+        system += ("\nExecute this user's goal now, following this saved plan: " + json.dumps(created["task"]) +
+            "\nUse tools to do the work, not merely describe it. Update a step as done only after a verified result "
+            "supports its work. Mark impossible work blocked. Cite observed URLs. Never create reminders or jobs "
+            "unless the original user asked for them. Stop at any confirmation. End with results and what remains.")
+    budget = 12 if goal_mode else MAX_TOOL_CALLS
+    started = time.monotonic()
+    seen_calls = {}
     calls_used = 0
     reply = ""
     try:
         while True:
-            out = llm.generate(contents, system=system, tools=None if degraded else T.declarations())
+            out = llm.generate(contents, system=system, tools=None if degraded or calls_used >= budget or time.monotonic()-started > 90 else T.declarations())
             meta["model"] = out["model"]
-            if not out["calls"] or calls_used >= MAX_TOOL_CALLS:
+            if not out["calls"]:
                 reply = out["text"]
                 break
             contents.append({"role": "model", "parts": out["parts"]})
             resp_parts = []
             for c in out["calls"]:
                 calls_used += 1
-                res = T.run(c["name"], c["args"], ctx) if calls_used <= MAX_TOOL_CALLS else {"ok": False, "error": "tool budget exhausted"}
+                signature = json.dumps([c["name"], c["args"]], sort_keys=True)
+                seen_calls[signature] = seen_calls.get(signature, 0) + 1
+                if calls_used > budget or time.monotonic()-started > 120:
+                    res = {"ok": False, "error": "work budget exhausted; report partial results"}
+                elif seen_calls[signature] > 2:
+                    res = {"ok": False, "error": "repeated identical call blocked; change approach or stop"}
+                else:
+                    res = T.run(c["name"], c["args"], ctx)
+                meta.setdefault("trace", []).append({"tool": c["name"], "ok": bool(res.get("ok")), "verified": bool(res.get("verified")), "error": str(res.get("error", ""))[:160]})
                 meta["tools"].append(c["name"])
                 if res.get("needs_confirmation"):
                     meta["confirm"] = res.get("label", "")
@@ -134,6 +163,13 @@ def respond(uid, chat_id, text, name=""):
                     meta["failed"] = [x for x in meta["failed"] if x != c["name"]]  # a later success supersedes an earlier failure
                 resp_parts.append({"functionResponse": {"name": c["name"], "response": {"result": json.loads(json.dumps(res, default=str))}}})
             contents.append({"role": "user", "parts": resp_parts})
+            if meta.get("confirm"):
+                break
+            if calls_used >= budget or time.monotonic()-started > 120:
+                meta["stopped"] = "budget"
+                final = llm.generate(contents, system=system + "\nWork budget ended. No more tools. Report verified results and remaining steps honestly.", tools=None)
+                reply = final["text"]
+                break
         if not reply:
             reply = "I got stuck producing an answer. Could you rephrase or try again?"
         if not degraded and needs_check(text, reply, meta) and C.env("CRAYON_VERIFY", "1") == "1":
@@ -151,6 +187,8 @@ def respond(uid, chat_id, text, name=""):
         reply = "Something broke on my side while handling that, and I can't tell you it worked. Please try again in a minute."
         meta["error"] = "internal"
         return reply, meta
+    if goal_mode and meta.get("plan"):
+        reply = "Plan: " + " -> ".join(str(x) for x in meta["plan"]) + "\n\n" + reply
     reply = redact(reply)
     try:
         if not degraded:
