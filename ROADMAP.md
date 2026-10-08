@@ -20,3 +20,7 @@
 - [ ] A web adapter that shares the same agent core
 - [ ] Webhook mode (polling is the deliberate current choice)
 - [ ] Automated CI for the test suite
+
+## Phase 2 status
+
+M7 bounded goals, M8 media, M9 memory review, M10 drafts, M11 opt-in check-ins and M12 digests are deployed. M14 content-aware reactions is implemented. M13 Google Gmail/Calendar connection is awaiting account choice and OAuth setup; no Google connection is active. See TEST_CHECKLIST.md for what has and has not been tested live.
