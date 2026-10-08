@@ -48,6 +48,22 @@ class Handler(BaseHTTPRequestHandler):
         return bool(C.ADMIN_TOKEN) and tok == C.ADMIN_TOKEN
 
     def do_GET(self):
+        if self.path.split("?",1)[0] == "/google/callback":
+            from urllib.parse import parse_qs,urlsplit
+            import cr_google as G, html
+            q=parse_qs(urlsplit(self.path).query)
+            try:
+                if q.get("error"):
+                    raise G.GoogleError("Google consent was cancelled. Start again in Telegram if you want to connect.")
+                G.complete(q.get("state",[""])[0],q.get("code",[""])[0])
+                return self._send(200,"<title>Crayon Google connection</title><h1>Connected</h1><p>Return to your private Crayon chat and use /google_status. If you did not request this, disconnect in Telegram.</p>","text/html")
+            except Exception:
+                return self._send(400,"<title>Crayon connection failed</title><h1>Connection not confirmed</h1><p>The link expired, consent failed or setup is unavailable. Start again with /connect_google in Telegram.</p>","text/html")
+        if self.path in ("/privacy", "/terms"):
+            from cr_policy import page
+            return self._send(200,page(self.path),"text/html")
+        if self.path == "/":
+            return self._send(200,'<title>Crayon</title><h1>Crayon Telegram assistant</h1><p>Memory, reminders, search and media reading on free hosting.</p><p>Google integration is in testing mode, only for named test users. Each user connects their own account.</p><p><a href="https://t.me/crayon_v1_bot">Open Crayon</a> | <a href="/privacy">Privacy</a> | <a href="/terms">Terms</a></p>',"text/html")
         if self.path == "/admin-test":
             return self._send(200, """<!doctype html><title>Crayon admin test</title><h1>Captured self-test</h1>
 <p>Negative synthetic users only. No Telegram sends.</p>
@@ -109,6 +125,8 @@ def main():
     import cr_telegram as tg
     try:
         db.init()
+        import cr_google
+        cr_google.init()
     except Exception as e:
         log.error("database init failed (running without persistence): %s", redact(str(e))[:200])
     if not C.TELEGRAM_TOKEN:
