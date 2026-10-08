@@ -3,6 +3,8 @@ import cr_utilities as U
 
 def test_units():
     assert U.convert('1','mi','km')['result']=='1.609344'
+    assert U.convert('1','mile','kilometers')['result']=='1.609344'
+    assert U.convert('1','hour','minutes')['result']=='6E+1'
     assert U.convert('100','celsius','fahrenheit')['result']=='212'
     assert U.convert('1','lb','g')['result']=='453.59237'
 
