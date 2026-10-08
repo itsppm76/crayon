@@ -404,7 +404,7 @@ def set_commands():
             {"command":"gmail","description":"Check your mail"},
             {"command":"calendar","description":"See the next week on your calendar"},
             {"command":"calendar_slot","description":"Preview a private calendar slot before booking"},
-            {"command":"email_checks","description":"Turn hourly new-mail checks on or off"},
+            {"command":"email_checks","description":"Hourly mail checks on/off (owner beta)"},
             {"command":"browse","description":"Public website screenshot (approved testers)"},
             {"command":"computer","description":"Computer status and maths (approved testers)"},
             {"command":"research","description":"Research a topic with sources"},
