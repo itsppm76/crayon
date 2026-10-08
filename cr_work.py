@@ -36,18 +36,20 @@ def parse(arg):
 
 def calculate(expression):
     tree=ast.parse(expression,mode='eval');count=[0]
+    from decimal import Decimal,localcontext
     ops={ast.Add:operator.add,ast.Sub:operator.sub,ast.Mult:operator.mul,ast.Div:operator.truediv,ast.Mod:operator.mod}
     def go(n):
         count[0]+=1
         if count[0]>60:raise ValueError('Expression too long')
-        if isinstance(n,ast.Constant) and type(n.value) in (int,float):v=n.value
-        elif isinstance(n,ast.UnaryOp) and type(n.op) in (ast.UAdd,ast.USub):v=go(n.operand)*(-1 if isinstance(n.op,ast.USub) else 1)
+        if isinstance(n,ast.Constant) and type(n.value) in (int,float):v=Decimal(ast.get_source_segment(expression,n))
+        elif isinstance(n,ast.UnaryOp) and type(n.op) in (ast.UAdd,ast.USub):v=go(n.operand)*(Decimal(-1) if isinstance(n.op,ast.USub) else Decimal(1))
         elif isinstance(n,ast.BinOp) and type(n.op) in ops:v=ops[type(n.op)](go(n.left),go(n.right))
         else:raise ValueError('Only basic arithmetic; no functions, variables or code.')
-        import math
-        if not math.isfinite(v) or abs(v)>1e15:raise ValueError('Number too large')
+        if not v.is_finite() or abs(v)>Decimal('1e15'):raise ValueError('Number too large')
         return v
-    return go(tree.body)
+    with localcontext() as context:
+        context.prec=28
+        return go(tree.body)
 
 def create(uid,chat,arg):
     title,steps=parse(arg)
@@ -88,7 +90,7 @@ def control(uid,ident,op):
 def step_run(step):
     from cr_safety import redact
     op,value=step['op'],step['input']
-    if op=='calculate':return {'text':value+' = '+str(calculate(value)),'sources':[]}
+    if op=='calculate':return {'text':value+' = '+str(calculate(value))+'\nDecimal arithmetic,28-digit precision; repeating decimals rounded.','sources':[]}
     import cr_web as W
     if op=='page':
         result=W.fetch(value,5000)
