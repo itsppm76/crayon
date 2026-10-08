@@ -49,6 +49,7 @@ def clean_text(text):
     """Telegram-safe plain text. Preserve languages, URLs and ordinary punctuation."""
     out = redact(text) or ""
     out = out.translate(str.maketrans({"\u2014":" - ", "\u2013":"-", "\u2018":"'", "\u2019":"'", "\u201c":'"', "\u201d":'"', "\u2022":"-", "\u25cf":"-", "\u25aa":"-", "\u2026":"..."}))
+    out = re.sub(r"\[([^]\n]+)\]\((https?://[^\s)]+)\)", r"\1: \2", out)
     out = re.sub(r"```[^\n]*\n?", "", out)
     out = re.sub(r"\*\*(.*?)\*\*", r"\1", out, flags=re.S)
     out = re.sub(r"__(.*?)__", r"\1", out, flags=re.S)
