@@ -79,3 +79,38 @@ def test_draft_never_sends(monkeypatch):
     monkeypatch.setattr(cr_llm,'generate',lambda *a,**k:{'text':'Hi Sam, could we move the meeting?'})
     r=T.draft_message({'uid':-1},'Sam','Ask to move meeting')
     assert r['sent'] is False and r['verified']
+
+def test_digest_once_and_proactive_once(monkeypatch):
+    import cr_proactive as P
+    from datetime import datetime, timezone
+    settings={'proactive':True,'digest':'both','quiet_start':0,'quiet_end':0,'chat_id':-4}
+    def query(sql,params=(),fetch='all'):
+        if sql.startswith('SELECT user_id,settings'):
+            return [{'user_id':-4,'settings':settings.copy()}]
+        if sql.startswith('SELECT id,title FROM tasks'):
+            return None
+        if sql.startswith('SELECT text FROM reminders'):
+            return {'text':'Test reminder'}
+        if sql.startswith('UPDATE users SET settings=jsonb_set'):
+            import json
+            settings[params[0][0]]=json.loads(params[1])
+            return None
+        raise AssertionError(sql)
+    monkeypatch.setattr(P.db,'q',query)
+    monkeypatch.setattr(P.T,'now_local',lambda uid:datetime(2026,10,8,10,tzinfo=timezone.utc))
+    monkeypatch.setattr(P,'digest_text',lambda uid:'Digest test')
+    from cr_telegram import CaptureOut
+    out=CaptureOut()
+    assert P.tick(out,only_user=-4)==['digest_morning','proactive_date']
+    assert P.tick(out,only_user=-4)==[]
+    assert len(out.sent)==2
+
+
+def test_quiet_hours_block_all_optional_messages(monkeypatch):
+    import cr_proactive as P
+    from datetime import datetime,timezone
+    monkeypatch.setattr(P.db,'q',lambda *a:[{'user_id':-4,'settings':{'proactive':True,'digest':'both','chat_id':-4}}])
+    monkeypatch.setattr(P.T,'now_local',lambda uid:datetime(2026,10,8,23,tzinfo=timezone.utc))
+    from cr_telegram import CaptureOut
+    out=CaptureOut()
+    assert P.tick(out,only_user=-4)==[] and not out.sent
