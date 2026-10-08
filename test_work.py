@@ -106,3 +106,8 @@ def test_quiet_hours_defer(monkeypatch):
         def send(self,*a):pytest.fail('quiet ping')
     W.tick(Out(),only_user=1)
     assert not any('notified=true' in x for x in calls)
+
+def test_decimal_calculation():
+    from decimal import Decimal
+    assert W.calculate('0.1+0.2')==Decimal('0.3')
+    assert str(W.calculate('1/3'))=='0.3333333333333333333333333333'
