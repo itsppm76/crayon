@@ -377,10 +377,16 @@ def handle_callback(cb, out):
     except Exception:
         pass
     data=cb.get("data","")
-    if not data.startswith(("email_send:","email_cancel:","calendar_create:","calendar_cancel:","ux:")):return
+    if not data.startswith(("email_send:","email_cancel:","calendar_create:","calendar_cancel:","ux:","work:")):return
     uid=cb.get("from",{}).get("id",0)
     chat_id=cb.get("message",{}).get("chat",{}).get("id")
     if uid<=0 or chat_id!=uid:return
+    if data.startswith("work:"):
+        import re,cr_work
+        if not re.fullmatch(r'work:(show|pause|resume|cancel|export):[1-9][0-9]{0,10}',data):return
+        _,op,ident=data.split(':')
+        with mem.user_lock(uid):cr_work.handle(uid,chat_id,'/work '+op+' '+ident,out)
+        return
     if data.startswith("ux:"):
         with mem.user_lock(uid):
             if data=="ux:delete_review":out.send(chat_id,"Permanently delete all stored memory, notes, reminders, chat history and Google credentials?",markup={"inline_keyboard":[[{"text":"Delete all my data","callback_data":"ux:delete_confirm"},{"text":"Keep my data","callback_data":"ux:keep"}]]})
