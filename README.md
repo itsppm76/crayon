@@ -9,10 +9,14 @@
 ![MIT license](https://img.shields.io/badge/license-MIT-FFC93C?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Telegram](https://img.shields.io/badge/Telegram-long_polling-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)
-![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-Flash_Lite-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)
 ![Postgres](https://img.shields.io/badge/Neon-Postgres-00E599?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Render](https://img.shields.io/badge/Render-free_tier-46E3B7?style=for-the-badge&logo=render&logoColor=black)
 ![Cost](https://img.shields.io/badge/cost-%240_free_tiers-22A06B?style=for-the-badge)
+
+![Codespaces](https://img.shields.io/badge/Codespaces-owner_beta-FFC93C?style=for-the-badge&logo=github)
+![Browser](https://img.shields.io/badge/Chromium-public_docs_beta-2B2D31?style=for-the-badge&logo=googlechrome)
+![Tests](https://img.shields.io/badge/local_tests-93_passed-22A06B?style=for-the-badge)
 
 [**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
@@ -203,7 +207,7 @@ python main.py
 - The code sandbox has no network or file access by design, so it cannot fetch data.
 - Search quality depends on Tavily and its fallbacks; snippets can be wrong or stale.
 - The honesty guard and secret detector are heuristics, not proofs. Rotate any secret that was pasted into a chat.
-- Google testing-mode integration is live: per-user OAuth, direct Gmail/primary Calendar reads and exact-content review-first email drafts. Public verification and real email-send proof are pending.
+- Google testing-mode integration is live: per-user OAuth, direct Gmail/primary Calendar reads and exact-content review-first email drafts. Owner-confirmed real send was proven. Public verification remains pending.
 - Test coverage in `tests/` is from the earlier prototype (see [`TEST_CHECKLIST.md`](TEST_CHECKLIST.md) for live checks) and mocks model responses. Live behaviour is checked through `/selftest` and the bot itself.
 
 See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) and [`ROADMAP.md`](ROADMAP.md) for older notes written before the milestones above; the sections in this README reflect the current deployed state.
@@ -222,44 +226,50 @@ Small assistant. Honest status. Room to grow.
 
 </div>
 
-## Phase 2: practical agent skills
+## 🟣 Agentic features, phases 2 and 3
 
-- `/goal <goal>`: saves a small plan, executes available tools, checks results, and reports remaining work. Maximum 12 calls with repeat/time limits. It cannot log into websites, buy things, or contact other people.
-- Files up to 20,000,000 bytes: photos/PDF/audio/video use Gemini; text/code and common Office documents have bounded extraction; archives are listed without execution; unknown formats get honest receipts. Raw uploads are not kept, but up to 3,000 characters of analysis enter follow-up history. Large binary/video uploads use temporary Gemini Files with deletion attempts. Embedded instructions are data, not commands. Do not upload secrets.
-- `/memory_review`: exact duplicate facts and evidence-backed preference suggestions for review. It never deletes facts or silently accepts inferred preferences.
-- Message drafting: ask for a draft with the recipient and facts. Drafts are review-only; no external message is sent.
-- `/proactive on|off`: optional daily check-in for a stale task or reminder due in the next two hours. Off by default.
-- `/digest morning|evening|both|off`: optional task, reminder and recently completed task summaries. Off by default. Morning window 09-12, evening 18-21 local time.
-- `/digest_now`: immediate summary. `/quiet_hours 21 9`: silence proactive messages and scheduled digests between those hours. Explicit reminders are not silenced.
+| Layer | What exists | Status and boundaries |
+| :--- | :--- | :--- |
+| 🎯 Goal mode | Saved plans, bounded tools, per-step result tracking | Deployed;12-call goal budget, no invented actions |
+| 📚 Media | Photo, PDF, voice, audio, video, text/code, common Office extraction, archive listing |20MB Telegram cap; local/provider limits; raw uploads not retained |
+| 🧠 Memory review | Duplicates and preference suggestions for review | No silent merges or deletes |
+| ✍️ Message drafts | Recipient/fact-grounded review-only drafts | No third-party message auto-send |
+| 🌅 Daily controls | Opt-in proactive nudges, morning/evening digests, quiet hours | Free-host timing is best-effort |
+| 💛 Chat UX | Local reactions, plain text, natural-language controls, buttons, timed progress | Serialized progress prevents late fillers after response |
+| 👥 Group chat | Exact @crayon_v1_bot mentions; no private memory/account actions | Tagged reply and untagged-ignore live-proven; add-welcome code exists, live add test pending |
+| 🔐 Google beta | Encrypted per-user OAuth, short personal links, Gmail and primary Calendar reads | Named testers only,7-day token expiry possible; no mailbox data sent to Gemini |
+| 📧 Reviewed email | Ten-minute encrypted drafts, exact-content Send/Cancel, stale-button protection | Owner reviewed real send proven; no CC/BCC/attachments or uncertain-send retry |
+| 🌐 Public reader | Bounded HTTP page reads, redirects checked, explicit failures |1MB/12k-character caps; no login/JavaScript/paywall bypass |
+| 🔎 Deep research | Bounded multi-source reads; comparison subject/context searches | Official Notion/Obsidian comparison retested; citations/model synthesis remain fallible |
+| 🧮 Conversions | Dated Frankfurter currency and Decimal unit conversion | Real currency/unit tests passed; not a live FX quote, fees excluded |
+| 📎 File output | CSV and non-negative bar chart PNG from supplied/checked data | Both received in real Telegram; delivered chart pixels checked |
+| 💻 Computer beta | Owner-only2-core Codespace, outbound bridge, bounded arithmetic/text-file tasks | Provisioned; no shared-user shell, no paid budget or auto-restart |
+| 📸 Browser beta | Fresh public Chromium, allowlist, two-page limit, screenshot and URL log | Built/deployed; end-to-end Telegram screenshot test in progress |
 
-Free-host delivery remains best-effort, not guaranteed at an exact minute. Quiet hours postpone a digest only while its delivery window remains open. Digests are deterministic and do not spend model quota.
+### Try it in plain language
 
-The admin-only `/admin-test` form runs captured `/selftest` requests without exposing the admin token in a URL. Synthetic negative users are excluded from real scheduled senders. Captured tests accept negative synthetic IDs only. Authorized live owner-chat tests are separate and have actual Telegram transport.
+```text
+Remind me tomorrow at8 to call Mum.
+Help me plan a project and track the steps.
+Any new mail from Alex?
+What's on my calendar?
+Connect Google.
+Go deep on a comparison of Notion and Obsidian for student notes.
+Convert10 USD to INR.
+Create a CSV and chart using Maths3, Finance5, Strategy2 hours.
+On my computer browser, open https://docs.python.org/3/tutorial/ and send a screenshot.
+```
 
-Content-aware emoji reactions are chosen locally without model calls. Commands and YES/NO confirmations are skipped. Telegram reaction failures never block the reply.
+Slash commands remain optional power controls: `/goal`, `/memory_review`, `/proactive`, `/digest`, `/quiet_hours`, `/connect_google`, `/google_status`, `/disconnect_google`, `/gmail`, `/gmail_read`, `/calendar` and review-only email commands.
 
-## Google beta and group replies
+### Computer and browser are a beta, not an unrestricted operator
 
-- `/connect_google`, `/google_status`, `/disconnect_google`: each real private-chat user connects their own account. External/testing audience permits named testers only, lifetime user cap 100. Tokens can expire after seven days.
-- `/gmail <query>`, `/gmail_read <ID>`, `/calendar`: direct reads, no mailbox/calendar results sent to Gemini or personal memory. Primary calendar only, next seven days.
-- `/email_draft recipient | subject | body`: encrypted ten-minute draft. Review From, To, subject, body and no-CC/BCC/attachments before using the exact draft-specific `/email_send` command. `/email_cancel <ID>` removes a pending draft. No automatic send or uncertain-send retry. Owner natural draft and confirmed-send result observed in real Telegram.
-- Slow text responses send timed progress notices. The shorter prompt keeps replies direct and plain.
-- In groups, exact @crayon_v1_bot mentions route to a separate conversation-only answer path. No private memory, Google or personal tools. Untagged messages are ignored; group context is not stored in personal memory. BotFather privacy is DISABLED; app still ignores untagged messages. Tagged reply and ignored untagged reply verified in real Telegram.
-- Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope security assessment are pending, not approved certification. No paid assessment has been initiated.
+The owner's GitHub student allowance includes180core-hours, about90actual hours at2cores, and20GB-month storage. A$0 Codespaces budget with stop-usage was verified before creation. Compute is used while awake; storage while the Codespace exists. The outbound worker session stops after25minutes. Start the existing Codespace and worker manually; there is no automatic wake. Stop when finished. Never raise the budget as a workaround.
 
-### Conversation-first controls (2.18)
-Say `help` for examples and buttons, `connect Google`, `any new mail from Alex?`, `what's on my calendar?`, or `email alex@example.com saying the meeting moved to 5`. A missing recipient address is requested, never guessed. Drafts show exact account, recipient, subject and body. Review, then tap Send or say `send it`; `cancel` discards. One current reviewed draft, ten-minute expiry, no CC/BCC/attachments. Old buttons cannot send a replaced draft. Commands remain optional power controls. Google results bypass the model and permanent memory; only the user's intent text is parsed by the model.
+Browser starts with public docs hosts only: Python, GitHub Docs, Notion, Obsidian and example.com. No imported account cookies, no forms, logins, posting, purchases, downloads or unrestricted scripts. Other bot users cannot borrow the owner's computer. Details: [COMPUTER_SETUP.md](COMPUTER_SETUP.md).
 
-Groups receive messages with Telegram privacy disabled, but the application discards untagged/non-command messages before model/private-state use. Group answers have no private memory, tools or account actions. Welcome is emitted when Crayon is newly added. Live tagged reply and ignored untagged reply proven; welcome-on-add is not yet real-chat proven.
+### Google connection rules
 
-## Public tools (2.20.1)
-Paste a public link to read it before answering; say `go deep on ...` for bounded multi-source research. Source failures are returned, not hidden. No JavaScript, login, paywall bypass or browser automation is available. `Convert10 USD to INR` uses Frankfurter dated reference rates; fixed unit conversions use Decimal arithmetic. Weather remains source-grounded search.
+Each user requests their own short link in their own private Crayon chat. Never forward an account-bound connection link. Choose your own named tester email and review Google's permissions. Invalid/used/expired states fail closed. `/disconnect_google` removes stored credentials and pending drafts and attempts Google revocation.
 
-Type `connect Google`, `link my Gmail`, `please connect my Google account` or `/connect_google`. A direct tappable URL is sent in chat; Telegram's optional keyboard is not required. Google stays testing-only for named testers.
-
-Real phase3 chat checks: example.com read passed; dated currency passed; singular-unit fix retested with1 mile ->1.609344km. First research comparison exposed uneven source coverage, improved with bounded per-subject searches; post-fix live proof pending. CSV/chart delivery and virtual-computer integration are not shipped yet.
-
-### Files and connection links (2.21)
-Ask for a CSV or bar chart with supplied/source-checked data. Files are generated in memory and attached as Telegram documents; delivery errors are reported. CSV cap100rows/20columns/500characters per cell; formula-leading cells are escaped. Bar charts cap12non-negative values, bounded labels, no arbitrary code execution. Two attachments max per reply,2MB each. No public file hosting or third-party file sends.
-
-Google connect links now use a short Crayon URL with an expiring random state. The destination is fixed to Google's configured OAuth app. Invalid/used/expired states fail; it isn't an open redirect. Every link belongs to the requesting Telegram user. Never forward your link: friends request their own in their private Crayon chat.
+Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
