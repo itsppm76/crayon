@@ -65,3 +65,12 @@ def test_brief_source_bound(monkeypatch):
     monkeypatch.setattr(cr_llm,'ask_json',lambda *a,**k:{'answer':'Draft','points':[{'claim':'point','url':'https://example.com'}],'outline':['Intro'],'gaps':['Check']})
     r=W.step_run({'op':'brief','input':'topic'})
     assert r['draft'] and 'check before using' in r['text'] and 'https://example.com' in r['text']
+
+def test_pause_running_cannot_resume(monkeypatch):
+    row={'id':1,'user_id':1,'status':'running'};written=[]
+    monkeypatch.setattr(W,'get',lambda *a:row)
+    def q(sql,args,fetch):written.append(args);row['status']=args[0]
+    monkeypatch.setattr(W.db,'q',q)
+    W.control(1,1,'pause')
+    assert row['status']=='pausing'
+    with pytest.raises(ValueError):W.control(1,1,'resume')
