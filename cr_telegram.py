@@ -226,7 +226,11 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             elif cmd == "/calendar":
                 out.send(chat_id,G.calendar(uid))
             elif cmd == "/email_draft":
-                out.send(chat_id,G.make_draft(uid,arg))
+                draft=G.make_draft(uid,arg)
+                import re
+                match=re.search(r"/email_send ([a-f0-9]+) ([a-f0-9]+)",draft)
+                markup={"inline_keyboard":[[{"text":"Send this exact email", "callback_data":"email_send:"+match[1]+":"+match[2]}],[{"text":"Cancel draft", "callback_data":"email_cancel:"+match[1]}]]} if match else None
+                out.send(chat_id,draft,markup=markup)
             elif cmd == "/email_send":
                 bits=arg.split()
                 if len(bits)!=2:raise G.GoogleError("Use the exact /email_send command shown beneath your draft")
@@ -296,11 +300,26 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         out.send(chat_id, reply)
 
 
-def handle_callback(cb, out):  # filled in by the safety milestone
+def handle_callback(cb, out):
     try:
         api("answerCallbackQuery", callback_query_id=cb["id"])
     except Exception:
         pass
+    data=cb.get("data","")
+    if not data.startswith(("email_send:","email_cancel:")):return
+    uid=cb.get("from",{}).get("id",0)
+    chat_id=cb.get("message",{}).get("chat",{}).get("id")
+    if uid<=0 or chat_id!=uid:return
+    import cr_google as G
+    try:
+        with mem.user_lock(uid):
+            parts=data.split(":")
+            if parts[0]=="email_send" and len(parts)==3:
+                out.send(chat_id,G.send_draft(uid,parts[1],parts[2]))
+            elif parts[0]=="email_cancel" and len(parts)==2:
+                out.send(chat_id,G.cancel_draft(uid,parts[1]))
+    except G.GoogleError as e:out.send(chat_id,str(e))
+    except Exception:out.send(chat_id,"Email action not confirmed. Check Sent before retrying.")
 
 
 def set_commands():
