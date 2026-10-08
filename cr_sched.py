@@ -48,10 +48,39 @@ def tick(out=None, only_user=None):
     return delivered
 
 
+def nudge(out=None):
+    """At most one check-in per task per ~day for stale active tasks, during waking hours (user local time)."""
+    if out is None:
+        import cr_telegram as tg
+        out = tg.Out()
+    import cr_tools as T
+    rows = db.q("""UPDATE tasks SET last_nudge=now() WHERE id IN (
+                     SELECT t.id FROM tasks t WHERE t.status='active' AND t.updated_at < now() - interval '20 hours'
+                     AND (t.last_nudge IS NULL OR t.last_nudge < now() - interval '22 hours')
+                     AND EXISTS (SELECT 1 FROM subtasks s WHERE s.task_id=t.id AND s.status<>'done')
+                     ORDER BY t.updated_at LIMIT 5 FOR UPDATE SKIP LOCKED) RETURNING id,user_id,chat_id,title""", ())
+    sent = []
+    for t in rows:
+        hr = T.now_local(t["user_id"]).hour
+        if not (9 <= hr < 21):
+            db.q("UPDATE tasks SET last_nudge=NULL WHERE id=%s", (t["id"],), "none")
+            continue
+        v = T._task_view(t["user_id"], t["id"])
+        nxt = next((x for x in v["steps"] if x["status"] != "done"), None)
+        try:
+            out.send(t["chat_id"], f"Task check-in: \"{t['title']}\" is {v['done']}/{v['total']} done. Next: {nxt['title'] if nxt else 'wrap up'}. Want to continue, change it, or drop it?")
+            sent.append(t["id"])
+        except Exception as e:
+            log.warning("nudge failed %s", redact(str(e))[:120])
+            db.q("UPDATE tasks SET last_nudge=NULL WHERE id=%s", (t["id"],), "none")
+    return sent
+
+
 def _loop():
     while True:
         try:
             tick()
+            nudge()
         except Exception as e:
             log.warning("tick failed: %s", redact(f"{type(e).__name__}: {e}")[:200])
         time.sleep(20)
