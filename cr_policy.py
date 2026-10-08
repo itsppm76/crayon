@@ -1,0 +1,27 @@
+"""Public disclosures match implemented data paths. No compliance promises."""
+import html
+
+CONTACT="prathamprateek76@gmail.com"
+PRIVACY="""Crayon privacy policy
+Last updated: October 8, 2026
+Operator and contact: Pratham Prateek Mohanty, prathamprateek76@gmail.com.
+Crayon is a Telegram assistant. Use it only if you are comfortable with Telegram, Render, Neon and the AI providers processing the data described here. Do not upload credentials or other secrets.
+Ordinary chat: Telegram user ID, display name, chat text, assistant replies, saved facts, notes, reminders, tasks and audit events are stored in Neon Postgres. Chat/history and selected facts are sent to Google's Gemini API to answer you. Web searches can send your search query to search providers. Data remains until you delete it; /memory and /forget provide controls. /delete_my_data confirm removes stored profile, facts, messages, notes, tasks, reminders and pending actions. Minimal audit/operational records may remain.
+Media: files up to 20,000,000 bytes are downloaded in server memory. Photos, PDF, audio and video can be sent to Gemini. Large media and video are temporarily uploaded through Gemini Files API and deletion is attempted after processing. If immediate deletion fails, Google normally auto-deletes after 48 hours. Crayon warns if cleanup cannot be confirmed. Raw files are not saved by Crayon to persistent storage. Up to 3,000 characters of the analysis are retained in chat history for follow-up questions. Telegram keeps the original message under its own policies. Office text is extracted with limits; archives are listed without execution. Unknown formats are acknowledged, not decoded.
+Google connection: optional, per-user OAuth, currently testing mode for named test users. Permissions requested: email identity, read Gmail, read primary-calendar events, and send Gmail only after your explicit draft confirmation. Tokens are encrypted with a server-held key in Neon and resolved only by your private Telegram user ID. Tokens can expire or be revoked. /disconnect_google revokes Google access and deletes stored credentials, OAuth links and pending drafts. /delete_my_data also disconnects Google. A failed Google revocation is reported and you can remove access in your Google account.
+Google data use: direct /gmail, /gmail_read and /calendar commands return requested results to your private Telegram chat. Crayon does not pass these mailbox/calendar results to Gemini, AI training or its permanent memory. Requested content is sent to Telegram to show you the result; Telegram retains messages according to its own policy. Email drafts you explicitly enter are encrypted temporarily in Neon with a ten-minute confirmation window; expired pending drafts are cleaned when draft/connection operations run. No email is sent by model instructions, inbox content or scheduled tasks. Uncertain sends are not automatically retried. CC, BCC and attachments are not supported by this draft command.
+Google API data is used only to provide the requested user-facing features, not sold, used for advertising, lending or unrelated purposes. No human review is part of normal Google reads. The operator may investigate limited data for security or bugs as permitted by Google's rules. The Google API connection follows Google's API Services User Data Policy, including Limited Use requirements. Public verification is pending, not certified.
+Security: HTTPS is used in transit and Google tokens/drafts have application-level encryption. Other stored chat data uses the database provider's protections. Access controls and heuristic secret detection reduce risk but do not guarantee perfect security. Contact the operator for questions or deletion issues.
+Changes: material Google-data-use changes need updated disclosures and consent before new use. No Google-data uses beyond those described here are enabled.
+"""
+TERMS="""Crayon terms
+Crayon is an experimental Telegram assistant operated by Pratham Prateek Mohanty. Contact: prathamprateek76@gmail.com.
+Free hosting can sleep or restart; reminders and replies are best-effort, not guaranteed deadlines. Model output can be wrong. Review important facts and all outgoing email content and recipients before confirming. File parsing has format and size limits. Do not rely on Crayon for emergencies.
+Do not upload secrets, unlawful content or data you do not have permission to share. Do not use the service to harm others or evade service limits. Google connection is optional and in testing mode, not generally verified. The operator may suspend access for safety or quota reasons. No paid service or billing commitment is included.
+You control deletion and Google disconnect through the commands described in the privacy policy. These terms do not waive rights provided by applicable law.
+"""
+
+def page(path):
+    text=PRIVACY if path=="/privacy" else TERMS
+    paras=text.split("\n")
+    return '<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><title>Crayon '+('privacy' if path=='/privacy' else 'terms')+'</title><main style="max-width:760px;margin:40px auto;padding:20px;font:17px/1.6 sans-serif"><h1>'+html.escape(paras[0])+'</h1>'+''.join('<p>'+html.escape(p)+'</p>' for p in paras[1:] if p)+'<a href="/">Crayon home</a></main>'
