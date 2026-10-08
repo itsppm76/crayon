@@ -55,4 +55,7 @@ curl -X POST https://crayon-v1.onrender.com/selftest \
 
 ## Phase 2
 
-M7: `/goal <concrete research/calculation goal>` saves a 2-4 step plan and executes with up to 12 tools, repeat-call limits, and a time budget. Local runtime tests pass. Live acceptance pending deployment. Admin form `/admin-test` uses captured output and requires the existing admin token. Selftest rejects real user IDs; scheduler excludes negative test users.
+M7: `/goal <concrete research/calculation goal>` saves a 2-4 step plan and executes with up to 12 tools, repeat-call limits, and a time budget. Local runtime tests pass. Verified live: /goal calculated 17 x 23 with sandbox output, saved a note, updated both steps, and cleaned up the synthetic user. Admin form `/admin-test` uses captured output and requires the existing admin token. Selftest rejects real user IDs; scheduler excludes negative test users.
+
+M8: photo/PDF/text/audio ingestion, 4 MB limit, untrusted-content analysis, no raw upload retention. Live testing pending.
+M9: /memory_review returns exact duplicate groups and evidence-backed preference suggestions, changes no facts. Live testing pending.
