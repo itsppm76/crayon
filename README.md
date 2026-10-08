@@ -258,3 +258,8 @@ Paste a public link to read it before answering; say `go deep on ...` for bounde
 Type `connect Google`, `link my Gmail`, `please connect my Google account` or `/connect_google`. A direct tappable URL is sent in chat; Telegram's optional keyboard is not required. Google stays testing-only for named testers.
 
 Real phase3 chat checks: example.com read passed; dated currency passed; singular-unit fix retested with1 mile ->1.609344km. First research comparison exposed uneven source coverage, improved with bounded per-subject searches; post-fix live proof pending. CSV/chart delivery and virtual-computer integration are not shipped yet.
+
+### Files and connection links (2.21)
+Ask for a CSV or bar chart with supplied/source-checked data. Files are generated in memory and attached as Telegram documents; delivery errors are reported. CSV cap100rows/20columns/500characters per cell; formula-leading cells are escaped. Bar charts cap12non-negative values, bounded labels, no arbitrary code execution. Two attachments max per reply,2MB each. No public file hosting or third-party file sends.
+
+Google connect links now use a short Crayon URL with an expiring random state. The destination is fixed to Google's configured OAuth app. Invalid/used/expired states fail; it isn't an open redirect. Every link belongs to the requesting Telegram user. Never forward your link: friends request their own in their private Crayon chat.
