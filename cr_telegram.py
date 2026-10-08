@@ -31,7 +31,7 @@ I'll show the email first. Tap Send or say "send it" after reviewing it. You can
 
 You can send photos, documents, audio or video up to 20 MB. Ask follow-up questions about them.
 
-Say "connect Google", "my reminders", "my tasks", "memory review" or "help". For updates, say "turn on daily check-ins" or "morning digest". Google is in testing mode, so only approved testers can connect and access may need renewing after 7 days.
+Say "connect Google", "my reminders", "my tasks", "memory review" or "help". Menu: /browse, /computer, /research, /files, /email_checks, /calendar_slot. Calendar slots are private previews; Create is always reviewed. Hourly email checks are owner beta and respect quiet hours. Browser/computer require approved tester access. For updates, say "turn on daily check-ins" or "morning digest". Google is in testing mode, so only approved testers can connect and access may need renewing after 7 days.
 
 In a group, tag @crayon_v1_bot. Your personal memory and account actions stay in private chat.
 
@@ -227,9 +227,24 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     cmd, arg = fields[0], fields[1] if len(fields)>1 else ""
     cmd = cmd.split("@")[0].lower()
     arg = arg.strip()
+    if cmd in ('/browse','/computer','/research','/files'):
+        examples={'/browse':'Visit https://www.instagram.com and send a screenshot. Approved testers only; no login/forms.', '/computer':'On my computer calculate 20*(3+2)/4. Approved testers only. Text-file storage is owner-only.', '/research':'Go deep on a comparison of Notion and Obsidian for student notes.', '/files':'Create a CSV and chart using Maths3, Finance5, Strategy2 hours.'}
+        if not arg:out.send(chat_id,examples[cmd]);return
+        text={'/browse':'Browser screenshot: ','/computer':'On my computer ','/research':'Research ','/files':'Create CSV/chart: '}[cmd]+arg
+        reply,meta=A.respond(uid,chat_id,text,name)
+        out.send(chat_id,reply)
+        for item in meta.get('artifacts',[]):out.artifact(chat_id,item)
+        return
+    if cmd=='/email_checks':
+        import cr_mail_watch as W,cr_google as G
+        try:
+            if arg not in ('on','off'):out.send(chat_id,'Use /email_checks on or off. Owner beta, hourly metadata only, quiet hours respected.');return
+            out.send(chat_id,W.configure(uid,chat_id,arg=='on'))
+        except G.GoogleError as e:out.send(chat_id,str(e))
+        return
     if cmd == "/start":
         mem.touch_user(uid, name)
-        out.send(chat_id, f"Hi{' ' + name if name else ''}, I'm Crayon. I remember what matters about you now, even after restarts. Just tell me what you need, or say 'help'. To link your account, type 'connect Google'. No button needed.")
+        out.send(chat_id, f"Hi{' ' + name if name else ''}, I'm Crayon. I remember what matters about you now, even after restarts. Just tell me what you need or say help. Use the menu for mail, calendar previews, research, charts, memory and updates. Browser/computer are approved-tester beta. Connect Google in your own private chat.")
     elif cmd == "/help":
         out.send(chat_id, HELP, markup={"keyboard":[[{"text":"My reminders"},{"text":"My tasks"}],[{"text":"Show my memory"},{"text":"Privacy options"}],[{"text":"Connect Google"},{"text":"Help"}]],"resize_keyboard":True,"one_time_keyboard":True})
     elif cmd == "/goal":
@@ -383,10 +398,23 @@ def handle_callback(cb, out):
 def set_commands():
     try:
         api("setMyCommands", commands=[
-            {"command": "memory", "description": "What I remember about you"},
-            {"command": "forget", "description": "Remove one remembered thing"},
-            {"command": "delete_my_data", "description": "Wipe all my data"},
-            {"command": "help", "description": "What I can do"}])
+            {"command":"help","description":"See what I can do"},
+            {"command":"connect_google","description":"Connect your own Gmail and calendar"},
+            {"command":"google_status","description":"Check your Google connection"},
+            {"command":"gmail","description":"Check your mail"},
+            {"command":"calendar","description":"See the next week on your calendar"},
+            {"command":"calendar_slot","description":"Preview a private calendar slot before booking"},
+            {"command":"email_checks","description":"Turn hourly new-mail checks on or off"},
+            {"command":"browse","description":"Public website screenshot (approved testers)"},
+            {"command":"computer","description":"Computer status and maths (approved testers)"},
+            {"command":"research","description":"Research a topic with sources"},
+            {"command":"files","description":"Create a CSV or chart from your data"},
+            {"command":"memory","description":"See what I remember about you"},
+            {"command":"forget","description":"Remove one remembered fact"},
+            {"command":"digest","description":"Set morning or evening updates"},
+            {"command":"quiet_hours","description":"Set hours with no proactive pings"},
+            {"command":"disconnect_google","description":"Remove your Google connection"},
+            {"command":"delete_my_data","description":"Delete your stored data after confirmation"}])
     except Exception as e:
         log.warning("setMyCommands failed: %s", redact(str(e)))
 
