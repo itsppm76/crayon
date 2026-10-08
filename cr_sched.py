@@ -24,8 +24,15 @@ def tick(out=None, only_user=None):
     delivered = []
     for r in rows:
         late = (db.q("SELECT now() AS n", (), "one")["n"] - r["due_at"]).total_seconds()
-        text = "Reminder: " + r["text"] + (f"\n(sent {int(late // 60)} min late, the free host was asleep)" if late > 300 else "")
+        late_note = f"\n(sent {int(late // 60)} min late, the free host was asleep)" if late > 300 else ""
         try:
+            if r.get("kind") == "job":
+                import cr_agent
+                reply, _meta = cr_agent.respond(r["user_id"], r["chat_id"],
+                    "[Scheduled job you set for me earlier - do it now and reply with the result only, don't create new reminders or jobs] " + r["text"], "")
+                text = "Scheduled: " + reply + late_note
+            else:
+                text = "Reminder: " + r["text"] + late_note
             out.send(r["chat_id"], text)
         except Exception as e:
             attempts = (r["attempts"] or 0) + 1
