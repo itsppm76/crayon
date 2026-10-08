@@ -45,7 +45,7 @@
 - Google mail/calendar reads, owner-reviewed email send, and calendar preview/Cancel passed live checks. No calendar event write claimed.
 - Group exact-tag replies and untagged-ignore passed live tests; add-welcome still needs a real add test.
 - 17-command Telegram menu, plain-text replies, reactions and progress messages are deployed.
-- PNG screenshots/charts use Telegram `sendPhoto` within photo dimensions; CSVs stay documents. Existing artifact limit is 2MB. A live test returned a Photo card; final downloaded inline pixels were not yet visually verified.
+- PNG screenshots/charts use Telegram `sendPhoto` within photo dimensions; CSVs stay documents. Existing artifact limit is 2MB. Photo-card delivery and rendered in-chat screenshot pixels were verified live.
 
 ### Still coming / not active
 
