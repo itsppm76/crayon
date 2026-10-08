@@ -25,6 +25,9 @@ def run(body):
         if len(data) > cr_media.MAX_BYTES:
             return {"ok": False, "error": "fixture too large"}
         results.append({"media": fixture["mime"], "out": cr_media.analyze(data, fixture["mime"], fixture.get("caption", ""))})
+    if body.get("draft_fixture"):
+        import cr_tools
+        results.append({"draft": cr_tools.draft_message({"uid":uid}, "Sam", "Ask to reschedule a meeting; new time not chosen yet")})
     if body.get("seed_reminder"):
         from datetime import datetime, timezone, timedelta
         mem.touch_user(uid)
