@@ -29,6 +29,24 @@ def handle(uid,chat,text,out):
     try:
         parts=text.split(None,3)
         if len(parts)==1:out.send(chat,render(uid))
+        elif parts[1]=='add':
+            fields=[x.strip() for x in text[len('/tasks add '):].split(' | ')]
+            if not 2<=len(fields)<=9 or any(not x for x in fields):raise ValueError('Use /tasks add Title | step1 | step2 (up to8 steps).')
+            r=T.create_task({'uid':uid,'chat_id':chat},fields[0],fields[1:])
+            if not r['verified']:raise ValueError(r.get('error','Task not confirmed'))
+            out.send(chat,'Task saved and checked.\n\n'+render(uid))
+        elif parts[1]=='export':
+            tasks=T.list_tasks({'uid':uid})['tasks']
+            if not tasks:raise ValueError('No active tasks to export.')
+            import cr_artifacts
+            records=[]
+            for t in tasks:
+                for step in t['steps']:records.append([str(t['id']),t['title'],str(step['n']),step['title'],step['status'],step['result']])
+            if len(records)>100:raise ValueError('Too many task rows for this bounded export.')
+            out.artifact(chat,{'filename':'crayon-tasks.csv','mime':'text/csv','data':cr_artifacts.csv_bytes(['task_id','task','step','title','status','reported_result'],records)})
+            chart=cr_artifacts.chart_bytes('Your recorded task progress',[t['title'][:22] for t in tasks[:12]],[100*t['done']/max(1,t['total']) for t in tasks[:12]],'% complete')
+            out.artifact(chat,{'filename':'crayon-task-progress.png','mime':'image/png','data':chart})
+            out.send(chat,'Task CSV and recorded-progress chart prepared. Step completion reflects recorded results, not independent proof.')
         elif parts[1]=='show':
             r=T.list_tasks({'uid':uid},int(parts[2]))
             if not r['verified']:raise ValueError('No such task in your account')
@@ -42,6 +60,6 @@ def handle(uid,chat,text,out):
             r=T.update_step({'uid':uid},int(parts[2]),int(step),'done',note[:600])
             if not r['verified']:raise ValueError(r.get('error','Update unverified'))
             out.send(chat,'Your completion note was saved. This is your reported result, not independently checked.\n\n'+render(uid))
-        else:raise ValueError('Use /tasks, show ID, or done ID STEP | result.')
+        else:raise ValueError('Use /tasks, add Title | steps, export, show ID, or done ID STEP | result.')
     except Exception as e:out.send(chat,'Task request not completed: '+str(e)[:200])
     return True
