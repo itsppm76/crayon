@@ -30,3 +30,7 @@
 Every feature is reported separately as built, deployed and live-tested. Free quotas and hosting do not create an uptime or scale promise.
 
 Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.102 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+
+## Next interaction layer (design only)
+
+Public no-login website interactions, including Calendly and Google appointment pages. Emails supply untrusted links, never authority. Show exact destination, form fields, slot, disclosed identity and any cancellation/no-show/payment terms for owner review. Calendar/timezone/class timetable checked before proposing a booking; incomplete availability blocks commitment. One-use approval bound to page/form/fields/slot, then fresh state check, submit once, inspect confirmation pixels and return source URL/proof. No login, account cookies, purchases/payments, sensitive portals, arbitrary external instructions or automatic retry of uncertain submission. This is not built and is not a promise that every public website works.
