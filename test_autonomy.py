@@ -106,3 +106,12 @@ def test_calendar_create_readback_exact(monkeypatch):
     monkeypatch.setattr(G.httpx,'Client',Client)
     assert 'read back' in K.create(10,'a1b2c3',digest[:12]);assert Client.posts==1
     assert any(x.startswith('DELETE FROM google_calendar_drafts WHERE id') for x in queries)
+
+def test_mail_clean_entities(monkeypatch):
+    monkeypatch.setattr(W.G,'status',lambda uid:{'email':'owner@example.com'})
+    def request(uid,url,params):
+        if url.endswith('/messages'):return {'messages':[{'id':'x'}]}
+        return {'payload':{'headers':[{'name':'Subject','value':'Let&#39;s work'},{'name':'From','value':'Sam <sam@example.com>'}]},'snippet':'I didn&#39;t forget','labelIds':['IMPORTANT']}
+    monkeypatch.setattr(W.G,'request',request)
+    text,_=W.scan(W.OWNER,{'email':'owner@example.com','since':0,'seen':[]})
+    assert "Let's work" in text and "didn't" in text and '&#' not in text and '<sam@' not in text
