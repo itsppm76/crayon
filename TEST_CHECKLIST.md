@@ -77,3 +77,6 @@ M13 Google beta, October 8:
 - Cloud client created; API enablement, scopes, Render secrets and live OAuth/read/disconnect verification still pending.
 - Real email send is NOT tested; requires owner review of final recipient/content before any live send.
 - Public verification and security assessment are NOT complete. No paid assessment authorized.
+
+M15 prepared, not deployed: 41 local tests including exact group mention, ignored untagged groups, no private state and disabled group tools. Slow-text progress timer and revised prompt need owner-chat checks. Group tagging needs a real group test. Keep BotFather privacy mode ON; exact @crayon_v1_bot mentions are sufficient. No existing group was selected or messaged.
+M13 2.16.0 live: health ok/db true. Privacy page visually inspected. Cloud credentials in Render; Gmail API enabled. Live captured smoke test passes /help and synthetic private-Google rejection. OAuth and real reads/send still untested; public verification not submitted.
