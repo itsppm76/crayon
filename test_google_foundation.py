@@ -125,3 +125,22 @@ def test_draft_single_line_review(monkeypatch):
     monkeypatch.setattr(G.db,'q',lambda *a,**kw:None)
     out=G.make_draft(11,'owner@example.com | Review only | Do not send this.')
     assert 'Draft only, not sent' in out and 'Subject: Review only' in out
+
+
+def test_email_button_user_binding(monkeypatch):
+    import cr_telegram as T
+    monkeypatch.setattr(T,'api',lambda *a,**kw:None)
+    monkeypatch.setattr(G,'send_draft',lambda *a:pytest.fail('cross-user callback send'))
+    out=T.CaptureOut()
+    T.handle_callback({'id':'c','from':{'id':22},'message':{'chat':{'id':33}},'data':'email_send:id:hash'},out)
+    assert not out.sent
+
+
+def test_review_button_exact_bound_fields(monkeypatch):
+    import cr_telegram as T
+    monkeypatch.setattr(T,'api',lambda *a,**kw:None)
+    seen=[]
+    monkeypatch.setattr(G,'send_draft',lambda *a:seen.append(a) or 'Sent test (mock)')
+    out=T.CaptureOut()
+    T.handle_callback({'id':'c','from':{'id':22},'message':{'chat':{'id':22}},'data':'email_send:id:hash'},out)
+    assert seen==[(22,'id','hash')]
