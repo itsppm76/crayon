@@ -63,7 +63,7 @@ class Handler(BaseHTTPRequestHandler):
             from cr_policy import page
             return self._send(200,page(self.path),"text/html")
         if self.path == "/":
-            return self._send(200,'<title>Crayon</title><h1>Crayon Telegram assistant</h1><p>Memory, reminders, search and media reading on free hosting.</p><p>Google integration is in testing mode, only for named test users. Each user connects their own account.</p><p><a href="https://t.me/crayon_v1_bot">Open Crayon</a> | <a href="/privacy">Privacy</a> | <a href="/terms">Terms</a></p>',"text/html")
+            return self._send(200, '<!doctype html><html><head><meta name="google-site-verification" content="dhan82Y3H9t0tn4VuTh-Bs53DELgy7XEukGcvh0LuSg"><title>Crayon</title></head><body><h1>Crayon Telegram assistant</h1><p>Memory, reminders, search and media reading on free hosting.</p><p>Google integration is in testing mode, only for named test users. Each user connects their own account.</p><p><a href="https://t.me/crayon_v1_bot">Open Crayon</a> | <a href="/privacy">Privacy</a> | <a href="/terms">Terms</a></p>',"text/html")
         if self.path == "/admin-test":
             return self._send(200, """<!doctype html><title>Crayon admin test</title><h1>Captured self-test</h1>
 <p>Negative synthetic users only. No Telegram sends.</p>
