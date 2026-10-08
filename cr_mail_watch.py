@@ -1,5 +1,5 @@
 """Opt-in hourly sender/subject/provider-snippet mail check. No model/body reads/actions."""
-import time,re,json
+import time,re,json,html
 import cr_db as db
 import cr_google as G
 import cr_proactive as P
@@ -23,19 +23,21 @@ def scan(uid,state):
         item=G.request(uid,'https://gmail.googleapis.com/gmail/v1/users/me/messages/'+ident,{'format':'metadata','metadataHeaders':['From','Subject']})
         h={v['name'].lower():v['value'] for v in item.get('payload',{}).get('headers',[])}
         from cr_safety import redact,clean_text
-        subject=redact(clean_text(h.get('subject','(no subject)')).replace('\n',' ')[:130])
-        sender=redact(clean_text(h.get('from','unknown sender')).replace('\n',' ')[:100])
-        snippet=redact(clean_text(item.get('snippet','')).replace('\n',' ')[:180])
-        line=sender+': '+subject+(' | Excerpt: '+snippet if snippet else '')
+        subject=redact(clean_text(html.unescape(h.get('subject','(no subject)'))).replace('\n',' ')[:100])
+        sender=redact(clean_text(html.unescape(h.get('from','unknown sender'))).replace('\n',' ')[:100])
+        sender=re.sub(r'\s*<[^>]+>','',sender).strip() or 'Unknown sender'
+        snippet=redact(clean_text(html.unescape(item.get('snippet',''))).replace('\n',' ')[:140])
+        line=subject+'\nFrom: '+sender+('\n'+snippet if snippet else '')
         labels=item.get('labelIds',[])
         target=attention if any(x in labels for x in ('IMPORTANT','STARRED')) or re.search(r'\b(deadline|action required|due|overdue|urgent|interview|exam)\b',subject,re.I) else optional
         target.append(line)
     state['seen']=(state.get('seen',[])+ids)[-500:]
     if not ids:return '',state
-    lines=['New email metadata (untrusted, no actions taken):']
-    if attention:lines+=['May need attention:']+attention
-    if optional:lines+=['FYI: '+str(len(optional))+' other new email(s): '+'; '.join(optional)[:250]]
-    if messages.get('nextPageToken') or len(messages.get('messages',[]))>len(ids):lines+=['More mail may remain; this check is capped at4 messages.']
+    lines=['INBOX CHECK']
+    if attention:lines+=['','POSSIBLE ATTENTION','\n\n'.join(attention)]
+    if optional:lines+=['','OTHER RECENT MAIL','\n\n'.join(optional)]
+    if messages.get('nextPageToken') or len(messages.get('messages',[]))>len(ids):lines+=['','More mail remains. Use /gmail to explore.']
+    lines+=['','Checked up to4 messages. Labels/subjects can misjudge importance. No actions taken.']
     return '\n'.join(lines),state
 def tick(out):
     state=db.kv_get(KEY(OWNER),None)
