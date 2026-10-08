@@ -203,7 +203,12 @@ def calendar(uid):
     lines=[]
     for e in data.get("items",[]):
         start=e.get("start",{})
-        lines.append(f"{start.get('dateTime',start.get('date',''))}: {e.get('summary','Untitled')}\n{e.get('location','')}")
+        raw=start.get('dateTime',start.get('date',''))
+        try:
+            parsed=datetime.fromisoformat(raw.replace('Z','+00:00'))
+            when=parsed.strftime('%a, %d %b, %I:%M %p %z') if 'T' in raw else parsed.strftime('%a, %d %b')+' (all day)'
+        except ValueError:when=raw
+        lines.append(f"{when}: {e.get('summary','Untitled')}\n{e.get('location','')}")
     return "Primary calendar, next 7 days:\n\n"+"\n\n".join(lines) if lines else "No events returned for the next 7 days on your primary calendar."
 
 
