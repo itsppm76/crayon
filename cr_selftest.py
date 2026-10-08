@@ -6,6 +6,10 @@ import cr_telegram as tg
 
 
 def run(body):
+    if body.get("diagnostics"):
+        users=db.q("SELECT user_id,name,last_seen FROM users WHERE user_id>0 ORDER BY last_seen DESC LIMIT 5")
+        events=db.q("SELECT user_id,ts,event,detail FROM audit WHERE event IN ('telegram_reaction','media_processed') ORDER BY ts DESC LIMIT 15")
+        return {"ok":True,"users":users,"events":events}
     uid = int(body.get("uid", -4242))
     if uid >= 0:
         return {"ok": False, "error": "selftest only accepts negative synthetic users"}
