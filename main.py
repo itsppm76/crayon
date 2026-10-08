@@ -1,11 +1,103 @@
+"""Crayon entrypoint: health server, database, Telegram polling."""
+import json
 import logging
-from dotenv import load_dotenv
-from config.settings import Settings
-from core.agent import Agent
-from core.memory import InMemoryMemory
-from core.model_router import ModelRouter
-from adapters.telegram.bot import run
+import os
+import sys
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import cr_config as C
+from cr_safety import redact
+
+
+class RedactFilter(logging.Filter):
+    def filter(self, record):
+        try:
+            record.msg = redact(record.getMessage())
+            record.args = ()
+        except Exception:
+            pass
+        return True
+
+
+def setup_logging():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    for h in logging.getLogger().handlers:
+        h.addFilter(RedactFilter())
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+
+log = logging.getLogger("crayon.main")
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _send(self, code, body, ctype="text/plain"):
+        data = body if isinstance(body, bytes) else body.encode()
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _admin(self):
+        tok = self.headers.get("Authorization", "").replace("Bearer ", "")
+        return bool(C.ADMIN_TOKEN) and tok == C.ADMIN_TOKEN
+
+    def do_GET(self):
+        if self.path.startswith("/health"):
+            import cr_db as db
+            info = {"ok": True, "version": C.VERSION, "db": db.available(), "mode": C.MODE}
+            return self._send(200, json.dumps(info), "application/json")
+        return self._send(200, "Crayon host running\n")
+
+    def do_POST(self):
+        n = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(n) if n else b""
+        try:
+            body = json.loads(raw or b"{}")
+        except Exception:
+            body = {}
+        if self.path == "/selftest":
+            if not self._admin():
+                return self._send(403, "forbidden")
+            import cr_selftest
+            return self._send(200, json.dumps(cr_selftest.run(body), default=str), "application/json")
+        return self._send(404, "not found")
+
+    def log_message(self, *a):
+        pass
+
+
+def start_server():
+    port = int(os.environ.get("PORT", "10000"))
+    try:
+        srv = ThreadingHTTPServer(("0.0.0.0", port), Handler)
+    except OSError:
+        log.info("port %s already served by the host wrapper; skipping own server", port)
+        return None
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    log.info("http server on %s", port)
+    return srv
+
+
+def main():
+    setup_logging()
+    start_server()
+    import cr_db as db
+    import cr_telegram as tg
+    try:
+        db.init()
+    except Exception as e:
+        log.error("database init failed (running without persistence): %s", redact(str(e))[:200])
+    if not C.TELEGRAM_TOKEN:
+        log.error("TELEGRAM_BOT_TOKEN missing")
+        threading.Event().wait()
+    tg.set_commands()
+    tg.poll_forever()
+
 
 if __name__ == "__main__":
-    load_dotenv(); logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    settings = Settings(); run(Agent(ModelRouter(settings), InMemoryMemory()), settings)
+    main()
