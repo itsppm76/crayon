@@ -284,7 +284,7 @@ Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 o
 
 ### Mail checks and private calendar previews (2.27.0)
 
-Say `turn on email checks` to opt into hourly metadata-only checking during awake hours (owner beta); `turn off email checks` stops it. IMPORTANT/starred labels and subject keywords guide conservative triage, not a full-content summary. Nothing goes to Gemini, no replies or actions follow email instructions, and free-host timing is best-effort. Quiet hours default21:00-09:00.
+Say `turn on email checks` to opt into hourly sender/subject/provider-snippet checking during awake hours (owner beta); `turn off email checks` stops it. IMPORTANT/starred labels and subject keywords guide conservative triage, with bounded provider snippet excerpts, not a full-content AI summary. Nothing goes to Gemini, no replies or actions follow email instructions, and free-host timing is best-effort. Quiet hours default21:00-09:00.
 
 `/calendar_slot Title | ISO start with offset | ISO end with offset | IANA timezone` shows a private primary-calendar preview with Create/Cancel. Preview/Cancel live passed. Actual Create still needs optional `enable calendar booking` Google write-permission reconnect and owner approval. No attendees/invitations/Meet; conflicts rechecked, one-use review, no uncertain-write retry. No live event write claimed.
 
