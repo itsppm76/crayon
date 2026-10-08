@@ -35,3 +35,20 @@ def test_not_auto_activate():
     class Out:
         def send(self,*a,**k):pytest.fail('no command')
     assert not W.handle(1,1,'do more automatically',Out())
+
+def test_scheduled_writes_blocked():
+    import cr_tools as T
+    for tool,args in [('remember',{'key':'x','value':'y'}),('create_csv',{'headers':['x'],'rows':[['1']]}),('computer_browse',{'url':'https://example.com'})]:
+        r=T.run(tool,args,{'uid':1,'readonly':True,'meta':{}})
+        assert not r['ok'] and 'read-only' in r['error']
+    names=[x['name'] for x in T.declarations(readonly=True)[0]['functionDeclarations']]
+    assert 'research_web' in names and 'remember' not in names and 'computer_browse' not in names
+
+def test_dashboard_no_invented_done(monkeypatch):
+    import cr_dashboard as D
+    monkeypatch.setattr(D.T,'list_tasks',lambda ctx:{'tasks':[{'id':4,'title':'Demo','done':0,'total':2,'steps':[{'n':1,'title':'Review','status':'blocked'},{'n':2,'title':'Write','status':'todo'}]}]})
+    monkeypatch.setattr(D.T,'list_reminders',lambda ctx:{'reminders':[]})
+    monkeypatch.setattr(W,'init',lambda:None)
+    monkeypatch.setattr(D.db,'q',lambda *a:[])
+    text=D.render(1)
+    assert 'Blocked: Review' in text and 'Next 2: Write' in text and '0/2' in text
