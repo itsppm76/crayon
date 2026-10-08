@@ -219,7 +219,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     if __import__('re').fullmatch(r"(?:(?:please|plz|pls) )?(?:connect|link|reconnect)(?: to)?(?: my)? (?:google|gmail)(?: account)?(?: please)?[.!?]*",plain) or plain in ('how do i connect google','how to connect google','i want to connect google','connect my google account'):
         plain='connect google'
     text=aliases.get(plain,text)
-    if not text.startswith('/') and chat_id==uid:
+    if (not text.startswith('/') or text.startswith('/calendar_slot ')) and chat_id==uid:
         import cr_google_chat
         if cr_google_chat.handle(uid,chat_id,text,None,out):return
     fields = text.split(None,1)
@@ -252,7 +252,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             if cmd != "/disconnect_google" and not G.configured():
                 raise G.GoogleError("Google setup is not active yet")
             if cmd == "/connect_google":
-                out.send(chat_id, "Open this link to connect your own Google account:\n" + G.begin(uid) + "\n\nThis link is only for your Telegram account. Don't forward it. Friends must type 'connect Google' in their own private Crayon chat. Choose your whitelisted Google email, then review Google's permissions. This link works even if you don't see a Connect Google button.\n\nCrayon is in testing mode: only approved tester emails can connect, and access may need renewing after 7 days. Mail/calendar results stay in this private chat and aren't sent to the AI model or permanent memory. Tokens are encrypted. I show each email draft before you approve sending.\n\nPrivacy: " + C.PUBLIC_URL + "/privacy\nYou can always type 'connect Google' or /connect_google to get a fresh link.")
+                out.send(chat_id, "Open this link to connect your own Google account:\n" + G.begin(uid) + "\n\nThis link is only for your Telegram account. Don't forward it. Friends must type 'connect Google' in their own private Crayon chat. Choose your whitelisted Google email, then review Google's permissions. This link works even if you don't see a Connect Google button.\n\nCrayon is in testing mode: only approved tester emails can connect, and access may need renewing after 7 days. Mail/calendar results stay in this private chat and aren't sent to the AI model or permanent memory. Tokens are encrypted. I show each email draft before you approve sending. Say enable calendar booking for an optional calendar-write reconnect, or turn on email checks for hourly metadata-only checks during awake hours.\n\nPrivacy: " + C.PUBLIC_URL + "/privacy\nYou can always type 'connect Google' or /connect_google to get a fresh link.")
             elif cmd == "/disconnect_google":
                 r=G.disconnect(uid)
                 out.send(chat_id, "Stored Google credentials and pending drafts removed. " + ("Google revocation confirmed." if r["revoked"] else "Google revocation was not confirmed; remove Crayon access in your Google account too."))
@@ -351,7 +351,7 @@ def handle_callback(cb, out):
     except Exception:
         pass
     data=cb.get("data","")
-    if not data.startswith(("email_send:","email_cancel:","ux:")):return
+    if not data.startswith(("email_send:","email_cancel:","calendar_create:","calendar_cancel:","ux:")):return
     uid=cb.get("from",{}).get("id",0)
     chat_id=cb.get("message",{}).get("chat",{}).get("id")
     if uid<=0 or chat_id!=uid:return
@@ -366,12 +366,18 @@ def handle_callback(cb, out):
     try:
         with mem.user_lock(uid):
             parts=data.split(":")
-            if parts[0]=="email_send" and len(parts)==3:
+            if parts[0]=='calendar_create' and len(parts)==3:
+                import cr_calendar_draft as K
+                out.send(chat_id,K.create(uid,parts[1],parts[2]))
+            elif parts[0]=='calendar_cancel' and len(parts)==2:
+                import cr_calendar_draft as K
+                out.send(chat_id,K.cancel(uid,parts[1]))
+            elif parts[0]=="email_send" and len(parts)==3:
                 out.send(chat_id,G.send_draft(uid,parts[1],parts[2]))
             elif parts[0]=="email_cancel" and len(parts)==2:
                 out.send(chat_id,G.cancel_draft(uid,parts[1]))
     except G.GoogleError as e:out.send(chat_id,str(e))
-    except Exception:out.send(chat_id,"Email action not confirmed. Check Sent before retrying.")
+    except Exception:out.send(chat_id,"Google action not confirmed. Check Gmail Sent or Calendar before retrying.")
 
 
 def set_commands():
