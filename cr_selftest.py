@@ -16,6 +16,14 @@ def run(body):
         upd = {"message": {"message_id": 1, "chat": {"id": uid}, "from": {"id": uid, "first_name": body.get("name", "SelfTest")}, "text": t}}
         tg.handle_update(upd, out)
         results.append({"in": t, "out": [m["text"] for m in out.sent], "meta": out.meta})
+    if body.get("tick"):
+        import cr_sched
+        out = tg.CaptureOut()
+        ids = cr_sched.tick(out, only_user=uid)
+        results.append({"tick_delivered": ids, "sent": [m["text"] for m in out.sent]})
+    if body.get("probe") == "reminders":
+        rows = db.q("SELECT id,text,status,attempts FROM reminders WHERE user_id=%s ORDER BY id", (uid,))
+        results.append({"reminders": [dict(r) for r in rows]})
     if body.get("probe") == "facts":
         results.append({"facts": [dict(key=f["key"], value=f["value"]) for f in mem.facts(uid)]})
     if body.get("cleanup"):
