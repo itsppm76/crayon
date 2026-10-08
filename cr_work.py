@@ -16,13 +16,13 @@ def parse(arg):
     chunks=[x.strip() for x in arg.split(' | ')]
     title=chunks.pop(0) if len(chunks)>1 else 'Internal work'
     if not chunks:chunks=[arg.strip()]
-    if not 1<=len(chunks)<=3:raise ValueError('Use1-3 steps separated by |.')
+    if not 1<=len(chunks)<=3:raise ValueError('Use 1-3 steps separated by |.')
     steps=[]
     for text in chunks:
         bits=text.split(None,1)
         if len(bits)!=2 or bits[0] not in OPS:raise ValueError('Supported steps: research query, page https://URL, calculate arithmetic. No emails, calendar, browser actions or external writes.')
         op,value=bits
-        if not value or len(value)>400:raise ValueError('Step input must be1-400 characters.')
+        if not value or len(value)>400:raise ValueError('Step input must be 1-400 characters.')
         if op=='page':
             from urllib.parse import urlparse
             from cr_web import _safe_host
@@ -49,13 +49,14 @@ def calculate(expression):
 
 def create(uid,chat,arg):
     title,steps=parse(arg)
+    P.mem.touch_user(uid)
     conn=db._connect()
     try:
         with conn.transaction():
             conn.execute('SELECT pg_advisory_xact_lock(39272412)')
             active=conn.execute("SELECT count(*) AS n FROM work_jobs WHERE user_id=%s AND status IN ('queued','running','paused')",(uid,)).fetchone()['n']
             quota=conn.execute("SELECT count(*) AS total,count(*) FILTER(WHERE user_id=%s) AS own FROM work_jobs WHERE created_at>now()-interval '24 hours'",(uid,)).fetchone()
-            if active>=3 or quota['own']>=3 or quota['total']>=10:raise ValueError('Work queue limit:3 active and3 new jobs per person/24h,10 total/24h. No quota changes.')
+            if active>=3 or quota['own']>=3 or quota['total']>=10:raise ValueError('Work queue limit: 3 active and 3 new jobs per person/24h, 10 total/24h. No quota changes.')
             job=conn.execute('INSERT INTO work_jobs(user_id,chat_id,title,steps) VALUES(%s,%s,%s,%s::jsonb) RETURNING id',(uid,chat,title,json.dumps(steps))).fetchone()['id']
     finally:conn.close()
     row=get(uid,job)
@@ -65,7 +66,7 @@ def create(uid,chat,arg):
 def get(uid,ident):return db.q('SELECT * FROM work_jobs WHERE id=%s AND user_id=%s',(int(ident),uid),'one')
 def view(row):
     results=row.get('results') or []
-    lines=[f"Work #{row['id']}: {row['title']}",f"Status: {row['status']}. Verified steps:{len(results)}/{len(row['steps'])}."]
+    lines=[f"Work #{row['id']}: {row['title']}",f"Status: {row['status']}. Verified steps: {len(results)}/{len(row['steps'])}."]
     for i,step in enumerate(row['steps'],1):
         lines.append(f"{i}. {step['op']}: {step['input']}"+(' [verified]' if i<=len(results) else ' [not completed]'))
     if row.get('error'):lines+=['Failure: '+row['error']]
