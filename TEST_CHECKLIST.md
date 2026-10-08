@@ -121,4 +121,10 @@ October 8 23:15 IST live follow-up:
 - Browser initial bridge failures produced fake model '(screenshot attached)' text with no attachment. Deterministic screenshot routing now requires verified result AND PNG bytes; fail-closed errors instead.
 - Remaining: real group welcome-on-add, real computer file create/read (initial operation error fail-closed; schema enum fixed, retest pending), README rendered final phase table inspection. Public Google verification still pending, no paid assessment initiated.
 
-Tester release2.24.0: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.97 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.102 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+
+## Public-web and official chart chain (Oct9,01:20IST)
+-2.25.0 public-web:98 local tests, deployed; fresh$0 Codespaces consumed/billable and$0 stop budget checked before restarting existing machine.
+- Owner Telegram Instagram screenshot281KB, full pixels checked: blank login fields; no sign-in. YouTube screenshot18.7KB full pixels checked: signed-out search/sign-in/try-searching homepage. No search/playback claim.
+-2.26.0 World Bank API three-country2024 nominal GDP per capita -> exact-record validation -> source screenshot45.3KB, CSV466B, chart21.9KB -> findings/source/action log. Delivered real Telegram at01:19; full chart pixels checked. Source updated2026-10-08.
+-102 local tests include exact source values, missing/mismatched/duplicate records, and narrowly scoped recipe browser intent. Synthetic tests are not live proof.
