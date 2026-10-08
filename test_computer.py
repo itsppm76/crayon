@@ -28,3 +28,12 @@ def test_browser_allowlist():
     from computer_browser import allowed
     for url in ('http://example.com','https://127.0.0.1','https://accounts.google.com','https://docs.github.com/login','https://docs.python.org:1234','https://example.com@evil.com'):
         with pytest.raises(ValueError):allowed(url)
+
+
+def test_queue_retention(monkeypatch):
+    queries=[]
+    monkeypatch.setattr(K.db,'q',lambda sql,args,mode:queries.append(sql))
+    monkeypatch.setattr(K.db,'kv_set',lambda *a:None)
+    K.next_job({'system':'Linux'})
+    assert queries[0].startswith('DELETE FROM computer_jobs')
+    assert "30 minutes" in queries[0]
