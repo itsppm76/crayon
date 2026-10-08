@@ -219,6 +219,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         db.audit(uid,"telegram_reaction",f"message_id={message_id} emoji={emoji} accepted={reaction_ok}")
     if text.strip().lower().rstrip('.!') in ('hi','hey','hello','cool','thanks','thank you'):
         out.send(chat_id,"You're welcome." if text.strip().lower().rstrip('.!') in ('thanks','thank you') else "Hey! What can I help with?" if text.strip().lower().rstrip('.!') in ('hi','hey','hello') else "Got it.");return
+    import cr_dashboard
+    if cr_dashboard.handle(uid,chat_id,text,out):return
     if text=='/work' or text.startswith('/work '):
         import cr_work
         if cr_work.handle(uid,chat_id,text,out):return
@@ -409,6 +411,8 @@ def set_commands():
     try:
         api("setMyCommands", commands=[
             {"command":"help","description":"See what I can do"},
+            {"command":"tasks","description":"Task dashboard and next steps"},
+            {"command":"work","description":"Bounded background research and maths"},
             {"command":"connect_google","description":"Connect your own Gmail and calendar"},
             {"command":"google_status","description":"Check your Google connection"},
             {"command":"gmail","description":"Check your mail"},
