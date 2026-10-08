@@ -358,8 +358,8 @@ def computer_status(ctx):
     import cr_computer as K
     return K.status(ctx['uid'])
 
-@tool("computer_task", "Owner-only virtual computer: basic arithmetic, list/read text files, create a NEW text file. No shell, imports, secrets, private accounts, deletes or overwrites. Use only when user explicitly asks to use the computer.",
-      {"operation": S,"args":{"type":"object"}},["operation","args"])
+@tool("computer_task", "Owner-only virtual computer: basic arithmetic (calculate), list_files, read_text, write_text to create a NEW text file. Use these exact operation names. No shell, imports, secrets, private accounts, deletes or overwrites. Use only when user explicitly asks to use the computer.",
+      {"operation":{"type":"string","enum":["status","calculate","write_text","read_text","list_files"],"description":"Exact operation name. write_text requires filename and text; read_text requires filename; calculate requires expression."},"args":{"type":"object","properties":{"filename":S,"text":S,"expression":S}}},["operation","args"])
 def computer_task(ctx,operation,args):
     import cr_computer as K
     if not re.search(r'(?i)\b(computer|codespace|virtual machine|vm)\b',ctx.get('meta',{}).get('user_text','')):return {'ok':False,'error':'Explicit computer request required'}
