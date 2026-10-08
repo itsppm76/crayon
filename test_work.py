@@ -67,7 +67,7 @@ def test_brief_source_bound(monkeypatch):
     assert r['draft'] and 'check before using' in r['text'] and 'https://example.com' in r['text']
 
 def test_pause_running_cannot_resume(monkeypatch):
-    row={'id':1,'user_id':1,'status':'running'};written=[]
+    row={'id':1,'user_id':1,'status':'running','steps':[{}],'results':[]};written=[]
     monkeypatch.setattr(W,'get',lambda *a:row)
     def q(sql,args,fetch):written.append(args);row['status']=args[0]
     monkeypatch.setattr(W.db,'q',q)
@@ -78,6 +78,7 @@ def test_pause_running_cannot_resume(monkeypatch):
 def test_task_add_deterministic(monkeypatch):
     import cr_dashboard as D
     called=[]
+    monkeypatch.setattr(D.T.mem,'touch_user',lambda *a:None)
     monkeypatch.setattr(D.T,'create_task',lambda ctx,title,steps:called.append((title,steps)) or {'verified':True})
     monkeypatch.setattr(D,'render',lambda uid:'dashboard')
     class Out:
@@ -154,3 +155,14 @@ def test_work_callback_routes_exact(monkeypatch):
     monkeypatch.setattr(W,'handle',lambda *a:called.append(a))
     Tg.handle_callback({'id':'test','data':'work:pause:12','from':{'id':10},'message':{'chat':{'id':10}}},Tg.CaptureOut())
     assert called[0][0:3]==(10,10,'/work pause 12')
+
+def test_resume_finished_pause_goes_done(monkeypatch):
+    row={'id':1,'status':'paused','steps':[{}],'results':[{}]}
+    monkeypatch.setattr(W,'get',lambda *a:row)
+    def q(sql,args,fetch):row['status']=args[0]
+    monkeypatch.setattr(W.db,'q',q)
+    assert W.control(1,1,'resume')['status']=='done'
+
+def test_failed_pause_no_retry(monkeypatch):
+    monkeypatch.setattr(W,'get',lambda *a:{'status':'paused','error':'timed out'})
+    with pytest.raises(ValueError):W.control(1,1,'resume')
