@@ -12,3 +12,5 @@ Status is intentionally conservative. This file reflects the deployed bot (`cr_*
 - **No external writes:** the live bot does not send email, create calendar events or contact third parties.
 - **Google integrations:** the OAuth helper in `core/` is unused and not wired into the bot.
 - **Prototype leftovers:** `core/`, `adapters/`, `tools/`, `db/schema.sql` and the Colab notebook are from the first prototype. The offline tests in `tests/` cover that code and mock model calls.
+
+Phase 2 limits: goals are bounded tool workflows, not unrestricted autonomous browser agents. Media uploads have a 4 MB cap; document/image/audio fidelity varies. Memory review does not auto-merge facts. Drafts do not send. Proactive check-ins and digests are opt-in and depend on the host running. No Google connection is active yet.
