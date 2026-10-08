@@ -5,8 +5,11 @@ OWNER=1898030949
 SCHEMA="""CREATE TABLE IF NOT EXISTS computer_jobs(id TEXT PRIMARY KEY,operation TEXT NOT NULL,args JSONB NOT NULL,status TEXT NOT NULL DEFAULT 'pending',result JSONB,created_at TIMESTAMPTZ DEFAULT now());"""
 def init():db.q(SCHEMA,(),"none")
 def validate(operation,args):
-    if operation not in ('status','calculate','write_text','read_text','list_files'):raise ValueError('Unsupported computer operation')
+    if operation not in ('status','calculate','write_text','read_text','list_files','browse'):raise ValueError('Unsupported computer operation')
     if not isinstance(args,dict):raise ValueError('Invalid arguments')
+    if operation=='browse':
+        from computer_browser import validate_plan
+        validate_plan(args)
     if len(json.dumps(args))>20000:raise ValueError('Computer input too large')
     if operation in ('read_text','write_text'):
         import re
@@ -27,7 +30,7 @@ def execute(uid,operation,args):
     if not status(uid)['ok']:return {'ok':False,'error':'Computer is asleep or not connected. Owner must start it in GitHub Codespaces.'}
     job=uuid.uuid4().hex
     db.q('INSERT INTO computer_jobs(id,operation,args) VALUES(%s,%s,%s::jsonb)',(job,operation,json.dumps(args)),'none')
-    for _ in range(25):
+    for _ in range(85 if operation=='browse' else 25):
         row=db.q('SELECT status,result FROM computer_jobs WHERE id=%s',(job,),'one')
         if row and row['status']=='done':return row['result']
         time.sleep(1)
@@ -39,5 +42,5 @@ def next_job(info):
     return db.q("UPDATE computer_jobs SET status='running' WHERE id=(SELECT id FROM computer_jobs WHERE status='pending' AND created_at>now()-interval '40 seconds' ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id,operation,args",(),'one')
 
 def complete(job,result):
-    if not isinstance(result,dict) or len(json.dumps(result))>22000:raise ValueError('Invalid result')
+    if not isinstance(result,dict) or len(json.dumps(result))>1500000:raise ValueError('Invalid result')
     db.q("UPDATE computer_jobs SET status='done',result=%s::jsonb WHERE id=%s AND status='running'",(json.dumps(result),job),'none')
