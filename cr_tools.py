@@ -330,3 +330,24 @@ def convert_units(ctx,value,source,target):
 def currency_rate(ctx,value,source,target):
     import cr_utilities
     return {'ok':True,'verified':True,**cr_utilities.currency(value,source,target)}
+
+
+@tool('create_csv','Create and attach a small CSV in this private chat ONLY when the user requests a file/export. Supply exact rows, no invented data. Max100 rows,20 columns. Cells are text. No sending to others.',{'headers':{'type':'array','items':S},'rows':{'type':'array','items':{'type':'array','items':S}}},['headers','rows'])
+def create_csv(ctx,headers,rows):
+    import cr_artifacts
+    if not re.search(r'(?i)\b(csv|export|spreadsheet)\b',ctx['meta'].get('user_text','')):raise ValueError('user did not ask for a CSV export')
+    data=cr_artifacts.csv_bytes(headers,rows)
+    artifacts=ctx['meta'].setdefault('artifacts',[])
+    if len(artifacts)>=2:raise ValueError('at most two attachments per reply')
+    artifacts.append({'filename':'crayon.csv','mime':'text/csv','data':data})
+    return {'ok':True,'verified':True,'rows':len(rows),'columns':len(headers),'note':'Generated in memory, delivery will follow reply. Do not claim Telegram delivery yet. Supplied data not independently verified.'}
+
+@tool('create_bar_chart','Create and attach a simple horizontal PNG bar chart ONLY when the user asks for a chart. No invented data.1-12 bars,non-negative values. Labels22 chars max,title70. It labels data as supplied, not independently verified.',{'title':S,'labels':{'type':'array','items':S},'values':{'type':'array','items':{'type':'number'}},'unit':S},['title','labels','values'])
+def create_bar_chart(ctx,title,labels,values,unit=''):
+    import cr_artifacts
+    if not re.search(r'(?i)\b(chart|graph|plot)\b',ctx['meta'].get('user_text','')):raise ValueError('user did not ask for a chart')
+    data=cr_artifacts.chart_bytes(title,labels,values,unit)
+    artifacts=ctx['meta'].setdefault('artifacts',[])
+    if len(artifacts)>=2:raise ValueError('at most two attachments per reply')
+    artifacts.append({'filename':'crayon-chart.png','mime':'image/png','data':data})
+    return {'ok':True,'verified':True,'bars':len(labels),'note':'Generated in memory, delivery will follow reply. Do not claim Telegram delivery yet. Supplied data not independently verified.'}
