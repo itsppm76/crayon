@@ -1,30 +1,27 @@
-# Roadmap
+# 🖍️ Crayon roadmap
 
-## Done and live (milestones M1-M6)
+## 🟢 Built and deployed
 
-- [x] Telegram bot hosted on Render (free tier), long polling
-- [x] Persistent memory in Neon Postgres: facts, preferences and projects recalled across chats
-- [x] Gemini 2.5 Flash as the model, with Flash-Lite as fallback
-- [x] Web search through Tavily, with DuckDuckGo, Mojeek and Wikipedia fallbacks, plus a page reader
-- [x] Sandboxed Python code execution
-- [x] Reminders and scheduled self-running jobs, delivered by a polling scheduler
-- [x] Multi-day tracked tasks with subtasks, progress injection and daily check-in nudges
-- [x] Confirmation before irreversible actions, secret auto-deletion, honesty guard against unbacked "done" claims
-- [x] `/health` and token-protected `/selftest` endpoints
-- [x] Per-user daily message cap and audit log
+- M1-M6: Telegram hosting, persistent memory, web search/page reading, sandbox calculations, reminders/jobs, tracked tasks, safe confirmations, health and captured self-tests.
+- M7-M12: bounded goals, media/Office extraction, memory review, review-only messaging drafts, opt-in proactive nudges and digests.
+- M13-M15: per-user Google testing beta, reviewed email send, group mention-only isolation, natural controls, reactions, slow-response progress and media/style fixes.
+- M16: public HTTP reader with bounded output and private-host checks.
+- M17: bounded deep research, comparison query context and official-source preference. Model synthesis remains fallible.
+- M18: dated currency and fixed unit conversions, live tested.
+- M19: CSV/bar-chart Telegram attachments, live received and chart visually inspected.
+- M20: owner-only Codespaces computer created; outbound bounded-operation bridge and fresh public-docs Chromium browser implemented.
 
-## Not built yet
+## 🟡 Verification still in progress
 
-- [ ] Read-only Gmail and Calendar tools (the OAuth helper in `core/` is unused groundwork)
-- [ ] Any external write action (sending mail, creating events) with draft and approval flow
-- [ ] A web adapter that shares the same agent core
-- [ ] Webhook mode (polling is the deliberate current choice)
-- [ ] Automated CI for the test suite
+- End-to-end Codespaces arithmetic/file/browser screenshot transport in real owner Telegram.
+- Group welcome-on-add in a real group. Tagged answer and ignoring untagged messages already passed.
+- Updated GitHub rendered README inspection.
 
-## Phase 2 status
+## ⚪ Not claimed as shipped
 
-M7 bounded goals, M8 media, M9 memory review, M10 drafts, M11 opt-in check-ins and M12 digests are deployed. M14 content-aware reactions is implemented. M13 Google Gmail/Calendar connection is in development with per-user encrypted-token foundations; personal Gmail Cloud ownership approved, OAuth setup and verification unfinished; no Google connection is active. See TEST_CHECKLIST.md for what has and has not been tested live.
+- Automatic Codespaces wake/restart or always-on computer.
+- General website/account login, LMS automation, forms, purchasing or posting.
+- Public Google restricted-scope verification/security certification.
+- Webhook mode, independent web UI adapter, automated CI, autonomous paywall/login bypass.
 
-M15 media/style revision: 20 MB transport cap, immediate receipt and timed progress, video/office/text/archive handling with honest format limits, follow-up analysis context, and outgoing plain-text cleanup. Local tests pass; real transport/provider format tests remain to be recorded.
-
-M13 direct Google beta: per-user encrypted OAuth, private-chat-only Gmail/Calendar commands, encrypted review-first email drafts and callback/privacy/terms pages. Testing mode only; public verification and live send are not complete. Mailbox/calendar results bypass model and permanent memory. No automatic email sends.
+Every feature is reported separately as built, deployed and live-tested. Free quotas and hosting do not create an uptime or scale promise.
