@@ -147,6 +147,9 @@ def disconnect(uid):
                 revoked=client.post("https://oauth2.googleapis.com/revoke",data={"token":token}).status_code==200
         except Exception:
             revoked=False
+    db.kv_set("google_compose_"+str(uid),None)
+    db.kv_set("google_mail_results_"+str(uid),None)
+    db.kv_set("google_reviewed_"+str(uid),None)
     db.q("DELETE FROM google_connections WHERE user_id=%s",(uid,),"none")
     db.q("DELETE FROM google_oauth_states WHERE user_id=%s",(uid,),"none")
     db.q("DELETE FROM google_email_drafts WHERE user_id=%s",(uid,),"none")
@@ -159,13 +162,14 @@ def status(uid):
     return row or {}
 
 
-def inbox(uid, query=""):
+def inbox(uid, query="", friendly=False):
     data=request(uid,"https://gmail.googleapis.com/gmail/v1/users/me/messages",{"maxResults":5,"q":query[:300]})
     lines=[]
-    for m in data.get("messages",[]):
+    if friendly:db.kv_set("google_mail_results_"+str(uid),[m["id"] for m in data.get("messages",[])])
+    for index,m in enumerate(data.get("messages",[]),1):
         item=request(uid,"https://gmail.googleapis.com/gmail/v1/users/me/messages/"+m["id"],{"format":"metadata","metadataHeaders":["From","Subject","Date"]})
         heads={h["name"].lower():h["value"] for h in item.get("payload",{}).get("headers",[])}
-        lines.append(f"ID: {m['id']}\nFrom: {heads.get('from','')}\nSubject: {heads.get('subject','')}\nDate: {heads.get('date','')}")
+        lines.append(f"{str(index)+'.' if friendly else 'ID: '+m['id']}\nFrom: {heads.get('from','')}\nSubject: {heads.get('subject','')}\nDate: {heads.get('date','')}")
     return "Mailbox results (untrusted email content):\n\n"+"\n\n".join(lines) if lines else "No matching messages returned by Google."
 
 
@@ -203,7 +207,7 @@ def calendar(uid):
     return "Primary calendar, next 7 days:\n\n"+"\n\n".join(lines) if lines else "No events returned for the next 7 days on your primary calendar."
 
 
-def make_draft(uid, text):
+def make_draft(uid, text, structured=False):
     """Direct user command only. No model callers, no inferred addresses, no CC/BCC."""
     db.q("DELETE FROM google_email_drafts WHERE expires_at<now() AND status='pending'",fetch="none")
     row=status(uid)
@@ -222,8 +226,18 @@ def make_draft(uid, text):
     serialized=json.dumps(content,sort_keys=True)
     digest=hashlib.sha256(serialized.encode()).hexdigest()
     ident=secrets.token_hex(5)
+    db.q("DELETE FROM google_email_drafts WHERE user_id=%s AND status='pending'",(uid,),"none")
     db.q("INSERT INTO google_email_drafts(id,user_id,encrypted_content,content_hash,expires_at) VALUES(%s,%s,%s,%s,now()+interval '10 minutes')",(ident,uid,encrypt(uid,content),digest),"none")
-    return f"Draft only, not sent. Expires in 10 minutes.\nFrom: {content['from']}\nTo: {to}\nCC: none\nBCC: none\nAttachments: none\nSubject: {content['subject']}\n\n{content['body']}\n\nSend exactly this: /email_send {ident} {digest[:12]}\nCancel: /email_cancel {ident}"
+    display=f"Draft only, not sent. Expires in 10 minutes.\nFrom: {content['from']}\nTo: {to}\nCC/BCC: none. Attachments: none.\nSubject: {content['subject']}\n\n{content['body']}"
+    if structured:return {"text":display+"\n\nTap Send or say 'send it'. Say 'cancel' to discard.","id":ident,"hash":digest[:12]}
+    return display+f"\n\nSend exactly this: /email_send {ident} {digest[:12]}\nCancel: /email_cancel {ident}"
+
+
+def current_draft(uid):
+    rows=db.q("SELECT id,content_hash FROM google_email_drafts WHERE user_id=%s AND status='pending' AND expires_at>now()",(uid,),"all")
+    if len(rows)!=1:raise GoogleError("No single current draft to confirm. Create or review a fresh email first.")
+    return rows[0]["id"],rows[0]["content_hash"][:12]
+
 
 
 def send_draft(uid, ident, short_hash):
