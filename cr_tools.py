@@ -104,12 +104,31 @@ def set_reminder(ctx, text, at="", in_minutes=None, recurrence=""):
     return {"ok": ok, "verified": ok, "id": r["id"], "due_local": due.astimezone(tz).strftime("%a %d %b, %I:%M %p"), "recurrence": rec}
 
 
-@tool("list_reminders", "List the user's pending reminders.")
+MAX_JOBS = 5
+
+
+@tool("schedule_job",
+      "Schedule a task Crayon will RUN itself at a set time and send the result to this chat (e.g. 'give me cricket news every morning', 'check X and tell me'). Unlike a reminder it does work (search, math) when it fires. 'prompt' is what to do. Give 'at' ISO 8601 in the user's timezone or 'in_minutes'. recurrence: '', 'daily' or 'weekly'. Max 5 active jobs.",
+      {"prompt": S, "at": S, "in_minutes": {"type": "integer"}, "recurrence": S}, ["prompt"], RISK_WRITE)
+def schedule_job(ctx, prompt, at="", in_minutes=None, recurrence=""):
+    n = db.q("SELECT count(*) AS n FROM reminders WHERE user_id=%s AND kind='job' AND status IN ('pending','sending')", (ctx["uid"],), "one")["n"]
+    if n >= MAX_JOBS:
+        return {"ok": False, "verified": False, "error": f"you already have {MAX_JOBS} active jobs; cancel one first (list_reminders / cancel_reminder)"}
+    r = set_reminder(ctx, prompt, at=at, in_minutes=in_minutes, recurrence=recurrence)
+    if not r.get("ok"):
+        return r
+    db.q("UPDATE reminders SET kind='job' WHERE id=%s AND user_id=%s", (r["id"], ctx["uid"]), "none")
+    chk = db.q("SELECT kind FROM reminders WHERE id=%s AND user_id=%s", (r["id"], ctx["uid"]), "one")
+    ok = bool(chk and chk["kind"] == "job")
+    return {**r, "ok": ok, "verified": ok, "kind": "job"}
+
+
+@tool("list_reminders", "List the user's pending reminders and scheduled jobs.")
 def list_reminders(ctx):
     tz = user_tz(ctx["uid"])
-    rows = db.q("SELECT id,text,due_at,recurrence FROM reminders WHERE user_id=%s AND status='pending' ORDER BY due_at LIMIT 30", (ctx["uid"],))
+    rows = db.q("SELECT id,text,due_at,recurrence,kind FROM reminders WHERE user_id=%s AND status='pending' ORDER BY due_at LIMIT 30", (ctx["uid"],))
     return {"ok": True, "verified": True, "reminders": [
-        {"id": r["id"], "text": r["text"], "due_local": r["due_at"].astimezone(tz).strftime("%a %d %b, %I:%M %p"), "recurrence": r["recurrence"]} for r in rows]}
+        {"id": r["id"], "text": r["text"], "due_local": r["due_at"].astimezone(tz).strftime("%a %d %b, %I:%M %p"), "recurrence": r["recurrence"], "kind": r["kind"] or "text"} for r in rows]}
 
 
 @tool("cancel_reminder", "Cancel one pending reminder by id.", {"id": {"type": "integer"}}, ["id"], RISK_WRITE)
