@@ -65,3 +65,8 @@ M10 draft_message: review only, no external sender. M11 /proactive on|off: at mo
 M14: content-based emoji selection and captured reaction calls. Command/YES/NO flows skipped. Telegram acceptance in a real chat not yet tested.
 M8 update: synthetic PDF sentence read exactly. Real Telegram download path and actual spoken voice note not yet tested.
 Runtime tests cover goal execution, invalid-tool handling, media size/type limits, duplicate detection, draft non-send, quiet hours, daily limits and reaction selection.
+
+## Media/style expansion
+
+- Local tests: 20 MB rejection boundary, unknown format receipt, safe ZIP listing, DOCX XML extraction, entity rejection, secret blocking, text truncation disclosure, video/caption routing, and final plain-text cleanup.
+- Still pending live: video/large-media Files API upload and deletion, actual office files, real Telegram progress and plain-text visual check.
