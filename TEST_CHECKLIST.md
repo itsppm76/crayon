@@ -90,3 +90,9 @@ October 8 23:15 IST live follow-up:
 - Public Google verification not submitted; testing status remains. No payment/assessment initiated.
 
 2.17.2: live health good, exact-content draft buttons visually inspected, Cancel callback passed in owner DM without send. Search Console URL-prefix ownership verification succeeded by homepage HTML tag. This is not OAuth app approval. Verification submission remains pending its end-to-end sanitized demo. No production publish, paid assessment or real test send initiated. His separately entered draft was left untouched.
+
+## 2.18.0 conversational UX (October 8)
+- 50 unique local tests pass, including absent/guessed recipient, forwarded input, no model inbox path, review-bound simple send and hidden draft IDs.
+- BotFather privacy DISABLED confirmed. Real owner test group tagged greeting and tagged question answered. Untagged reply ignored. Membership welcome not live exercised.
+- Friendly guide/reply keyboard, direct Google intent reads, encrypted pending recipient clarification, reviewed Send/Cancel and simple text confirmation. Single recipient, no CC/BCC/attachments. Previous draft invalidated on new review. Google results remain outside model and memory.
+- Natural mail/calendar/draft, delete UI and reply keyboard require live readback; do not call all phrases proven. Existing commands remain power options.
