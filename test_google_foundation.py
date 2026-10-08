@@ -144,3 +144,19 @@ def test_review_button_exact_bound_fields(monkeypatch):
     out=T.CaptureOut()
     T.handle_callback({'id':'c','from':{'id':22},'message':{'chat':{'id':22}},'data':'email_send:id:hash'},out)
     assert seen==[(22,'id','hash')]
+
+
+def test_short_connection_no_open_redirect(monkeypatch):
+    from urllib.parse import parse_qs,urlsplit
+    monkeypatch.setattr(G,'configured',lambda:True)
+    monkeypatch.setattr(G,'init',lambda:None)
+    monkeypatch.setattr(G.db,'q',lambda *a,**k:{'user_id':10})
+    monkeypatch.setenv('GOOGLE_CLIENT_ID','test-client')
+    state='a'*43
+    url=G.authorization_url(state)
+    assert url.startswith('https://accounts.google.com/o/oauth2/v2/auth?')
+    assert parse_qs(urlsplit(url).query)['state']==[state]
+    assert parse_qs(urlsplit(url).query)['client_id']==['test-client']
+    monkeypatch.setattr(G.db,'q',lambda *a,**k:None)
+    with pytest.raises(G.GoogleError):G.authorization_url(state)
+    with pytest.raises(G.GoogleError):G.authorization_url('https://evil.example')
