@@ -83,6 +83,12 @@ def run(body):
         cr_work.init()
         rows=db.q("SELECT * FROM work_jobs WHERE user_id=%s ORDER BY id",(uid,))
         results.append({"work_probe":[cr_work.view(r) for r in rows]})
+    if body.get("work_export"):
+        import cr_work
+        rows=db.q("SELECT id FROM work_jobs WHERE user_id=%s ORDER BY id DESC LIMIT 1",(uid,))
+        out=tg.CaptureOut()
+        if rows:cr_work.handle(uid,uid,"/work export "+str(rows[0]['id']),out)
+        results.append({"work_export":[m["text"] for m in out.sent]})
     if body.get("cleanup"):
         mem.delete_all(uid)
     return {"ok": True, "results": results}
