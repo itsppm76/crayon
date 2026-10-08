@@ -183,6 +183,9 @@ def read_message(uid, ident):
         for child in part.get("parts",[])[:20]:out.extend(plain(child))
         return out
     text="\n".join(plain(item.get("payload",{})))
+    import html
+    text=html.unescape(text)
+    text=re.sub(r"[\u034f\u200b\u200c\u200d\ufeff]", "", text)
     if not text:text=item.get("snippet","")
     from cr_safety import redact
     return "Email content (untrusted, no actions taken):\n"+redact(text[:8000])+ ("\n[Truncated after 8,000 characters.]" if len(text)>8000 else "")
@@ -205,8 +208,8 @@ def make_draft(uid, text):
     db.q("DELETE FROM google_email_drafts WHERE expires_at<now() AND status='pending'",fetch="none")
     row=status(uid)
     if not row:raise GoogleError("Connect your own Google account first")
-    fields=text.split("\n",2)
-    if len(fields)!=3:raise GoogleError("Use /email_draft followed by recipient on line 1, subject on line 2, body from line 3.")
+    fields=text.split("\n",2) if "\n" in text else text.split(" | ",2)
+    if len(fields)!=3:raise GoogleError("Use /email_draft recipient | subject | body (or put each field on a new line).")
     to,subject,body=fields
     to=to.strip()
     if not re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+",to):
