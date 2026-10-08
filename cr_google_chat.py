@@ -21,6 +21,26 @@ def show_draft(uid,chat,out,arg):
 
 
 def handle(uid,chat,text,msg,out):
+    if text.strip().lower()=='enable calendar booking':
+        out.send(chat,'Reconnect only if you want calendar write permission. Review Google permissions: '+G.begin(uid,calendar_write=True)+'\nPrivate solo events only, exact preview before Create. Do not forward this account-bound link.')
+        return True
+    if re.fullmatch(r'(?i)(?:turn (?:on|off) email checks|email checks (?:on|off))',text.strip()):
+        import cr_mail_watch as W
+        try:out.send(chat,W.configure(uid,chat,'off' not in text.lower()))
+        except G.GoogleError as e:out.send(chat,str(e))
+        return True
+    if re.search(r'(?i)\b(create|book|add|schedule)\b',text) and re.search(r'(?i)\b(calendar|slot|event)\b',text) and not text.startswith('/calendar_slot '):
+        out.send(chat,'I can prepare a private solo slot on your primary calendar. Please give exact title, ISO start/end with UTC offsets and timezone: /calendar_slot Title | 2026-10-10T10:00:00+05:30 | 2026-10-10T11:00:00+05:30 | Asia/Calcutta . No attendees, invitations or venue booking. I show Create/Cancel before anything writes.')
+        return True
+    if text.startswith('/calendar_slot '):
+        import cr_calendar_draft as K
+        try:
+            fields=[x.strip() for x in text[len('/calendar_slot '):].split(' | ')]
+            if len(fields)!=4:raise G.GoogleError('Use /calendar_slot Title | ISO start with offset | ISO end with offset | IANA timezone. Private solo events only.')
+            d=K.preview(uid,*fields)
+            out.send(chat,d['text'],markup={'inline_keyboard':[[{'text':'Create','callback_data':'calendar_create:'+d['id']+':'+d['hash']},{'text':'Cancel','callback_data':'calendar_cancel:'+d['id']}]]})
+        except G.GoogleError as e:out.send(chat,str(e))
+        return True
     t=text.strip().lower().rstrip('.!')
     stored=db.kv_get('google_compose_'+str(uid),None)
     state=G.decrypt(uid,stored) if stored else None
