@@ -145,7 +145,7 @@ def verify_answer(uid, text, reply, contents, system, meta):
     if verdict == "revise":
         note = f"\n\nSelf-check found a problem with your draft: {v.get('issues','')} {v.get('fix','')}\nWrite a corrected answer. If you cannot be sure, say so plainly instead of guessing."
         try:
-            out = llm.generate(contents + [llm.model_msg(reply), llm.user("Revise your last answer." + note)], system=system, thinking_budget=0)
+            out = llm.generate(contents + [llm.model_msg(reply), llm.user("The user has NOT seen your draft. Write the final answer to their last question now, as if for the first time, without mentioning any draft or revision." + note)], system=system, thinking_budget=0)
             return out["text"] or reply
         except llm.LLMError:
             return reply + "\n\n(Heads-up: my self-check flagged part of this as possibly wrong, so treat it with caution.)"
