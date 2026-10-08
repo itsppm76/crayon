@@ -364,3 +364,17 @@ def computer_task(ctx,operation,args):
     import cr_computer as K
     if not re.search(r'(?i)\b(computer|codespace|virtual machine|vm)\b',ctx.get('meta',{}).get('user_text','')):return {'ok':False,'error':'Explicit computer request required'}
     return K.execute(ctx['uid'],operation,args)
+
+
+@tool("computer_browse", "Owner-only fresh browser on the connected computer. Public documentation allowlist: docs.python.org, www.python.org, docs.github.com, www.notion.com, notion.com, obsidian.md, help.obsidian.md, example.com. No login/forms/purchases. One URL and optional visible link text to follow, maximum2 pages. Returns screenshot to Telegram and plain action log.",
+      {"url":S,"follow_link_text":S},["url"])
+def computer_browse(ctx,url,follow_link_text=''):
+    import cr_computer as K,base64
+    if not re.search(r'(?i)\b(browser|browse|screenshot|computer|codespace)\b',ctx.get('meta',{}).get('user_text','')):return {'ok':False,'error':'Explicit browser request required'}
+    result=K.execute(ctx['uid'],'browse',{'url':url,'follow_link_text':follow_link_text})
+    screenshot=result.pop('screenshot',None)
+    if screenshot:
+        data=base64.b64decode(screenshot,validate=True)
+        if len(data)>1000000:raise ValueError('Screenshot too large')
+        ctx['meta'].setdefault('artifacts',[]).append({'filename':'crayon-browser.png','mime':'image/png','data':data})
+    return result
