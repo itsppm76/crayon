@@ -13,7 +13,7 @@
 
 ## 🟡 Verification still in progress
 
-- End-to-end Codespaces arithmetic/file/browser screenshot transport in real owner Telegram.
+- Codespaces text-file create/read live transport pending. Real status/calculation and Python tutorial browser PNG transport passed.
 - Group welcome-on-add in a real group. Tagged answer and ignoring untagged messages already passed.
 - Updated GitHub rendered README inspection.
 
