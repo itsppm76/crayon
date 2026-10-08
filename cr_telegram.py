@@ -319,6 +319,14 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             out.meta = meta
         out.send(chat_id, reply)
 
+        for item in meta.pop('artifacts',[]):
+            try:
+                ident=out.artifact(chat_id,item)
+                db.audit(uid,'attachment_sent',item['filename']+' message='+str(ident))
+            except Exception as e:
+                log.warning('attachment failed: %s',redact(str(e))[:180])
+                out.send(chat_id,"I made the file, but Telegram delivery wasn't confirmed. Don't count on receiving it.")
+
 
 def handle_callback(cb, out):
     try:
