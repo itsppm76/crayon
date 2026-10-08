@@ -121,4 +121,4 @@ October 8 23:15 IST live follow-up:
 - Browser initial bridge failures produced fake model '(screenshot attached)' text with no attachment. Deterministic screenshot routing now requires verified result AND PNG bytes; fail-closed errors instead.
 - Remaining: real group welcome-on-add, real computer file create/read (initial operation error fail-closed; schema enum fixed, retest pending), README rendered final phase table inspection. Public Google verification still pending, no paid assessment initiated.
 
-Tester release2.24.0: owner+Sibi UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Uttiya not enabled until verified Telegram ID.97 local tests, tester behavior code-tested, not impersonated/live-tested as Sibi.
+Tester release2.24.0: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.97 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
