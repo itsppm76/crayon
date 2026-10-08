@@ -146,6 +146,9 @@ def tick(out,only_user=None):
     return row['id'] if row else None
 
 def handle(uid,chat,text,out):
+    if text.strip().lower() in ('my work queue','show my work queue'):text='/work list'
+    match=re.fullmatch(r'(?i)(?:work in background|background research): (.+)',text.strip())
+    if match:text='/work brief '+match[1]
     if not (text=='/work' or text.startswith('/work ')):return False
     bits=text.split(None,2);op=bits[1] if len(bits)>1 else 'list'
     try:
@@ -177,3 +180,19 @@ def handle(uid,chat,text,out):
         from cr_safety import redact
         out.send(chat,'Work not completed: '+redact(str(e))[:250])
     return True
+
+_started=False
+def start():
+    global _started
+    if _started:return
+    _started=True
+    import threading,logging
+    def loop():
+        from cr_telegram import Out
+        while True:
+            try:init();tick(Out())
+            except Exception as e:
+                from cr_safety import redact
+                logging.getLogger('crayon.work').warning('work loop: %s',redact(str(e))[:120])
+            time.sleep(20)
+    threading.Thread(target=loop,daemon=True,name='internal-work-queue').start()
