@@ -18,6 +18,13 @@ def run(body):
         upd = {"message": {"message_id": 1, "chat": {"id": uid}, "from": {"id": uid, "first_name": body.get("name", "SelfTest")}, "text": t}}
         tg.handle_update(upd, out)
         results.append({"in": t, "out": [m["text"] for m in out.sent], "meta": out.meta})
+    if body.get("media_fixture"):
+        import cr_media, base64
+        fixture = body["media_fixture"]
+        data = base64.b64decode(fixture.get("base64", ""), validate=True)
+        if len(data) > cr_media.MAX_BYTES:
+            return {"ok": False, "error": "fixture too large"}
+        results.append({"media": fixture["mime"], "out": cr_media.analyze(data, fixture["mime"], fixture.get("caption", ""))})
     if body.get("tick"):
         import cr_sched
         out = tg.CaptureOut()
