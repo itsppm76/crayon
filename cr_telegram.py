@@ -113,6 +113,35 @@ class CaptureOut:
         return True
 
 
+class ProgressOut:
+    """Serialize timed progress with the first reply so progress never follows it."""
+    def __init__(self,out,chat_id,lines):
+        self.out,self.chat_id=out,chat_id
+        self.finished=threading.Event()
+        self.lock=threading.Lock()
+        self.lines=lines
+    def __getattr__(self,name):return getattr(self.out,name)
+    def send(self,*args,**kwargs):
+        with self.lock:
+            self.finished.set()
+            return self.out.send(*args,**kwargs)
+    def emit(self,line):
+        with self.lock:
+            if self.finished.is_set():return False
+            try:self.out.send(self.chat_id,line)
+            except Exception:pass
+            return True
+    def run(self):
+        for delay,line in self.lines:
+            if self.finished.wait(delay):return
+            if not self.emit(line):return
+    def start(self):
+        threading.Thread(target=self.run,daemon=True).start()
+        return self
+    def stop(self):
+        with self.lock:self.finished.set()
+
+
 def _over_cap(uid):
     r = db.q("SELECT count(*) AS n FROM messages WHERE user_id=%s AND role='user' AND ts > now() - interval '24 hours'", (uid,), "one")
     return r["n"] >= C.DAILY_MESSAGE_CAP
@@ -136,17 +165,11 @@ def handle_update(upd, out=None):
                 out.send(chat_id,"Hi, I'm Crayon. Tag @crayon_v1_bot to chat. Personal memory and actions stay in your private chat.")
                 return
             if not cr_group.mentioned(msg):return
-            finished=threading.Event()
-            def group_progress():
-                for delay,line in ((12,"On it. Give me a moment."),(25,"Still working on it. I'll send the answer when it's ready.")):
-                    if finished.wait(delay):return
-                    try:out.send(chat_id,line)
-                    except Exception:pass
-            threading.Thread(target=group_progress,daemon=True).start()
+            progress=ProgressOut(out,chat_id,((12,"On it. Give me a moment."),(25,"Still working on it. I'll send the answer when it's ready."))).start()
             try:
                 out.typing(chat_id)
-                out.send(chat_id,cr_group.answer(msg))
-            finally:finished.set()
+                progress.send(chat_id,cr_group.answer(msg))
+            finally:progress.stop()
             return
         if uid > 0:
             db.kv_set("tg_latest_"+str(uid), {"chat_id":chat_id,"message_id":msg.get("message_id"),
@@ -160,16 +183,10 @@ def handle_update(upd, out=None):
                 _handle_media(uid, chat_id, name, msg, out)
             return
         with mem.user_lock(uid):
-            finished=threading.Event()
-            def progress():
-                for delay,line in ((12,"On it. Give me a moment."),(25,"Still working on it. I'll send the answer when it's ready."),(35,"This is taking longer than usual. I'm still checking.")):
-                    if finished.wait(delay):return
-                    try:out.send(chat_id,line)
-                    except Exception:pass
-            threading.Thread(target=progress,daemon=True).start()
+            progress=ProgressOut(out,chat_id,((12,"On it. Give me a moment."),(25,"Still working on it. I'll send the answer when it's ready."),(35,"This is taking longer than usual. I'm still checking."))).start()
             try:
-                _handle_text(uid, chat_id, name, text, msg.get("message_id"), out)
-            finally:finished.set()
+                _handle_text(uid, chat_id, name, text, msg.get("message_id"), progress)
+            finally:progress.stop()
     except Exception as e:
         log.exception("handle_update failed")
         try:
@@ -431,17 +448,8 @@ def _handle_media(uid, chat_id, name, msg, out):
         out.delete(chat_id, msg.get("message_id"))
         out.send(chat_id, "The caption appears to contain a secret. I did not process or save it.")
         return
-    finished = threading.Event()
-    def progress(text):
-        try:
-            out.send(chat_id, text)
-        except Exception:
-            pass
-    def keep_updated():
-        for message in ("Still reading it. Larger files can take a little longer.", "Still processing with the media provider. I will tell you if it fails."):
-            if finished.wait(25):
-                return
-            progress(message)
+    guard=ProgressOut(out,chat_id,((25,"Still reading it. Larger files can take a little longer."),(25,"Still processing with the media provider. I will tell you if it fails.")))
+    progress=guard.emit
     try:
         mem.touch_user(uid, name)
         if _over_cap(uid):
@@ -453,7 +461,7 @@ def _handle_media(uid, chat_id, name, msg, out):
             accepted=out.react(chat_id,msg["message_id"],"👀")
             db.audit(uid,"telegram_reaction",f"message_id={msg['message_id']} emoji=👀 accepted={accepted}")
         progress("Big file, give me a moment to read it." if item.get("file_size", 0)>4_000_000 else "Got it, reading your file now.")
-        threading.Thread(target=keep_updated, daemon=True).start()
+        guard.start()
         out.typing(chat_id)
         f = api("getFile", file_id=item["file_id"])
         path = f.get("file_path", "")
@@ -469,17 +477,17 @@ def _handle_media(uid, chat_id, name, msg, out):
                 if len(data) > cr_media.MAX_BYTES:
                     raise ValueError("Upload exceeds the 20 MB download limit.")
         reply = cr_media.analyze(bytes(data), mime, caption, item.get("file_name", ""), progress=progress)
-        finished.set()
+        guard.stop()
         db.audit(uid,"media_processed", f"mime={mime} bytes={len(data)}")
         mem.add_message(uid, "user", "[User sent media: " + mime + "] " + redact(caption))
         mem.add_message(uid, "assistant", "[Media analysis summary; raw file not retained] " + clean_text(reply)[:3000])
         if hasattr(out, "meta"):
             out.meta = {"media": mime, "bytes": len(data), "verified": bool(reply)}
-        out.send(chat_id, reply or "I couldn't read that clearly.")
+        guard.send(chat_id, reply or "I couldn't read that clearly.")
     except Exception as e:
-        finished.set()
+        guard.stop()
         log.warning("media handling failed: %s",type(e).__name__)
         reason = str(e) if isinstance(e, ValueError) else "The download or media provider failed. Try a smaller file or retry shortly."
         out.send(chat_id, "I couldn't read that upload: " + redact(reason)[:200])
     finally:
-        finished.set()
+        guard.stop()
