@@ -31,3 +31,10 @@ def test_research_failed_sources_explicit(monkeypatch):
     monkeypatch.setattr(W,'search',lambda *a:[{'url':'https://bad.example'}])
     monkeypatch.setattr(W,'fetch',lambda *a:(_ for _ in ()).throw(RuntimeError('blocked')))
     r=W.research('x');assert not r['pages'] and r['failures'][0]['error']=='blocked'
+
+def test_comparison_queries_keep_context(monkeypatch):
+    import cr_web as W
+    calls=[]
+    monkeypatch.setattr(W,'search',lambda q,n:(calls.append(q) or []))
+    W.research('Go deep on a comparison of Notion and Obsidian for student notes. Use current official sources for both.')
+    assert calls==['Notion student notes official documentation','Obsidian student notes official documentation']
