@@ -33,6 +33,10 @@ Commands:
 /digest morning|evening|both|off - opt-in daily digests
 /digest_now - task/reminder summary now
 /quiet_hours 21 9 - silence check-ins and digests at night
+/connect_google - connect your own Google (testing mode)
+/google_status, /disconnect_google - connection controls
+/gmail <search>, /gmail_read <ID>, /calendar - direct reads
+/email_draft, /email_send, /email_cancel - reviewed email only
 /memory - what I remember about you
 /forget <key> - remove one thing
 /delete_my_data - wipe everything I hold on you
@@ -136,6 +140,10 @@ def handle_update(upd, out=None):
             pass
 
 
+def msg_private_invalid(uid):
+    return uid <= 0
+
+
 def _handle_text(uid, chat_id, name, text, message_id, out):
     if looks_like_secret(text):
         out.delete(chat_id, message_id)
@@ -147,7 +155,9 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     if emoji and message_id and hasattr(out, "react"):
         reaction_ok = out.react(chat_id, message_id, emoji)
         db.audit(uid,"telegram_reaction",f"message_id={message_id} emoji={emoji} accepted={reaction_ok}")
-    cmd, _, arg = text.partition(" ")
+    fields = text.split(None,1)
+    if not fields:return
+    cmd, arg = fields[0], fields[1] if len(fields)>1 else ""
     cmd = cmd.split("@")[0].lower()
     arg = arg.strip()
     if cmd == "/start":
@@ -166,6 +176,40 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             if hasattr(out, "meta"):
                 out.meta = meta
             out.send(chat_id, reply)
+    elif cmd in ("/connect_google", "/disconnect_google", "/google_status", "/gmail", "/gmail_read", "/calendar", "/email_draft", "/email_send", "/email_cancel"):
+        import cr_google as G
+        if chat_id != uid or msg_private_invalid(uid):
+            out.send(chat_id, "Google commands only work in your private chat with Crayon.")
+            return
+        try:
+            if cmd != "/disconnect_google" and not G.configured():
+                raise G.GoogleError("Google setup is not active yet")
+            if cmd == "/connect_google":
+                out.send(chat_id, "Google testing mode: only named test users can connect; reconnect after 7 days. Read the privacy policy before connecting: " + C.PUBLIC_URL + "/privacy\nMailbox/calendar results are shown in this private Telegram chat, not sent to the AI model or permanent memory. Tokens are encrypted. Sending always needs an exact draft confirmation.\nConnect your own account: " + G.begin(uid))
+            elif cmd == "/disconnect_google":
+                r=G.disconnect(uid)
+                out.send(chat_id, "Stored Google credentials and pending drafts removed. " + ("Google revocation confirmed." if r["revoked"] else "Google revocation was not confirmed; remove Crayon access in your Google account too."))
+            elif cmd == "/google_status":
+                r=G.status(uid)
+                out.send(chat_id, "Connected Google account: " + r["email"] if r else "No Google account connected.")
+            elif cmd == "/gmail":
+                out.send(chat_id,G.inbox(uid,arg))
+            elif cmd == "/gmail_read":
+                out.send(chat_id,G.read_message(uid,arg))
+            elif cmd == "/calendar":
+                out.send(chat_id,G.calendar(uid))
+            elif cmd == "/email_draft":
+                out.send(chat_id,G.make_draft(uid,arg))
+            elif cmd == "/email_send":
+                bits=arg.split()
+                if len(bits)!=2:raise G.GoogleError("Use the exact /email_send command shown beneath your draft")
+                out.send(chat_id,G.send_draft(uid,*bits))
+            elif cmd == "/email_cancel":
+                out.send(chat_id,G.cancel_draft(uid,arg))
+        except G.GoogleError as e:
+            out.send(chat_id,str(e))
+        except Exception:
+            out.send(chat_id,"Google request failed. No action is confirmed. Try reconnecting if access expired.")
     elif cmd == "/memory_review":
         import json
         mem.touch_user(uid, name)
