@@ -1,5 +1,13 @@
 # Change log
 
+## October 10, 2026 - web computer, queue and private notifications
+
+- Enable authenticated web computer/browser and /work internal-queue controls with existing per-account quotas and private file folders.
+- Standalone reminders/read-only scheduled results and work completion save encrypted private in-app notifications, deduplicated by source, with account-bound Mark read. No invented Telegram destination or OS push while closed.
+- Add Menu entries, readable mobile notification dialog and remove the disabled consolidation entry from the visible menu.
+-364tests; disposable Postgres account/dedup/acknowledgement proof and390px/1280px visual checks. Full parity/group rooms/deletion remain pending.
+
+
 ## October 9, 2026 - per-user access
 
 - Open bounded Telegram computer/browser and controlled public-form previews to all authenticated users. Preserve free per-user/global caps and exact effect review.

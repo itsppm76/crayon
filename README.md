@@ -16,7 +16,7 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-360_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-364_passed-22A06B?style=for-the-badge)
 ![Pages](https://img.shields.io/badge/GitHub_Pages-web_live-FF6B6B?style=for-the-badge&logo=githubpages&logoColor=white)
 ![Login](https://img.shields.io/badge/Telegram_login-7_days-26A5E4?style=for-the-badge)
 ![Parity](https://img.shields.io/badge/full_parity-in_progress-FFC93C?style=for-the-badge)
@@ -37,9 +37,9 @@ Per-user access release opens bounded computer/browser and private text files to
 
 Web chat, history, uploads, generated files, seven-day sessions, visible-tab sync, waiting UI and original-request result recovery are deployed. Telegram-backed accounts share their ordinary chat/memory between Telegram and web. Standalone accounts have no Telegram mirror destination. Private Google results remain outside the chat model and shared memory.
 
-360 local tests pass. Live health confirms database/polling; live web status confirms all three login configurations and uploads. Real standalone Google/email and password-reset acceptance are not claimed. Owner-device post-fix reconnect/upload delivery remains pending.
+364 local tests pass. Live health confirms database/polling; live web status confirms all three login configurations and uploads. Real standalone Google/email and password-reset acceptance are not claimed. Owner-device post-fix reconnect/upload delivery remains pending.
 
-Browser-only reminders, scheduled jobs and background alerts are unavailable. Web rooms, computer execution, deletion confirmations and work-queue controls remain locked or unfinished. Gmail is a named-tester beta, calendar is per-user, and actual calendar Create remains unproven. WhatsApp is parked. No paid setup or payment was made.
+Standalone reminders/scheduled jobs/work completion now appear in private in-app Notifications, not system push while closed. Web computer/browser and /work controls are enabled. Web rooms and deletion confirmations remain pending. Gmail is a named-tester beta, calendar is per-user, and actual calendar Create remains unproven. WhatsApp is parked. No paid setup or payment was made.
 
 The checklist separates deployed features, real acceptance evidence and disabled/setup-dependent paths. Older milestone sections below are historical and do not override it.
 

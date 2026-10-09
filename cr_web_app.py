@@ -29,6 +29,7 @@ def init():
     __import__('cr_web_actions').init()
     __import__('cr_history').init()
     db.q(SCHEMA, fetch='none')
+    __import__('cr_web_notifications').init()
 
 
 def encode(value):
@@ -78,17 +79,30 @@ def dispatch(uid, name, text):
                 import cr_dashboard
                 cr_dashboard.handle(uid, uid, text, out)
                 return out.items
+            if text.startswith('/work') or simple in ('my work queue','show my work queue') or text.lower().startswith(('background research:','work in background:')):
+                import cr_work
+                cr_work.handle(uid,chat_destination,text,out)
+                return out.items
+            if text.startswith(('/browse ','/computer ')):
+                cmd,arg=text.split(None,1)
+                if cmd=='/computer' and arg.strip()=='status':out.send(uid,json.dumps(__import__('cr_computer').status(uid)))
+                else:
+                    intent=('Browser screenshot: ' if cmd=='/browse' else 'On my computer ')+arg
+                    reply,meta=A.respond(uid,chat_destination,intent,name,channel_name='web')
+                    out.send(uid,reply)
+                    for item in meta.get('artifacts',[]):out.artifact(uid,item)
+                return out.items
             if simple in ('my reminders','/reminders'):
                 rows = T.list_reminders({'uid':uid})['reminders']
                 return [{'kind':'text','text':json.dumps(rows, default=str, ensure_ascii=False)}]
             if simple in ('show my memory','/memory'):
                 return [{'kind':'text','text':M.render_memory(uid)}]
             if simple in ('help','/help'):
-                return [{'kind':'text','text':'Web foundation: chat, shared memory, notes, tasks, research, calculations, CSV/charts and reminders. Reminders need a linked Telegram delivery route; browser-only reminders are not enabled yet. Uploads use the + button. Google reads and reviewed sends use Menu > Connections / actions. Computer and group rooms are not enabled.'}]
+                return [{'kind':'text','text':'Web: chat, memory, notes, tasks, research, calculations, CSV/charts, computer/browser and /work controls. Standalone reminder/work results appear in Menu > Notifications, not phone/email/push. Telegram-backed reminders still arrive in Telegram. Uploads use +. Google actions use Menu > Connections. Group rooms/deletion remain locked.'}]
             # Do not fall into the model for features whose channel review is not implemented yet.
             import re
-            if re.search(r'(?i)\b(gmail|inbox|email|e-mail|calendar|google|workspace|github|sheet|doc|computer|browser|browse|booking|book|delete|wipe|forget|digest|proactive|watch)\b', text) or text.startswith(('/email','/google','/connect','/calendar','/work','/delete','/forget')):
-                return [{'kind':'text','text':'For Google reads, email/calendar/Sheet previews use Menu > Connections / actions. Computer, rooms and deletion are not enabled in web chat. No external action was made.'}]
+            if re.search(r'(?i)\b(gmail|inbox|email|e-mail|calendar|google|workspace|github|sheet|doc|booking|book|delete|wipe|forget|digest|proactive|watch)\b', text) or text.startswith(('/email','/google','/connect','/calendar','/delete','/forget')):
+                return [{'kind':'text','text':'For Google reads, email/calendar/Sheet previews use Menu > Connections / actions. Rooms and deletion are not enabled in web chat. No external action was made.'}]
             if simple in ('yes','confirm','go ahead','do it','send it'):
                 return [{'kind':'text','text':'Web confirmations are not enabled yet. Nothing was sent or deleted.'}]
             # Never consume a pending action created in another channel.
@@ -138,7 +152,7 @@ def _run(uid, ident):
             items = dispatch(uid,data['name'],data['input'])
             try:
                 import re
-                if looks_like_secret(data['input']) or re.search(r'(?i)\b(gmail|inbox|email|e-mail|calendar|google|workspace|github|sheet|doc|computer|browser|browse|booking|book|delete|wipe|forget|digest|proactive|watch)\b',data['input']) or data['input'].startswith(('/email','/google','/connect','/calendar','/work','/delete','/forget')):
+                if looks_like_secret(data['input']) or re.search(r'(?i)\b(gmail|inbox|email|e-mail|calendar|google|workspace|github|sheet|doc|booking|book|delete|wipe|forget|digest|proactive|watch)\b',data['input']) or data['input'].startswith(('/email','/google','/connect','/calendar','/delete','/forget')):
                     raise StopIteration
                 import cr_accounts
                 destination=cr_accounts.telegram_destination(uid)

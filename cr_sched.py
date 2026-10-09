@@ -17,7 +17,7 @@ def tick(out=None, only_user=None):
         import cr_telegram as tg
         out = tg.Out()
     db.q("UPDATE reminders SET status='pending' WHERE status='sending' AND claimed_at < now() - interval '3 minutes'", (), "none")
-    cond, params = ("AND user_id=%s", (only_user,)) if only_user is not None else ("AND user_id>0 AND user_id<1000000000000000", ())
+    cond, params = ("AND user_id=%s", (only_user,)) if only_user is not None else ("AND user_id>0", ())
     rows = db.q(f"""UPDATE reminders SET status='sending', claimed_at=now() WHERE id IN (
                       SELECT id FROM reminders WHERE status='pending' AND due_at <= now() {cond}
                       ORDER BY due_at LIMIT 10 FOR UPDATE SKIP LOCKED) RETURNING *""", params)
@@ -33,7 +33,11 @@ def tick(out=None, only_user=None):
                 text = "Scheduled: " + reply + late_note
             else:
                 text = "Reminder: " + r["text"] + late_note
-            out.send(r["chat_id"], text)
+            import cr_accounts
+            if cr_accounts.telegram_destination(r['user_id']) is None:
+                import cr_web_notifications as N
+                N.publish(r['user_id'],text,'reminder:'+str(r['id'])+':'+r['due_at'].isoformat())
+            else:out.send(r['chat_id'],text)
         except Exception as e:
             attempts = (r["attempts"] or 0) + 1
             log.warning("reminder %s send failed (%s)", r["id"], redact(str(e))[:120])

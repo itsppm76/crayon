@@ -2,7 +2,7 @@
 
 Updated October 9, 2026, final live-state audit. Built, deployed and real-device acceptance are separate.
 
-See [the final cumulative checklist](LIVE_FEATURE_CHECKLIST.md) for the full feature inventory. Per-user access update: Google Calendar now uses each signed-in user's own connection. Computer/browser remain Telegram-only, with private per-account files.
+See [the final cumulative checklist](LIVE_FEATURE_CHECKLIST.md) for the full feature inventory. Per-user access update: Google Calendar now uses each signed-in user's own connection. Computer/browser and /work controls are also enabled on web, with private per-account files. Standalone scheduled results appear in Notifications, not system push.
 
 - [x] Independent Google-first accounts and verified email/password registration/sign-in/reset UI are deployed and configured. Existing linked identities retain their account; no email auto-match. Real standalone sign-in/reset delivery acceptance is pending.
 - [x] Account consolidation remains OFF by owner choice. No merge happened; stopped scoped/two-Google changes were not deployed.
@@ -29,7 +29,7 @@ See [the final cumulative checklist](LIVE_FEATURE_CHECKLIST.md) for the full fea
 
 ## Evidence, not promises
 
-- 360 local Python tests passed.
+- 364 local Python tests passed.
 - Captured browser tests: same-browser refresh/new tab; transient saved-session fetch failure and automatic reconnect; one failed upload acknowledgement plus one failed result GET recovered with exactly one POST; delayed typing update and logout cleanup.
 - Desktop and 390px mobile screenshots inspected, with no horizontal overflow in captured checks.
 - Real owner Telegram login and existing-history mapping passed. Real owner web chat persisted. The owner's 5.39 MB image reached the server at 20:04:24 and analysis completed at 20:04:50; browser result delivery failed before recovery was shipped.
@@ -44,15 +44,15 @@ See [the final cumulative checklist](LIVE_FEATURE_CHECKLIST.md) for the full fea
 - [ ] Real owner exact Google link approval, then Google logout/login returning the same UID/history. Live Google picker reached; full callback/link/login acceptance is not yet proved.
 - [ ] Owner-device post-fix reconnect, upload-result delivery and live two-way chat acceptance.
 - [ ] Full conversational parity: Google/email/calendar/Workspace workflows should behave consistently across both interfaces, while preserving exact review and channel privacy. Current web workflow uses the menu.
-- [ ] Web internal-work queue controls and full Telegram command/menu coverage.
+- [x] Web internal-work queue commands and controls; full Telegram menu coverage remains pending.
 - [ ] Richer shared attachment history. Historical raw Telegram media and omitted command bodies were never retained and cannot be reconstructed.
-- [ ] Web-visible reminder delivery/notifications and background completion updates. Telegram-backed reminders still arrive in Telegram, with free-host timing limits. Browser-only reminders/scheduled jobs are blocked; standalone accounts lack Telegram background delivery.
+- [x] Private in-app Notifications for standalone reminder/scheduled results and work completion. No system push while closed. Telegram-backed delivery remains Telegram.
 - [ ] General provider booking/account workflows and broad public Google verification. Existing narrow controlled-form proof is not general booking support.
 
 ## Deliberately locked, not broken
 
 - Web rooms/group actions: no shared-audience interface yet. Telegram group consent rules must carry over before enabling it.
-- Web computer/browser execution: per-user beta in Telegram only; web allowlist/review/transport not yet wired.
+- Web computer/browser now uses the same bounded per-account public-only operations/private files and quotas. Rooms/deletion remain locked.
 - Web deletion/forget confirmations: disabled until dedicated exact-review controls prevent cross-channel approvals. Telegram deletion remains available.
 - Automatic external sends, automatic uncertain-action retries, paid tiers and payment setup: not enabled.
 - WhatsApp: parked by owner request. Test configuration is preserved; no card/payment method or paid tier was added.

@@ -81,12 +81,9 @@ def list_notes(ctx):
 
 
 @tool("set_reminder",
-      "Schedule a reminder that Crayon will actually send in this chat at the due time. Give 'at' as an ISO 8601 datetime in the user's timezone (e.g. 2026-10-09T08:00:00+05:30) computed from the current time, or 'in_minutes'. recurrence: '', 'daily' or 'weekly'.",
+      "Schedule a reminder: Telegram-backed accounts get Telegram delivery; standalone web accounts get a private in-app notification, not phone/email/system push. Give 'at' as an ISO 8601 datetime in the user's timezone (e.g. 2026-10-09T08:00:00+05:30) computed from the current time, or 'in_minutes'. recurrence: '', 'daily' or 'weekly'.",
       {"text": S, "at": S, "in_minutes": {"type": "integer"}, "recurrence": S}, ["text"], RISK_WRITE)
 def set_reminder(ctx, text, at="", in_minutes=None, recurrence=""):
-    import cr_accounts
-    if cr_accounts.standalone(ctx['uid']) and cr_accounts.telegram_destination(ctx['uid']) is None:
-        return {'ok':False,'verified':False,'error':'Reminder delivery is not enabled for browser-only accounts yet. No reminder was created.'}
     tz = user_tz(ctx["uid"])
     if in_minutes:
         due = datetime.now(timezone.utc) + timedelta(minutes=int(in_minutes))
@@ -106,14 +103,14 @@ def set_reminder(ctx, text, at="", in_minutes=None, recurrence=""):
              (ctx["uid"], ctx["chat_id"], text.strip()[:500], due, rec), "one")
     chk = db.q("SELECT due_at,status FROM reminders WHERE id=%s AND user_id=%s", (r["id"], ctx["uid"]), "one")
     ok = bool(chk and chk["status"] == "pending" and abs((chk["due_at"] - due).total_seconds()) < 2)
-    return {"ok": ok, "verified": ok, "id": r["id"], "due_local": due.astimezone(tz).strftime("%a %d %b, %I:%M %p"), "recurrence": rec}
+    return {"ok": ok, "verified": ok, "id": r["id"], "due_local": due.astimezone(tz).strftime("%a %d %b, %I:%M %p"), "recurrence": rec,"delivery":"private in-app Notifications (no system push)" if __import__("cr_accounts").telegram_destination(ctx["uid"]) is None else "Telegram"}
 
 
 MAX_JOBS = 5
 
 
 @tool("schedule_job",
-      "Schedule a task Crayon will RUN itself at a set time and send the result to this chat (e.g. 'give me cricket news every morning', 'check X and tell me'). Unlike a reminder it does work (search, math) when it fires. 'prompt' is what to do. Give 'at' ISO 8601 in the user's timezone or 'in_minutes'. recurrence: '', 'daily' or 'weekly'. Max 5 active jobs.",
+      "Schedule a task Crayon will RUN itself at a set time. Results go to Telegram for Telegram-backed accounts or private in-app Notifications for standalone accounts, not system push (e.g. 'give me cricket news every morning', 'check X and tell me'). Unlike a reminder it does work (search, math) when it fires. 'prompt' is what to do. Give 'at' ISO 8601 in the user's timezone or 'in_minutes'. recurrence: '', 'daily' or 'weekly'. Max 5 active jobs.",
       {"prompt": S, "at": S, "in_minutes": {"type": "integer"}, "recurrence": S}, ["prompt"], RISK_WRITE)
 def schedule_job(ctx, prompt, at="", in_minutes=None, recurrence=""):
     n = db.q("SELECT count(*) AS n FROM reminders WHERE user_id=%s AND kind='job' AND status IN ('pending','sending')", (ctx["uid"],), "one")["n"]
@@ -366,7 +363,7 @@ def create_bar_chart(ctx,title,labels,values,unit=''):
     return {'ok':True,'verified':True,'bars':len(labels),'note':'Generated in memory, delivery will follow reply. Do not claim Telegram delivery yet. Supplied data not independently verified.'}
 
 
-@tool("computer_status", "Check owner's connected virtual computer. Approved testers see only awake/asleep, not machine details.")
+@tool("computer_status", "Check bounded shared computer readiness; machine configuration remains private.")
 def computer_status(ctx):
     import cr_computer as K
     return K.status(ctx['uid'])
@@ -379,7 +376,7 @@ def computer_task(ctx,operation,args):
     return K.execute(ctx['uid'],operation,args)
 
 
-@tool("computer_browse", "Approved-tester fresh browser on the connected computer. Public HTTPS websites, including Instagram and YouTube. Sensitive account/transaction portals and private-network addresses are blocked. Login/access walls can be screenshotted, never signed into. No login/forms/purchases. One URL and optional visible link text to follow, maximum2 pages. Returns screenshot to Telegram and plain action log.",
+@tool("computer_browse", "Per-user fresh public-only browser on the connected computer. Public HTTPS websites, including Instagram and YouTube. Sensitive account/transaction portals and private-network addresses are blocked. Login/access walls can be screenshotted, never signed into. No login/forms/purchases. One URL and optional visible link text to follow, maximum2 pages. Returns screenshot to Telegram and plain action log.",
       {"url":S,"follow_link_text":S},["url"])
 def computer_browse(ctx,url,follow_link_text=''):
     import cr_computer as K,base64

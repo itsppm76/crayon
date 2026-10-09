@@ -155,7 +155,11 @@ def tick(out,only_user=None):
             claimed=db.q("UPDATE work_jobs SET notified=true,delivery_state='sending' WHERE id=%s AND NOT notified RETURNING id",(item['id'],),'one')
             if not claimed:continue
             try:
-                out.send(item['chat_id'],view(fresh),markup=controls_markup(fresh))
+                import cr_accounts
+                if cr_accounts.telegram_destination(uid) is None:
+                    import cr_web_notifications as N
+                    N.publish(uid,view(fresh),'work:'+str(item['id']))
+                else:out.send(item['chat_id'],view(fresh),markup=controls_markup(fresh))
                 db.q("UPDATE work_jobs SET delivery_state='sent' WHERE id=%s",(item['id'],),'none')
             except Exception:
                 db.q("UPDATE work_jobs SET delivery_state='uncertain' WHERE id=%s",(item['id'],),'none')

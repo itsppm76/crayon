@@ -8,7 +8,7 @@
 <meta property="og:title" content="Crayon">
 <meta property="og:description" content="A friendly AI assistant. Ask me anything.">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=20261009-merge5">
+<link rel="stylesheet" href="./style.css?v=20261009-webparity1">
 </head>
 <body>
 <header>
@@ -17,7 +17,7 @@
 </header>
 <nav id="panel" class="hide" aria-label="Crayon controls">
 <button data-command="/help">Help</button><button data-command="my tasks">Tasks</button><button data-command="show my memory">Memory</button><button data-command="my reminders">Reminders</button>
-<button id="history">Full history</button><button id="activity">Web activity / files</button><button id="google-link">Link Google login</button><button id="email-link">Link email login</button><button id="telegram-merge">Link Telegram / merge accounts</button><button id="connections">Connections / actions</button>
+<button data-command="/work list">Work queue</button><button data-command="/computer status">Computer</button><button id="notifications">Notifications</button><button id="history">Full history</button><button id="activity">Web activity / files</button><button id="google-link">Link Google login</button><button id="email-link">Link email login</button><button id="telegram-merge" hidden disabled>Link Telegram / merge accounts</button><button id="connections">Connections / actions</button>
 <p>History has recorded text. Older Telegram files were not retained. New uploads are read without saving raw bytes.</p>
 </nav>
 <main id="scroll"><button id="older" class="ghost hide">Load earlier messages</button>
@@ -33,7 +33,7 @@
       <input id="auth-email" class="auth-email" type="email" autocomplete="email" placeholder="you@example.com">
       <button id="email-login" class="auth-primary">Continue with email</button>
       <p class="auth-help">Email sign-in requires email verification. Passwords stay with Firebase.</p>
-      <p class="auth-help" id="auth-link-help">Already have a Crayon account? Use your existing login, then link an unused Google or email login in Menu. Signing in separately creates a separate account. Reviewed consolidation is in inspection and remains disabled.</p>
+      <p class="auth-help" id="auth-link-help">Already have a Crayon account? Use your existing login, then link an unused Google or email login in Menu. Signing in separately creates a separate account. Accounts remain separate; consolidation is disabled.</p>
       <p class="auth-legal">By continuing, you agree to the <a href="https://crayon-v1.onrender.com/terms" target="_blank" rel="noopener">Terms</a> and <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
     </div>
     <div id="signedin-hero" class="hide"><h1>What can I help with?</h1><p class="sub">Your Crayon, across your connected accounts.</p></div>
@@ -53,8 +53,8 @@
       <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </form>
-  <p class="note">Crayon is an AI and can make mistakes. Chat uses your Crayon account and memory. Reminders need a linked Telegram delivery route. Uploads up to 20 MB. Raw uploads are not retained. Google reads and exact-reviewed actions are in Menu. Computer and rooms stay locked. <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
+  <p class="note">Crayon is an AI and can make mistakes. Chat uses your Crayon account and memory. Standalone reminder/work results appear in Notifications when you open the app; no system push while closed. Telegram-backed reminders use Telegram. Uploads up to 20 MB. Raw uploads are not retained. Google reads and exact-reviewed actions are in Menu. Computer/browser and /work controls available; rooms/deletion remain locked. <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
 </footer>
-<script src="./app.js?v=20261009-merge5"></script>
+<script src="./app.js?v=20261009-webparity1"></script>
 </body>
 </html>

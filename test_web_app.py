@@ -128,7 +128,7 @@ def test_web_tools_enforced_even_if_model_requests(config):
     try:
         names=[x['name'] for x in T.declarations()[0]['functionDeclarations']]
         assert 'remember' in names and 'create_task' in names
-        for name in ('computer_browse','computer_task','schedule_job','forget'):
+        for name in ('forget',):
             assert name not in names and not T.run(name,{}, {'uid':17,'chat_id':17})['ok']
     finally:cr_channel.channel.reset(mark)
     assert 'computer_browse' in [x['name'] for x in T.declarations()[0]['functionDeclarations']]
@@ -159,7 +159,7 @@ def test_dispatch_does_not_use_telegram_confirmation(config):
     config.setattr(W.db,'q',lambda *a,**k:{'user_id':17})
     config.setattr(M,'touch_user',lambda *a:None)
     config.setattr(Brain,'respond',lambda *a,**k:pytest.fail('must not run model/confirmation'))
-    for s in ('yes','send it','connect Google','read my inbox','forget name','computer calculate 2+2'):
+    for s in ('yes','send it','connect Google','read my inbox','forget name'):
         assert W.dispatch(17,'N',s)[0]['kind']=='text'
 
 def test_frontend_session_browser_storage_and_revocation():
@@ -334,7 +334,12 @@ def test_browser_only_account_never_mirrors_to_telegram(config):
     W.SLOTS.acquire();W._run(10**15,'a'*43)
 
 
-def test_browser_only_reminder_rejected_without_dead_delivery(config):
-    config.setattr(T.db,'q',lambda *a:None)
+def test_browser_only_reminder_creates_inapp_delivery(config):
+    stored={}
+    def q(sql,p=(),*args,**kwargs):
+        if sql.startswith('INSERT INTO reminders'):
+            stored['due']=p[3];return {'id':1}
+        if sql.startswith('SELECT due_at'):return {'due_at':stored['due'],'status':'pending'}
+    config.setattr(T.db,'q',q)
     r=T.set_reminder({'uid':10**15,'chat_id':10**15},'Test',in_minutes=5)
-    assert not r['ok'] and 'No reminder was created' in r['error']
+    assert r['ok']

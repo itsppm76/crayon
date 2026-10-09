@@ -84,7 +84,7 @@ def handle(h, method, raw=b''):
             reply(h,204,'','text/plain',True,{'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600'})
             return True
         if method=='GET' and p.path=='/web/status':
-            reply(h,200,{'stage':'private foundation','login_configured':A.configured(),'google_login_configured':__import__('cr_web_google_auth').configured(),'email_login_configured':C.env('CRAYON_EMAIL_AUTH_ENABLED')=='on','rooms':False,'external_actions':'exact web review only','uploads':True,'computer':False},cors=True)
+            reply(h,200,{'stage':'private foundation','login_configured':A.configured(),'google_login_configured':__import__('cr_web_google_auth').configured(),'email_login_configured':C.env('CRAYON_EMAIL_AUTH_ENABLED')=='on','rooms':False,'external_actions':'exact web review only','uploads':True,'computer':True,'notifications':True,'work_queue':True},cors=True)
             return True
         if method=='GET' and p.path=='/web/email/config':
             reply(h,200,__import__('cr_web_email_auth').config(),cors=True)
@@ -145,6 +145,12 @@ def handle(h, method, raw=b''):
             q=parse_qs(p.query)
             if set(q)-{'before'} or any(len(v)!=1 for v in q.values()):raise ValueError('Invalid history query.')
             reply(h,200,W.history(user['user_id'],q.get('before',[None])[0]),cors=True)
+        elif method=='GET' and p.path=='/web/notifications':
+            reply(h,200,{'notifications':__import__('cr_web_notifications').list_for(user['user_id'])},cors=True)
+        elif method=='POST' and p.path=='/web/notification-seen':
+            if set(body)!={'id'}:raise ValueError('Invalid notification acknowledgement.')
+            __import__('cr_web_notifications').acknowledge(user['user_id'],body['id'])
+            reply(h,200,{'ok':True},cors=True)
         elif method=='GET' and p.path=='/web/activity':
             reply(h,200,{'activity':W.activity(user['user_id'])},cors=True)
         elif method=='GET' and p.path=='/web/connections':

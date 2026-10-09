@@ -72,14 +72,14 @@ This is a cumulative Day 0-to-current inventory, not a promise that every featur
 - [x] Per-account data isolation, encrypted connection/draft storage, exact one-use action reviews, audit records and bounded jobs/tools.
 - [x] Secret interception/redaction, verified deletes, honesty guard and untrusted-page handling. These are safeguards, not guarantees.
 - [x] No automatic external messages, purchases, paid setup or uncertain-effect retries.
-- [ ] Browser-only reminders/scheduled jobs/background alerts are unavailable. Telegram-backed reminders still deliver through Telegram; standalone Google/email users do not gain that delivery channel.
-- [ ] Web work-queue controls, rooms/group actions, computer/browser execution and deletion/forget confirmations are not enabled. Full web/Telegram parity is unfinished.
+- [ ] Standalone reminders/scheduled read-only jobs/work completion now use private in-app Notifications. Results persist until the next app open; no system push, email or phone alert while closed. Telegram-backed reminders still use Telegram.
+- [ ] Web computer/browser and /work controls are enabled. Rooms/group actions and deletion/forget confirmations remain pending; full parity is unfinished.
 - [ ] WhatsApp is parked by owner choice. No production WhatsApp service or paid Meta setup claimed.
 - [ ] Free hosts sleep and APIs have shared quotas. Reminder/worker timing and uptime are best-effort. Raw historical media/private command bodies cannot be reconstructed.
 
 ## Verification ledger
 
--360 tests pass for the committed runtime; frontend JavaScript syntax passes. Stopped local acceptance-test changes are excluded.
+-364 tests pass for the committed runtime; frontend JavaScript syntax passes. Stopped local acceptance-test changes are excluded.
 - Live `/health`: database reachable, polling mode, version2.35.0. Live web status: Telegram, Google and email login configured; uploads enabled; rooms/computer disabled.
 - Consolidation start rejected401 with "Account consolidation is not enabled yet." Last production environment read found no enable flag.
 - Real Telegram login/history, web chat persistence and image-analysis storage were checked. Captured desktop/mobile recovery and generated full review layouts were inspected.
@@ -93,3 +93,7 @@ This is a cumulative Day 0-to-current inventory, not a promise that every featur
 Computer/browser/text-file commands and controlled-form previews are no longer owner/tester gated in Telegram. Computer execution keeps5 jobs/user/day,20for the existing owner,30total including failures; no budget increase. Queue owner ID comes from the authenticated caller, not user-supplied args. Old worker versions cannot handle file jobs. Machine configuration/lifecycle tokens remain private; the worker exposes only bounded operations.
 
 Calendar and mail-watch use each user's own encrypted connection, never a fallback to the owner's account. Hourly mail checks require opt-in from that user's private Telegram chat and deliver only there; no browser-only delivery. Users who connected before calendar access was open must reconnect for their own calendar scopes. Actual provider Create and other users' live consent remain unproven. Gmail already followed each user's own connection. Google Testing still controls who can grant data scopes; product gates do not override Google approval.
+
+## Web parity milestone
+
+Menu now includes Work queue, Computer and Notifications. `/work list`, explicit bounded research/arithmetic plans and Show/Pause/Resume/Cancel/Export work in authenticated web chat. Public `/browse` and bounded `/computer` actions use the same private owner ID and quotas as Telegram. Standalone reminders and scheduled read-only results go to encrypted, account-bound Notifications, never an invented Telegram number. Notifications deduplicate on source receipt, check account existence and support account-bound Mark read. No OS push is promised. Local desktop/mobile UI and disposable database isolation checked; actual user acceptance remains separate.
