@@ -47,7 +47,7 @@ def openrouter_fallback(contents,system='',tools=None,json_mode=False,temperatur
     try:ai=chat.invoke(cr_lc.to_messages(contents,system,selected_provider='openrouter'))
     except Exception as e:raise LLMError(cr_lc.classify(e),'Free OpenRouter fallback unavailable; no paid route attempted') from None
     text,calls,parts=cr_lc.from_ai(ai)
-    if not text and not calls:raise LLMError('empty','Free fallback returned no content')
+    if not text and not calls:raise LLMError('empty','Free fallback returned no content; finish='+str(getattr(ai,'response_metadata',{}).get('finish_reason','unknown')))
     return {'text':text,'calls':calls,'parts':parts,'model':'openrouter/free','raw':{'provider':'openrouter','fallback':True,'actual_model':getattr(ai,'response_metadata',{}).get('model_name','unknown')}}
 
 
