@@ -180,7 +180,16 @@ def handle_update(upd, out=None):
             import cr_group_actions as GA,re
             text=re.sub(r'@'+re.escape(cr_group.BOT_USERNAME)+r'\b','',msg.get('text',''),flags=re.I).strip()
             # Direct group request selects this audience, never another member's identity.
-            if GA.action_request(text):
+            pending_compose=False
+            if cr_group.mentioned(msg):
+                # Only an explicitly tagged answer may resume this requester's compose.
+                import cr_google as Google,time
+                try:
+                    blob=db.kv_get('google_compose_'+str(uid),None)
+                    state=Google.decrypt(uid,blob) if blob else {}
+                    pending_compose=state.get('chat')==chat_id and state.get('until',0)>time.time()
+                except Exception:pending_compose=False
+            if GA.action_request(text) or pending_compose:
                 if uid<=0 or msg.get('sender_chat') or any(msg.get(k) for k in ('forward_origin','forward_from','via_bot')):
                     out.send(chat_id,'Account actions need your direct request, not an anonymous or forwarded message.');return
                 if re.search(r'(?i)\b(connect|link|reconnect|enable)\b.*\b(google|gmail|calendar booking)\b',text) or text.startswith('/connect_google'):

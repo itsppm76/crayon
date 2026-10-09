@@ -121,3 +121,12 @@ def test_pending_compose_cannot_send_old_review(monkeypatch,store):
     monkeypatch.setattr(H.G,'send_draft',lambda *a:pytest.fail('old draft sent'))
     out=T.CaptureOut();H.handle(10,10,'send it',{},out)
     assert 'pending email' in out.sent[0]['text']
+
+
+def test_pending_role_clarification_preserves_body(monkeypatch,store):
+    import time
+    store['google_compose_10']={'to':[],'subject':'Meeting','body':'Dear Sam,\nFull draft','until':time.time()+500,'chat':10}
+    seen=[];monkeypatch.setattr(H,'show_draft',lambda *a:seen.append(a[3]))
+    H.handle(10,10,'To: sam@example.com CC: c@example.com BCC: d@example.com',{},T.CaptureOut())
+    assert seen[0]['cc']==['c@example.com'] and seen[0]['bcc']==['d@example.com']
+    assert seen[0]['body']=='Dear Sam,\nFull draft'
