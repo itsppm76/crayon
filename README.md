@@ -14,9 +14,9 @@
 ![Render](https://img.shields.io/badge/Render-free_tier-46E3B7?style=for-the-badge&logo=render&logoColor=black)
 ![Cost](https://img.shields.io/badge/cost-%240_free_tiers-22A06B?style=for-the-badge)
 
-![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
+![Codespaces](https://img.shields.io/badge/Codespaces-per_user_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-367_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-377_passed-22A06B?style=for-the-badge)
 ![Pages](https://img.shields.io/badge/GitHub_Pages-web_live-FF6B6B?style=for-the-badge&logo=githubpages&logoColor=white)
 ![Login](https://img.shields.io/badge/Telegram_login-7_days-26A5E4?style=for-the-badge)
 ![Parity](https://img.shields.io/badge/full_parity-in_progress-FFC93C?style=for-the-badge)
@@ -27,19 +27,19 @@
 
 ---
 
-## Current release: October 9, 2026
+## Current release: October 10, 2026
 
 [Final Day 0-to-current feature checklist](LIVE_FEATURE_CHECKLIST.md) · [Web release checklist](WEB_RELEASE_CHECKLIST.md) · [Changelog](CHANGELOG.md)
 
-Per-user access release opens bounded computer/browser and private text files to every Telegram user. Calendar and mail-watch use each user's own connected Google account, with exact review and opt-in. No one gets the owner's data. Google Testing still limits data-access consent. Telegram login, independent Google-first login and verified email/password login are configured. An already-linked Google identity opens its existing account; otherwise accounts keep separate chat and memory. Matching email addresses never trigger linking. Login does not connect Gmail, Calendar or Workspace.
+Per-user access release opens bounded computer/browser and private text files to every authenticated user. Calendar and mail-watch use each user's own connected Google account, with exact review and opt-in. No one gets the owner's data. Google Testing still limits data-access consent. Telegram login, independent Google-first login and verified email/password login are configured. An already-linked Google identity opens its existing account; otherwise accounts keep separate chat and memory. Matching email addresses never trigger linking. Login does not connect Gmail, Calendar or Workspace.
 
 **Account consolidation is OFF by owner choice. No account merge happened.** The stopped scoped-test/two-Google changes were never deployed. Existing Telegram history and connections stay intact.
 
 Web chat, history, uploads, generated files, seven-day sessions, visible-tab sync, waiting UI and original-request result recovery are deployed. Telegram-backed accounts share their ordinary chat/memory between Telegram and web. Standalone accounts have no Telegram mirror destination. Private Google results remain outside the chat model and shared memory.
 
-367 local tests pass. Live health confirms database/polling; live web status confirms all three login configurations and uploads. Real standalone Google/email and password-reset acceptance are not claimed. Owner-device post-fix reconnect/upload delivery remains pending.
+377 local tests pass. Live health confirms database/polling; live web status confirms all three login configurations and uploads. Real standalone Google/email and password-reset acceptance are not claimed. Owner-device post-fix reconnect/upload delivery remains pending.
 
-Standalone reminders/scheduled jobs/work completion now appear in private in-app Notifications, not system push while closed. Web computer/browser and /work controls are enabled. Web rooms and deletion confirmations remain pending. Gmail is a named-tester beta, calendar is per-user, and actual calendar Create remains unproven. WhatsApp is parked. No paid setup or payment was made.
+Standalone reminders/scheduled jobs/work completion now appear in private in-app Notifications, not system push while closed. Web computer/browser and /work controls are enabled. Web shared public rooms, optional check-ins/digest controls and exact saved-fact removal reviews are deployed. Private group-action parity and full web data deletion remain pending. Gmail is a named-tester beta, calendar is per-user, and actual calendar Create remains unproven. WhatsApp is test-only; production setup stopped at payment-method/business requirements under the no-card rule. No paid setup or payment was made.
 
 The checklist separates deployed features, real acceptance evidence and disabled/setup-dependent paths. Older milestone sections below are historical and do not override it.
 
@@ -49,7 +49,7 @@ The checklist separates deployed features, real acceptance evidence and disabled
 
 Owner/tester gate notes below describe previous milestones. Current access is in the final checklist: every Telegram user gets bounded computer/browser/private files; Google features use only that user's connection, subject to Google Testing.
 
-Earlier milestone: 203 tests passed then. Current local suite: 360. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
+Earlier milestone: 203 tests passed then. Current local suite: 377. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
 
 ### Overnight task power (2.33.1)
 

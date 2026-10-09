@@ -1,6 +1,6 @@
 # Crayon: final live feature checklist
 
-October 9, 2026. Release: per-user access update; previous runtime `e4331d3`; health version: `2.35.0`.
+October 10, 2026. Release: per-user web/Telegram parity milestones; health version: `2.35.0`.
 This is a cumulative Day 0-to-current inventory, not a promise that every feature works on every login or device. This update removes product owner/tester gates only after adding per-account isolation. External provider approval and channel limits remain.
 
 ## Accounts and web
@@ -57,7 +57,7 @@ This is a cumulative Day 0-to-current inventory, not a promise that every featur
 - [ ] Workspace Docs text reads and Sheets bounded reads/RAW updates have Telegram/web entry points; Google consent is still required in the separate Testing project. Telegram Sheet changes now have exact one-use private review as on web. Public GitHub commit/PR digests need no connection; public itsppm76/crayon digest verified live. Private repo access/Docs editing are not enabled. Real Workspace consent/write acceptance remains pending.
 - [ ] Public Google data-access verification remains an external gate. Identity-only login is distinct from named-tester Gmail/Calendar access.
 
-## Computer/browser beta (all Telegram users)
+## Computer/browser beta (all authenticated users)
 
 - [x] Every user's computer status, arithmetic and public HTTPS browser screenshots on a bounded Codespace worker.
 - [x] Per-account create/read/list text files in separate private directories; no unrestricted shell, overwrites, deletion or access to another account's files. Existing owner files stay in place.100files/account and10MB shared storage cap.
@@ -72,15 +72,15 @@ This is a cumulative Day 0-to-current inventory, not a promise that every featur
 - [x] Per-account data isolation, encrypted connection/draft storage, exact one-use action reviews, audit records and bounded jobs/tools.
 - [x] Secret interception/redaction, verified deletes, honesty guard and untrusted-page handling. These are safeguards, not guarantees.
 - [x] No automatic external messages, purchases, paid setup or uncertain-effect retries.
-- [ ] Standalone reminders/scheduled read-only jobs/work completion now use private in-app Notifications. Results persist until the next app open; no system push, email or phone alert while closed. Telegram-backed reminders still use Telegram.
-- [ ] Web computer/browser and /work controls are enabled. Rooms/group actions and deletion/forget confirmations remain pending; full parity is unfinished.
-- [ ] WhatsApp is parked by owner choice. No production WhatsApp service or paid Meta setup claimed.
+- [x] Standalone reminders/scheduled read-only jobs/work completion now use private in-app Notifications. Results persist until the next app open; no system push, email or phone alert while closed. Telegram-backed reminders still use Telegram.
+- [x] Web computer/browser, /work controls, shared public-context rooms, private check-in/digest controls and exact saved-fact removal reviews are enabled. Telegram has matching public groups, private optional updates and named-key forget. Full private group-action parity and all-data web deletion are unfinished.
+- [ ] WhatsApp remains test-only: current production setup lists payment-method/business verification requirements. No card or paid setup is allowed; production onboarding stopped. No outbound acceptance claimed.
 - [ ] Free hosts sleep and APIs have shared quotas. Reminder/worker timing and uptime are best-effort. Raw historical media/private command bodies cannot be reconstructed.
 
 ## Verification ledger
 
--367 tests pass for the committed runtime; frontend JavaScript syntax passes. Stopped local acceptance-test changes are excluded.
-- Live `/health`: database reachable, polling mode, version2.35.0. Live web status: Telegram, Google and email login configured; uploads enabled; rooms/computer disabled.
+-377 tests pass for the committed runtime; frontend JavaScript syntax passes. Stopped local acceptance-test changes are excluded.
+- Live `/health`: database reachable, polling mode, version2.35.0. Live web status: Telegram, Google and email login configured; uploads, rooms, computer, notifications and work queue enabled.
 - Consolidation start rejected401 with "Account consolidation is not enabled yet." Last production environment read found no enable flag.
 - Real Telegram login/history, web chat persistence and image-analysis storage were checked. Captured desktop/mobile recovery and generated full review layouts were inspected.
 - Real successful standalone Google/email registration/login, password-reset delivery, and owner-device post-fix upload/reconnect acceptance were not performed by this audit. Deployed/configured is not the same as real acceptance.
