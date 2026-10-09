@@ -14,7 +14,7 @@ GEMINI_FALLBACKS = [m.strip() for m in env("GEMINI_FALLBACK_MODELS", "gemini-3.1
 LLM_PROVIDER = env("LLM_PROVIDER", "gemini").strip().lower()
 LLM_FRAMEWORK = env("LLM_FRAMEWORK", "langchain").strip().lower()
 OPENROUTER_KEY = env("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = env("OPENROUTER_MODEL", "google/gemini-2.5-flash")
+OPENROUTER_MODEL = env("OPENROUTER_MODEL", "openrouter/free")
 OPENROUTER_FALLBACKS = [m.strip() for m in env("OPENROUTER_FALLBACK_MODELS", "").split(",") if m.strip()]
 DATABASE_URL = env("DATABASE_URL")
 ADMIN_TOKEN = env("CRAYON_ADMIN_TOKEN")  # guards /selftest, /tick
@@ -27,3 +27,5 @@ DAILY_MESSAGE_CAP = int(env("CRAYON_DAILY_CAP", "80"))
 # WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN, WHATSAPP_GRAPH_VERSION,
 # CRAYON_OWNER_WA_ID (or WHATSAPP_ALLOWED_IDS, comma list)
 VERSION = "2.33.1"
+
+OPENROUTER_AUTO_FALLBACK = env("OPENROUTER_AUTO_FALLBACK", "off").lower() == "on"
