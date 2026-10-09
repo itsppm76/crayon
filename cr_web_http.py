@@ -1,5 +1,6 @@
 """HTTP surface for Pages frontend. Exact origins, short-lived server sessions."""
 import html
+import logging
 import json
 import secrets
 from http.cookies import SimpleCookie
@@ -10,6 +11,16 @@ import cr_web_app as W
 
 
 def reply(h, status, body, ctype='application/json', cors=False, extra=None):
+    path=urlsplit(h.path).path
+    if status>=400 and ctype=='application/json' and path in ('/web/auth/start','/web/auth/callback','/web/google/auth/start','/web/google/auth/callback'):
+        nonce=secrets.token_urlsafe(24)
+        message=str(body.get('error','Sign-in could not be completed.'))[:250]
+        target=A.origin()+'/crayon/'
+        title='Sign-in could not be completed'
+        body='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crayon sign-in</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fbfaf8;color:#1f1a1d;font:16px/1.6 system-ui}main{width:min(360px,calc(100vw - 64px));padding:28px;border:1px solid #ece7e2;border-radius:20px;background:white}h1{font-size:24px;line-height:1.3}p{overflow-wrap:anywhere}a{display:block;padding:12px;border-radius:10px;background:#1f1a1d;color:white;text-align:center;text-decoration:none}</style><main><p>Crayon</p><h1>'+title+'</h1><p>'+html.escape(message)+'</p><p>Your stored conversations were not changed. Return to the original Crayon tab to try again.</p><a href="'+html.escape(target,quote=True)+'">Return to Crayon</a></main><script nonce="'+nonce+'">if(window.opener){window.opener.postMessage('+json.dumps({'type':'crayon-login-error','error':message}).replace('<','\\u003c')+','+json.dumps(A.origin())+');}</script></html>'
+        ctype='text/html'
+        extra={**(extra or {}),'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-"+nonce+"'; base-uri 'none'; frame-ancestors 'none'"}
+        logging.getLogger('crayon.auth').warning('web_auth_failure path=%s status=%s category=%s',path,status,'provider_query' if message.startswith('Google returned') else 'auth_validation')
     data = json.dumps(body).encode() if ctype == 'application/json' else body.encode()
     h.send_response(status)
     h.send_header('Content-Type',ctype)
@@ -50,13 +61,15 @@ def handle(h, method, raw=b''):
             return True
         if method=='GET' and p.path in ('/web/google/auth/start','/web/google/auth/callback'):
             import cr_web_google_auth as GA
-            q=parse_qs(p.query)
+            if len(p.query)>16384:raise A.AuthError('Sign-in response was too large. Try again from Crayon.')
+            q=parse_qs(p.query,keep_blank_values=True,max_num_fields=64)
             if p.path.endswith('/start'):
                 if set(q)!={'state'} or len(q['state'])!=1:raise A.AuthError('Invalid Google login start.')
                 url,cookie=GA.start(q['state'][0])
                 reply(h,302,'','text/plain',extra={'Location':url,'Set-Cookie':'crayon_google_oidc='+cookie+'; Path=/web/google/auth; Max-Age=300; Secure; HttpOnly; SameSite=Lax'})
             else:
-                if not {'code','state'}.issubset(q) or set(q)-{'code','state','scope','authuser','prompt','hd'} or any(len(v)!=1 for v in q.values()):raise A.AuthError('Google login cancelled or invalid.')
+                if 'error' in q:raise A.AuthError('Google returned a sign-in error. No account was linked. Try again from Crayon.')
+                if any(len(q.get(k,[]))!=1 or not q[k][0] for k in ('code','state')):raise A.AuthError('Google sign-in response was incomplete. Try again from Crayon.')
                 cookies=SimpleCookie(h.headers.get('Cookie',''));GA.callback(q['state'][0],q['code'][0],cookies['crayon_google_oidc'].value if 'crayon_google_oidc' in cookies else '')
                 nonce=secrets.token_urlsafe(24)
                 page='<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crayon Google login</title><p>Google identity checked. Return to the original Crayon tab to finish signing in or review the account link.</p><script nonce="'+nonce+'">if(window.opener){window.opener.postMessage({type:"crayon-login"},'+json.dumps(A.origin())+');window.close();}</script>'

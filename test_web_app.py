@@ -198,7 +198,8 @@ def test_provider_decode_error_safe_http(config):
     h=Handler('/web/auth/callback?code=x&state=y')
     H.handle(h,'GET')
     assert h.code==503
-    assert b'utf-8' not in h.wfile.getvalue() and b'Start login again' in h.wfile.getvalue()
+    assert b'invalid start byte' not in h.wfile.getvalue() and b'Start login again' in h.wfile.getvalue()
+    assert h.out['Content-Type']=='text/html'
 
 
 def test_poll_login_bound_to_verifier(config):

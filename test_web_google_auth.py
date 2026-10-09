@@ -94,3 +94,29 @@ def test_google_callback_accepts_inert_provider_fields(env):
     called=[];env.setattr(G,'callback',lambda *a:called.append(a))
     h=Handler('/web/google/auth/callback?code=code&state='+('a'*43)+'&scope=openid+email+profile&authuser=0&prompt=select_account',{'Cookie':'crayon_google_oidc='+('b'*43)})
     H.handle(h,'GET');assert h.code==200 and called==[('a'*43,'code','b'*43)]
+
+
+def test_google_callback_ignores_unknown_inert_fields(env):
+    import cr_web_http as H
+    from test_web_app import Handler
+    called=[];env.setattr(G,'callback',lambda *a:called.append(a))
+    h=Handler('/web/google/auth/callback?code=code&state='+('a'*43)+'&iss=https%3A%2F%2Faccounts.google.com&new_metadata=value',{'Cookie':'crayon_google_oidc='+('b'*43)})
+    H.handle(h,'GET');assert h.code==200 and len(called)==1
+
+@pytest.mark.parametrize('query',['error=access_denied&state=a','code=a&state=a&state=b','code=a','state=a','code=a&state=a&state='])
+def test_google_auth_failures_friendly_no_exchange(env,query):
+    import cr_web_http as H
+    from test_web_app import Handler
+    env.setattr(G,'callback',lambda *a:pytest.fail('Must not exchange invalid callback'))
+    h=Handler('/web/google/auth/callback?'+query);H.handle(h,'GET')
+    assert h.code==401 and h.out['Content-Type']=='text/html'
+    assert b'Return to Crayon' in h.wfile.getvalue() and b'crayon-login-error' in h.wfile.getvalue()
+
+
+def test_auth_error_html_escapes_script_content(env):
+    import cr_web_http as H
+    from test_web_app import Handler
+    h=Handler('/web/google/auth/callback')
+    H.reply(h,401,{'error':'</script><img src=x onerror=alert(1)>'})
+    assert b'</script><img' not in h.wfile.getvalue()
+    assert b'&lt;/script&gt;' in h.wfile.getvalue()
