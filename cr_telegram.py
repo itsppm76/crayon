@@ -224,6 +224,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         db.audit(uid,"telegram_reaction",f"message_id={message_id} emoji={emoji} accepted={reaction_ok}")
     if text.strip().lower().rstrip('.!') in ('hi','hey','hello','cool','thanks','thank you'):
         out.send(chat_id,"You're welcome." if text.strip().lower().rstrip('.!') in ('thanks','thank you') else "Hey! What can I help with?" if text.strip().lower().rstrip('.!') in ('hi','hey','hello') else "Got it.");return
+    import cr_booking
+    if cr_booking.handle(uid,chat_id,text,out):return
     import cr_dashboard
     if cr_dashboard.handle(uid,chat_id,text,out):return
     import cr_work
@@ -383,10 +385,21 @@ def handle_callback(cb, out):
     except Exception:
         pass
     data=cb.get("data","")
-    if not data.startswith(("email_send:","email_cancel:","calendar_create:","calendar_cancel:","ux:","work:")):return
+    if not data.startswith(("email_send:","email_cancel:","calendar_create:","calendar_cancel:","form_submit:","form_cancel:","ux:","work:")):return
     uid=cb.get("from",{}).get("id",0)
     chat_id=cb.get("message",{}).get("chat",{}).get("id")
     if uid<=0 or chat_id!=uid:return
+    if data.startswith(('form_submit:','form_cancel:')):
+        import cr_booking as B,base64
+        parts=data.split(':')
+        try:
+            with mem.user_lock(uid):
+                if parts[0]=='form_cancel' and len(parts)==2:out.send(chat_id,B.cancel(uid,parts[1]))
+                elif parts[0]=='form_submit' and len(parts)==3:
+                    r=B.submit(uid,parts[1],parts[2]);out.send(chat_id,r.get('note','Outcome not confirmed')+'\n'+r.get('url',''))
+                    if r.get('screenshot'):out.artifact(chat_id,{'filename':'form-result.png','mime':'image/png','data':base64.b64decode(r['screenshot'],validate=True)})
+        except B.BookingError as e:out.send(chat_id,str(e))
+        return
     if data.startswith("work:"):
         import re,cr_work
         if not re.fullmatch(r'work:(show|pause|resume|cancel|export):[1-9][0-9]{0,10}',data):return
