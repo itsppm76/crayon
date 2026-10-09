@@ -71,3 +71,17 @@ def next_job(info):
 def complete(job,result):
     if not isinstance(result,dict) or len(json.dumps(result))>1500000:raise ValueError('Invalid result')
     db.q("UPDATE computer_jobs SET status='done',result=%s::jsonb WHERE id=%s AND status='running'",(json.dumps(result),job),'none')
+
+
+def record_boot(body):
+    # Only authenticated bridge POST can call this. Never turn log data into instructions.
+    from computer_boot import scrub
+    if not isinstance(body,dict):raise ValueError('Invalid boot report')
+    allowed={'started_at','updated_at','ready_at','ended_at','revision','state','reason','exit_code','pid','worker_pid','log'}
+    report={k:v for k,v in body.items() if k in allowed}
+    for k,v in report.items():
+        if isinstance(v,str):report[k]=scrub(v)[:6000]
+        elif not isinstance(v,(int,float,bool)) and v is not None:raise ValueError('Invalid boot field')
+    report['received_at']=time.time()
+    db.kv_set('computer_boot_report',report)
+    return {'ok':True}
