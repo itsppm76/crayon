@@ -24,6 +24,7 @@ SCHEMA = '''CREATE TABLE IF NOT EXISTS web_requests(
 def init():
     auth.init()
     __import__('cr_web_actions').init()
+    __import__('cr_history').init()
     db.q(SCHEMA, fetch='none')
 
 
@@ -129,6 +130,15 @@ def _run(uid, ident):
         data = decode(row['encrypted'])
         try:
             items = dispatch(uid,data['name'],data['input'])
+            try:
+                import cr_telegram
+                channel_out=cr_telegram.Out()
+                channel_out.send(uid,'[From web] '+data['input'])
+                for item in items:
+                    if item['kind']=='text':channel_out.send(uid,item['text'])
+                    elif item['kind']=='artifact':channel_out.artifact(uid,{'filename':item['name'],'mime':item['mime'],'data':base64.b64decode(item['data'])})
+            except Exception:
+                items.append({'kind':'text','text':'Web reply completed, but Telegram sync was not confirmed. No automatic resend. Check your Telegram chat.'})
             status = 'done'
         except Exception:
             items = [{'kind':'text','text':'Request stopped. Its outcome is unconfirmed. Check your records before trying again.'}]
@@ -158,14 +168,22 @@ def activity(uid):
 
 
 def history(uid, before=None):
-    if before is not None and (not isinstance(before,str) or not before.isdigit() or not 0<int(before)<10**18):
-        raise ValueError('Invalid history cursor.')
-    rows=db.q('SELECT id,role,content,ts FROM messages WHERE user_id=%s'+(' AND id<%s' if before else '')+' ORDER BY id DESC LIMIT 51',
-              (uid,int(before)) if before else (uid,))
-    page=rows[:50]
-    return {'messages':list(reversed([{'id':r['id'],'role':r['role'],'text':r['content'],'time':str(r['ts']),
-        'media_missing':r['content'].startswith('[User sent media:')} for r in page])),
-        'has_more':len(rows)>50,'before':str(page[-1]['id']) if page else None}
+    from datetime import datetime
+    if before is not None:
+        try:cursor=datetime.fromisoformat(before)
+        except Exception:raise ValueError('Invalid history cursor.') from None
+        if cursor.tzinfo is None:raise ValueError('History cursor needs timezone.')
+    params=(uid,cursor,uid,cursor) if before else (uid,uid)
+    condition=' AND ts<%s' if before else ''
+    rows=db.q("SELECT 'message' AS kind,id::text AS id,role,content,NULL::text AS encrypted,ts FROM messages WHERE user_id=%s"+condition+
+      " UNION ALL SELECT 'receipt',id,'receipt',NULL,encrypted,ts FROM channel_history WHERE user_id=%s"+condition+" ORDER BY ts DESC,id DESC LIMIT 51",params)
+    page=rows[:50];items=[]
+    for r in reversed(page):
+        if r['kind']=='receipt':
+            data=json.loads(auth._cipher().decrypt(r['encrypted'].encode()))
+            for role in ('user','assistant'):items.append({'id':r['id']+role,'role':role,'text':data[role],'time':str(r['ts']),'media_missing':False})
+        else:items.append({'id':r['id'],'role':r['role'],'text':r['content'],'time':str(r['ts']),'media_missing':r['content'].startswith('[User sent media:')})
+    return {'messages':items,'has_more':len(rows)>50,'before':page[-1]['ts'].isoformat() if page else None}
 
 
 def upload(user, body):
@@ -211,6 +229,12 @@ def _upload_run(uid,ident,username,data,mime,name,caption):
                 M.add_message(uid,'user','[User sent media: '+mime+'] '+name+' '+caption)
                 M.add_message(uid,'assistant','[Media analysis summary; raw file not retained] '+clean_text(response)[:3000])
             items=[{'kind':'text','text':clean_text(response)}];state='done'
+            try:
+                import cr_telegram
+                channel_out=cr_telegram.Out()
+                channel_out.send(uid,'[Web upload] '+name+' ('+mime+'). Original file not retained here.')
+                channel_out.send(uid,clean_text(response))
+            except Exception:items.append({'kind':'text','text':'Upload analysis completed, but Telegram sync was not confirmed. No automatic resend.'})
         except Exception as e:
             items=[{'kind':'text','text':'Upload stopped: '+(str(e)[:200] if isinstance(e,ValueError) else 'Media processing failed. No analysis confirmed.')}];state='blocked'
         db.q('UPDATE web_requests SET state=%s,encrypted=%s,updated_at=now() WHERE user_id=%s AND id=%s',

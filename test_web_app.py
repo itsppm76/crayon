@@ -233,11 +233,12 @@ def test_poll_exact_origin_and_shape(config):
 
 def test_history_pagination_bound_and_media_placeholder(config):
     calls=[]
-    rows=[{'id':i,'role':'user','content':'[User sent media: image/png]','ts':'2026-10-09'} for i in range(100,49,-1)]
+    from datetime import datetime,timezone,timedelta
+    rows=[{'kind':'message','id':str(i),'role':'user','content':'[User sent media: image/png]','ts':datetime(2026,10,9,tzinfo=timezone.utc)+timedelta(seconds=i)} for i in range(100,49,-1)]
     config.setattr(W.db,'q',lambda sql,p=(),fetch='all':calls.append((sql,p)) or rows)
-    r=W.history(17,'101')
-    assert len(r['messages'])==50 and r['has_more'] and r['before']=='51'
-    assert calls[0][1]==(17,101) and all(m['media_missing'] for m in r['messages'])
+    r=W.history(17,'2026-10-10T00:00:00+00:00')
+    assert len(r['messages'])==50 and r['has_more'] and r['before']==rows[49]['ts'].isoformat()
+    assert calls[0][1][0]==17 and calls[0][1][2]==17 and all(m['media_missing'] for m in r['messages'])
     with pytest.raises(ValueError):W.history(17,'1 OR 1=1')
 
 
@@ -268,3 +269,25 @@ def test_upload_raw_bytes_not_stored(config):
         assert 'RAW_UPLOAD_BYTES' not in str(stored) and body['data'] not in str(stored)
         assert 'raw_retained' in str(stored)
     finally:W.SLOTS.release()
+
+
+def test_sync_and_wait_ui():
+    from pathlib import Path
+    s=Path('docs/app.js').read_text()
+    assert 'typing-bubble' in s and 'Still working. Your request is not being repeated.' in s
+    assert '30000' in s and 'historyPaged' in s and 'passive&&key===lastHistoryKey' in s
+
+
+def test_web_reply_mirrors_only_authenticated_uid(config):
+    import cr_telegram
+    sent=[]
+    class Out:
+        def send(self,uid,text):sent.append((uid,text))
+    config.setattr(cr_telegram,'Out',Out)
+    config.setattr(W,'decode',lambda v:{'input':'hello','name':'N'})
+    config.setattr(W,'encode',lambda v:json.dumps(v))
+    config.setattr(W,'dispatch',lambda *a:[{'kind':'text','text':'reply'}])
+    config.setattr(W.db,'q',lambda sql,p=(),fetch='all':{'encrypted':'data'} if sql.startswith("UPDATE web_requests SET state='running'") else None)
+    W.SLOTS.acquire()
+    W._run(17,'a'*43)
+    assert sent==[(17,'[From web] hello'),(17,'reply')]

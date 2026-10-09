@@ -219,7 +219,7 @@ def handle_update(upd, out=None):
         with mem.user_lock(uid):
             progress=ProgressOut(out,chat_id,((12,"On it. Give me a moment."),(25,"Still working on it. I'll send the answer when it's ready."),(35,"This is taking longer than usual. I'm still checking."))).start()
             try:
-                _handle_text(uid, chat_id, name, text, msg.get("message_id"), progress)
+                __import__('cr_history').run(uid, chat_id, name, text, msg.get("message_id"), progress, _handle_text)
             finally:progress.stop()
     except Exception as e:
         log.exception("handle_update failed")
