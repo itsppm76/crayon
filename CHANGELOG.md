@@ -1,5 +1,20 @@
 # Change log
 
+## October 9, 2026 - final live-state documentation
+
+- Document cumulative Day 0-to-current features in `LIVE_FEATURE_CHECKLIST.md`.
+- Record deployed runtime `e4331d3`,357 passing committed tests, healthy database/polling and configured Telegram/Google/email login.
+- Google-first and verified email/password sign-in are deployed, with provider-independent IDs and no email auto-match. Existing linked identities keep their account. Real standalone sign-in/reset acceptance remains unclaimed.
+- Account consolidation stays OFF by owner choice; no production merge. Scoped acceptance/two-Google preparation was stopped and never deployed.
+- Separate Telegram/general features from web availability, named-tester/owner beta and setup-dependent Workspace/GitHub paths. Keep browser-only reminders/background alerts and web parity gaps explicit.
+- This update changes documentation only. It does not enable a flag, send mail, book anything or move data.
+
+## October 9, 2026 - deployed identity and inspection builds
+
+- `f3cda8c`: isolated verified email/password auth with current revocation/disabled checks, Google-first standalone accounts, explicit unused-identity linking and provider removal review.
+- `e4331d3`: exact-reviewed standalone-to-Telegram consolidation implementation published for inspection behind an OFF flag. Live bridge rejects consolidation before provider login. No production merge or real two-login test occurred.
+
+
 ## October 9, 2026 - auth callback recovery
 
 - Ignore inert Google callback metadata while keeping unique code/state, PKCE, cookie and signed identity checks.

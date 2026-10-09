@@ -16,7 +16,7 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-326_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-357_passed-22A06B?style=for-the-badge)
 ![Pages](https://img.shields.io/badge/GitHub_Pages-web_live-FF6B6B?style=for-the-badge&logo=githubpages&logoColor=white)
 ![Login](https://img.shields.io/badge/Telegram_login-7_days-26A5E4?style=for-the-badge)
 ![Parity](https://img.shields.io/badge/full_parity-in_progress-FFC93C?style=for-the-badge)
@@ -27,39 +27,27 @@
 
 ---
 
-## 🔑 Google login update (deployed; real linking acceptance pending)
+## Current release: October 9, 2026
 
-Current linked Google sign-in uses the same Crayon account, never a new chat history inferred from email. Google-first standalone accounts, email login and later reviewed account merge are requested work, not live yet. Sign in with Telegram once, choose **Link Google login** in Menu, authenticate with Google, then review the exact Telegram/Google pair. Future Google sign-ins open that same memory/history. Google subject ID is the stable key; collisions are rejected, not merged. Login requests only `openid email profile` and does not connect Gmail/Calendar/Workspace. Google login now has its own identity-only production project. Gmail/Calendar stays in the original named-tester project. Login branding is not verified, so Google may show the backend domain rather than the Crayon name. Provider tokens from login are not retained. Live Pages reaches the real Google account picker with the dedicated identity-only client; backend configuration and unauthorized-link denial were checked. The project's existing owner personal/college accounts are listed testers. Real owner link/login acceptance remains pending. 326 local tests passed.
+[Final Day 0-to-current feature checklist](LIVE_FEATURE_CHECKLIST.md) · [Web release checklist](WEB_RELEASE_CHECKLIST.md) · [Changelog](CHANGELOG.md)
 
-## 🌐 Web app: current release
+Runtime `e4331d3` is deployed. Telegram login, independent Google-first login and verified email/password login are configured. An already-linked Google identity opens its existing account; otherwise accounts keep separate chat and memory. Matching email addresses never trigger linking. Login does not connect Gmail, Calendar or Workspace.
 
-[Open Crayon on the web](https://itsppm76.github.io/crayon/) · [Full release checklist](WEB_RELEASE_CHECKLIST.md) · [Change log](CHANGELOG.md)
+**Account consolidation is OFF by owner choice. No account merge happened.** The stopped scoped-test/two-Google changes were never deployed. Existing Telegram history and connections stay intact.
 
-> [!IMPORTANT]
-> Telegram and the web use the same identity, recorded ordinary conversation and memory. Full feature parity is still in progress. "Deployed" is not the same as "passed on the owner's phone".
+Web chat, history, uploads, generated files, seven-day sessions, visible-tab sync, waiting UI and original-request result recovery are deployed. Telegram-backed accounts share their ordinary chat/memory between Telegram and web. Standalone accounts have no Telegram mirror destination. Private Google results remain outside the chat model and shared memory.
 
-| Status | What changed | Evidence / limit |
-| :--- | :--- | :--- |
-| 🟢 Live | Google login with explicit Telegram-account linking | Isolated identity-only project published in production; no sensitive/restricted scopes. Real provider picker reached; exact owner linking and later Google sign-in proof pending. No email auto-match or data scopes. |
-| 🟢 Live | Telegram login, seven-day browser sessions, refresh/new-tab persistence | Real owner login/history mapping passed; same-browser persistence tested with captured network responses. Session survives server deploys. |
-| 🟢 Live | Reconnect through temporary fetch/host failures | Captured failure test passes without a new login; owner's post-fix phone retest pending. |
-| 🟢 Live | Shared ordinary chat, 30-second visible-tab sync, web-to-Telegram mirror | Private Google bodies do not enter shared model memory. No automatic mirror resend. |
-| 🟢 Live | Uploads, analysis, generated files, typing bubble and waiting updates | 20 MB upload limit. Owner image analyzed successfully; browser lost its response before the recovery fix. |
-| 🟢 Live | Same-ID result recovery after lost responses | One POST only in captured failure test. Activity/files holds saved output. Raw upload bytes are not retained. |
-| 🟢 Live | Tasks, memory, reminders, history, activity and Google actions menu | Exact session-bound review for external writes; calendar owner-only; no email attachments. |
-| 🟡 Pending | Owner-device recovery retest and full conversational command coverage | Google currently uses web menu controls; queue controls and richer attachment history need more work. |
-| 🔒 Locked | Web rooms, computer/browser execution and deletion confirmations | Missing audience/allowlist/review wiring, not silent failures. Telegram gates remain unchanged. |
-| ⏸️ Parked | WhatsApp | Owner asked to leave it. Test configuration preserved; no payment method or paid tier added. |
+357 committed-runtime tests pass. Live health confirms database/polling; live web status confirms all three login configurations and uploads. Real standalone Google/email and password-reset acceptance are not claimed. Owner-device post-fix reconnect/upload delivery remains pending.
 
-**Verification:** 326 local tests passed. Desktop/mobile captured checks inspected. Real owner login, web chat and image-analysis storage proved; post-fix phone acceptance is still open. No web acceptance test sent a real email or created a calendar event/Sheet mutation.
+Browser-only reminders, scheduled jobs and background alerts are unavailable. Web rooms, computer execution, deletion confirmations and work-queue controls remain locked or unfinished. Gmail is a named-tester beta, calendar is owner-only, and actual calendar Create remains unproven. WhatsApp is parked. No paid setup or payment was made.
 
-**Privacy:** log out on shared devices. Closing Chrome does not revoke a stored session. Private browsing, browser-storage deletion, account deletion and expiry can end access. Historical missing media and private-command bodies cannot be recreated.
+The checklist separates deployed features, real acceptance evidence and disabled/setup-dependent paths. Older milestone sections below are historical and do not override it.
 
 ---
 
 ## ✅ Earlier October 9 Telegram milestones (historical)
 
-Earlier milestone: 203 tests passed then. Current suite: 326. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
+Earlier milestone: 203 tests passed then. Current committed suite: 357. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
 
 ### Overnight task power (2.33.1)
 
@@ -79,7 +67,7 @@ Earlier milestone: 203 tests passed then. Current suite: 326. Deployed bot: [@cr
 | Everyone using the bot | Chat, personal memory/review/forget/wipe, notes, reminders, tracked tasks, goal plans, web search/page reading, bounded research, sandboxed maths, currency/unit conversion, CSV/charts, review-only message drafts, opt-in digests/nudges and quiet hours | Each person's private data stays separate. Free-host timing and model output are best-effort. |
 | Named Google test users who connect their own account | Gmail reads and encrypted reviewed email Send/Cancel on their own connection; calendar is owner-only | Google OAuth is still in testing mode, not open to arbitrary accounts. Each user needs their own personal connection link. Calendar Create needs optional write-scope reconnect and an approved live test. |
 | Owner + approved computer testers | Computer status, arithmetic, public HTTPS browser screenshots; fixed World Bank research-to-chart demo | 5 execution jobs/tester/day, 20 owner/day, 30 total/day, failures included. Shared free machine must be awake. Tester access code-tested; another person's live test still pending. |
-| Owner only | Text-file create/read on the computer; lifecycle/setup controls; opt-in hourly email-watch beta | Mail watch was enabled October 9 at 13:59 IST. First automatic poll proof remains pending. Owner files are not shared with testers. |
+| Owner only | Text-file create/read on the computer; lifecycle/setup controls; opt-in hourly email-watch beta | Mail watch was enabled October 9 at 13:59 IST. Real two-item Telegram notification passed October 9 at 15:00 IST. Owner files are not shared with testers. |
 
 ### Live checks and UX
 
@@ -97,7 +85,7 @@ Earlier milestone: 203 tests passed then. Current suite: 326. Deployed bot: [@cr
 | Feature | Exact status |
 | :--- | :--- |
 | Automatic computer wake | Enabled after real cold start, worker-ready, calculation and idle-stop proof October 9. Free quota, stop-usage budget and idle policy remain. |
-| Hourly email watch | Deployed owner-only opt-in beta, enabled October 9 at 13:59 IST. Bounded sender/subject/provider-snippet excerpts, quiet hours, no bodies or Gemini processing. Scheduled delivery still needs a live check. |
+| Hourly email watch | Deployed owner-only opt-in beta, enabled October 9 at 13:59 IST. Bounded sender/subject/provider-snippet excerpts, quiet hours, no bodies or Gemini processing. Real two-item Telegram notification passed October 9 at 15:00 IST. |
 | Calendar Create | Deployed, awaiting optional Google write-scope reconnect and exact owner-approved live Create. Owner primary calendar only; optional explicit guest invites and popup reminders after exact Create. No Meet. |
 | Group welcome / other-user computer proof | Code-tested; real group-add and tester-chat checks pending. |
 | Public form/booking interaction | Reviewed public HTML-form foundation and controlled demo implemented. Local fresh-Chromium exact-one-POST acceptance passed. Live worker demo and dynamic Google appointment/Calendly adapter acceptance remain open. No provider booking claimed. |
@@ -290,7 +278,7 @@ python main.py
 - Google testing-mode integration is live: per-user OAuth, direct Gmail/primary Calendar reads and exact-content review-first email drafts. Owner-confirmed real send was proven. Public verification remains pending.
 - Test coverage in `tests/` is from the earlier prototype (see [`TEST_CHECKLIST.md`](TEST_CHECKLIST.md) for live checks) and mocks model responses. Live behaviour is checked through `/selftest` and the bot itself.
 
-See [`KNOWN_LIMITATIONS.md`](KNOWN_LIMITATIONS.md) and [`ROADMAP.md`](ROADMAP.md) for older notes written before the milestones above; the sections in this README reflect the current deployed state.
+See [final live checklist](LIVE_FEATURE_CHECKLIST.md) for current status; older roadmap and milestone notes are historical.
 
 ---
 
@@ -306,7 +294,7 @@ Small assistant. Honest status. Room to grow.
 
 </div>
 
-## 🟣 Agentic features, phases 2 and 3
+## 🟣 Agentic features, phases 2 and 3 (historical milestone details)
 
 | Layer | What exists | Status and boundaries |
 | :--- | :--- | :--- |

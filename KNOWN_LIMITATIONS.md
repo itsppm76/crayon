@@ -1,9 +1,10 @@
 # Known limitations
 
-## Current web release - October 9, 2026, 20:10 IST
+## Current release - October 9, 2026
 
-See [WEB_RELEASE_CHECKLIST.md](WEB_RELEASE_CHECKLIST.md) for the current done/pending/locked matrix and acceptance evidence. 317 local tests passed. Web login, shared ordinary history, uploads, waiting UI and safe reconnect/result recovery are deployed. Full feature parity and owner-device post-fix acceptance are pending. Older checkpoints below are historical, not current test counts or current web availability. WhatsApp is parked by owner request. No paid setup was made.
+[Final live checklist](LIVE_FEATURE_CHECKLIST.md) supersedes historical checkpoints below. Runtime `e4331d3`,357 committed tests. Telegram, independent Google and verified email/password login are deployed/configured; real standalone acceptance is pending. Accounts keep separate history/memory unless an unused identity is explicitly linked. Consolidation is OFF by owner choice and no production merge happened.
 
+Browser-only reminders/scheduled jobs/background delivery are unavailable. Web rooms, computer execution, deletion confirmations, work-queue controls and full command parity remain unfinished. Actual calendar Create and connected Workspace/GitHub acceptance are unproven. WhatsApp is parked. No paid setup occurred. Historical single-recipient notes below predate reviewed To/CC/BCC support; attachments remain unavailable. Historical form-demo and mail-watch pending notes predate their real Telegram checks on October9.
 
 Status is intentionally conservative. This file reflects the deployed bot (`cr_*.py` modules, Neon Postgres, Render free tier).
 
