@@ -1,10 +1,11 @@
 # Crayon web release checklist
 
-Updated October 9, 2026, 20:10 IST. Built, deployed and real-device acceptance are separate.
+Updated October 9, 2026, 21:22 IST. Built, deployed and real-device acceptance are separate.
 
 ## Done and deployed
 
 - [x] Web frontend is in this repository and hosted on GitHub Pages.
+- [x] Dedicated identity-only Google OIDC sign-in and exact session-bound Telegram/Google linking deployed. No email matching or automatic account merge. External Testing only.
 - [x] Telegram OIDC login maps to the existing Telegram user, memory and recorded history.
 - [x] New sessions last seven days. Refresh and new tabs restore the same browser login. Logout and server expiry revoke access. Browser storage deletion, private browsing and account deletion can also end access.
 - [x] Saved login reconnects after temporary host/network failures instead of giving up at the first failed fetch.
@@ -22,15 +23,17 @@ Updated October 9, 2026, 20:10 IST. Built, deployed and real-device acceptance a
 
 ## Evidence, not promises
 
-- 317 local Python tests passed.
+- 326 local Python tests passed.
 - Captured browser tests: same-browser refresh/new tab; transient saved-session fetch failure and automatic reconnect; one failed upload acknowledgement plus one failed result GET recovered with exactly one POST; delayed typing update and logout cleanup.
 - Desktop and 390px mobile screenshots inspected, with no horizontal overflow in captured checks.
 - Real owner Telegram login and existing-history mapping passed. Real owner web chat persisted. The owner's 5.39 MB image reached the server at 20:04:24 and analysis completed at 20:04:50; browser result delivery failed before recovery was shipped.
 - Seven-day session remains in the database across deployment. Backend recovery release is live; Pages has reconnect and recovery code.
+- Live /web/status confirms Google login configured; unauthenticated link-start is401. Real Google account chooser reached with basic identity scopes. Owner personal/college Google accounts are existing testers. No Google identity was silently linked.
 - No real email/calendar/Sheet mutation was performed for these web acceptance checks.
 
 ## Still pending
 
+- [ ] Real owner exact Google link approval, then Google logout/login returning the same UID/history. Live Google picker reached; full callback/link/login acceptance is not yet proved.
 - [ ] Owner-device post-fix reconnect, upload-result delivery and live two-way chat acceptance.
 - [ ] Full conversational parity: Google/email/calendar/Workspace workflows should behave consistently across both interfaces, while preserving exact review and channel privacy. Current web workflow uses the menu.
 - [ ] Web internal-work queue controls and full Telegram command/menu coverage.
@@ -55,3 +58,12 @@ Updated October 9, 2026, 20:10 IST. Built, deployed and real-device acceptance a
 5. Close/reopen the same browser and confirm login restores. Log out on shared devices.
 
 Full parity is the target, not a completed claim. Free-host restart, network outages and model/provider quotas still affect timing.
+
+## One-time Google login linking
+
+1. Sign in with Telegram and check the existing account name/history.
+2. Menu > Link Google login. Choose the Google account you want to use.
+3. Return to Crayon and review the exact Telegram ID/name and verified Google email. Link only if both are yours.
+4. Log out, use Log in with Google, and check that the same recorded history returns.
+
+This login does not authorize Gmail, Calendar or Workspace access. The current Google app accepts named test users only; publishing for everyone remains separate work.

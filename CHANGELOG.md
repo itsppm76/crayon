@@ -16,9 +16,10 @@
 
 See [release checklist](WEB_RELEASE_CHECKLIST.md) for remaining parity work and deliberately locked features. No paid tier/payment setup, no acceptance-test email/calendar/Sheet write.
 
-## Google login addition (October 9, 21:16 IST)
+## Google login addition (October 9, 21:22 IST)
 
 - Dedicated Google OIDC client with basic identity scopes, state/cookie/nonce/S256 PKCE, signed token checks.
 - Explicit session-bound review links stable Google subject to existing Telegram UID; no email matching, account merge or silent integration permissions.
 - Unlinked users start with Telegram and link once; Google external Testing restrictions remain.
-- 325 local tests passed. Configuration rollout and real owner link/login acceptance still pending at this checkpoint.
+- 326 local tests passed. Dedicated login configuration and backend/Pages rollout verified; real Google account picker reached. Callback permits inert Google-returned metadata without trusting it.
+- Cloud Audience confirmed external Testing with existing testers. Real owner exact link and subsequent Google login returning the same UID/history remain pending. No identity linked or provider data-access granted by this rollout.
