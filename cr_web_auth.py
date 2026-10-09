@@ -90,9 +90,27 @@ def begin(handshake):
     return url, cookie
 
 
+class TelegramJWKClient(jwt.PyJWKClient):
+    """Decode provider compression before JSON; keep fixed-origin JWKS and cache."""
+    def fetch_data(self):
+        try:
+            response = httpx.get(ISSUER + '/.well-known/jwks.json', timeout=10,
+                                 follow_redirects=False)
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, dict) or not isinstance(payload.get('keys'), list):
+                raise ValueError('Invalid JWKS')
+            if self.jwk_set_cache is not None:
+                self.jwk_set_cache.put(payload)
+            self._last_successful_fetch = time.monotonic()
+            return payload
+        except Exception:
+            raise AuthError('Telegram signing keys could not be checked. Start login again.') from None
+
+
 def validate_id_token(token, nonce):
     # Strict RS256 only. Never trust token-supplied jku/x5u URLs or algorithms.
-    client = jwt.PyJWKClient(ISSUER + '/.well-known/jwks.json', timeout=10)
+    client = TelegramJWKClient(ISSUER + '/.well-known/jwks.json', timeout=10)
     key = client.get_signing_key_from_jwt(token).key
     claims = jwt.decode(token, key, algorithms=['RS256'], audience=C.env('TELEGRAM_OIDC_CLIENT_ID'),
                         issuer=ISSUER, options={'require': ['exp', 'iat', 'iss', 'aud', 'sub', 'nonce', 'id']}, leeway=5)
@@ -101,6 +119,8 @@ def validate_id_token(token, nonce):
     if claims['iat'] > time.time() + 5 or claims['iat'] < time.time() - 300:
         raise AuthError('Login token is too old.')
     uid = claims['id']
+    if isinstance(uid, str) and re.fullmatch(r'[1-9][0-9]{0,12}', uid):
+        uid = int(uid)
     if type(uid) is not int or not 0 < uid < 10**13:
         raise AuthError('Telegram profile ID missing or invalid.')
     return uid, str(claims.get('name') or '')[:100]

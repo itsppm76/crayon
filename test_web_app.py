@@ -84,8 +84,9 @@ def test_jwt_profile_id_not_sub(config):
     claims={'iss':A.ISSUER,'aud':'123456','sub':'987987987','id':17,'iat':int(time.time()),'exp':int(time.time())+100,'nonce':'nonce','name':'N'}
     t=jwt.encode(claims,key,algorithm='RS256')
     assert A.validate_id_token(t,'nonce')==(17,'N')
+    assert A.validate_id_token(jwt.encode({**claims,'id':'17'},key,algorithm='RS256'),'nonce')==(17,'N')
     with pytest.raises(A.AuthError):A.validate_id_token(t,'wrong')
-    for changed in ({'aud':'wrong'},{'iss':'evil'},{'exp':1},{'iat':1},{'id':True},{'id':'17'}):
+    for changed in ({'aud':'wrong'},{'iss':'evil'},{'exp':1},{'iat':1},{'id':True},{'id':'17x'},{'id':17.0},{'id':'-17'},{'id':'017'}):
         with pytest.raises((A.AuthError,jwt.InvalidTokenError)):
             A.validate_id_token(jwt.encode({**claims,**changed},key,algorithm='RS256'),'nonce')
     with pytest.raises(jwt.InvalidAlgorithmError):
@@ -163,3 +164,32 @@ def test_frontend_no_tokens_in_persistent_storage():
     assert "e.origin!==API||e.source!==popup" in s
     assert '.innerHTML' not in s
     assert 'session_id' not in s
+
+
+def test_jwks_gzip_decoded_before_json(config):
+    import gzip, httpx
+    key=rsa.generate_private_key(public_exponent=65537,key_size=2048)
+    payload = {'keys': [json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(key.public_key()))]}
+    client = httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(
+        200, headers={'Content-Encoding':'gzip','Content-Type':'application/json'},
+        content=gzip.compress(json.dumps(payload).encode()))))
+    config.setattr(A.httpx,'get',lambda *args,**kwargs:client.get('https://oauth.telegram.org/.well-known/jwks.json'))
+    assert A.TelegramJWKClient(A.ISSUER+'/.well-known/jwks.json').fetch_data()==payload
+
+
+def test_jwks_decode_errors_not_exposed(config):
+    class Bad:
+        def raise_for_status(self): pass
+        def json(self): raise UnicodeDecodeError('utf-8',b'\x1f\x8b',1,2,'invalid start byte')
+    config.setattr(A.httpx,'get',lambda *a,**k:Bad())
+    with pytest.raises(A.AuthError,match='signing keys could not be checked'):
+        A.TelegramJWKClient(A.ISSUER+'/.well-known/jwks.json').fetch_data()
+
+
+def test_provider_decode_error_safe_http(config):
+    def fail(*a): raise UnicodeDecodeError('utf-8',b'\x1f\x8b',1,2,'invalid start byte')
+    config.setattr(A,'callback',fail)
+    h=Handler('/web/auth/callback?code=x&state=y')
+    H.handle(h,'GET')
+    assert h.code==503
+    assert b'utf-8' not in h.wfile.getvalue() and b'Start login again' in h.wfile.getvalue()

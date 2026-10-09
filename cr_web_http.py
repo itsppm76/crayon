@@ -88,6 +88,8 @@ def handle(h, method, raw=b''):
             reply(h,404,{'error':'Web feature not enabled.'},cors=True)
     except A.AuthError as e:
         reply(h,401,{'error':str(e)},cors=origin==A.origin())
+    except (UnicodeError, json.JSONDecodeError):
+        reply(h,503,{'error':'Telegram response could not be checked. Start login again.'},cors=origin==A.origin())
     except ValueError as e:
         reply(h,400,{'error':str(e)[:200]},cors=origin==A.origin())
     except Exception:
