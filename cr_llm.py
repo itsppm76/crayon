@@ -27,6 +27,32 @@ def _post(model, body):
 
 def generate(contents, system="", tools=None, json_mode=False, temperature=0.6, max_tokens=1500,
              models=None, thinking_budget=None):
+    try:
+        return _generate_primary(contents,system,tools,json_mode,temperature,max_tokens,models,thinking_budget)
+    except LLMError as error:
+        import cr_lc
+        if error.kind not in ('quota','unavailable','auth') or cr_lc.provider()!='gemini' or not C.OPENROUTER_AUTO_FALLBACK or not C.OPENROUTER_KEY:raise
+        # Gemini uploads cannot be forwarded, and non-image media lacks accepted OR proof.
+        for content in contents:
+            for part in content.get('parts',[]):
+                if 'fileData' in part or ('inlineData' in part and not part['inlineData'].get('mimeType','').startswith('image/')):raise error
+        return openrouter_fallback(contents,system,tools,json_mode,temperature,max_tokens)
+
+
+def openrouter_fallback(contents,system='',tools=None,json_mode=False,temperature=0.6,max_tokens=1500):
+    import cr_lc
+    if not C.OPENROUTER_KEY:raise LLMError('auth','OpenRouter fallback key absent')
+    # Fixed free router and explicit zero-price/provider-data guards; never use configured paid defaults.
+    chat=cr_lc.build_model('openrouter/free',temperature,max_tokens,json_mode,None,tools,selected_provider='openrouter')
+    try:ai=chat.invoke(cr_lc.to_messages(contents,system,selected_provider='openrouter'))
+    except Exception as e:raise LLMError(cr_lc.classify(e),'Free OpenRouter fallback unavailable; no paid route attempted') from None
+    text,calls,parts=cr_lc.from_ai(ai)
+    if not text and not calls:raise LLMError('empty','Free fallback returned no content')
+    return {'text':text,'calls':calls,'parts':parts,'model':'openrouter/free','raw':{'provider':'openrouter','fallback':True,'actual_model':getattr(ai,'response_metadata',{}).get('model_name','unknown')}}
+
+
+def _generate_primary(contents, system="", tools=None, json_mode=False, temperature=0.6, max_tokens=1500,
+             models=None, thinking_budget=None):
     """Returns dict: {text, calls:[{name,args}], raw_parts, model}. Raises LLMError."""
     import cr_lc
     if cr_lc.enabled() and cr_lc.has_key():
