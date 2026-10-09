@@ -51,6 +51,7 @@ def init():
     db.q("""CREATE TABLE IF NOT EXISTS google_email_drafts(
         id TEXT PRIMARY KEY, user_id BIGINT NOT NULL, encrypted_content TEXT NOT NULL,
         content_hash TEXT NOT NULL, status TEXT DEFAULT 'pending', expires_at TIMESTAMPTZ NOT NULL)""",fetch="none")
+    db.q("ALTER TABLE google_email_drafts ADD COLUMN IF NOT EXISTS origin TEXT DEFAULT 'telegram'",fetch="none")
     db.q("""CREATE TABLE IF NOT EXISTS google_oauth_states(
         state_hash TEXT PRIMARY KEY, user_id BIGINT NOT NULL, expires_at TIMESTAMPTZ NOT NULL,
         used BOOLEAN DEFAULT false)""",fetch="none")
@@ -260,16 +261,17 @@ def set_sender_name(uid,name):
 
 def current_content(uid):
     ident,digest=current_draft(uid)
-    row=db.q("SELECT encrypted_content,content_hash FROM google_email_drafts WHERE id=%s AND user_id=%s AND status='pending' AND expires_at>now()",(ident,uid),'one')
+    row=db.q("SELECT encrypted_content,content_hash FROM google_email_drafts WHERE id=%s AND user_id=%s AND origin='telegram' AND status='pending' AND expires_at>now()",(ident,uid),'one')
     if not row:raise GoogleError('No pending draft to edit.')
     content=decrypt(uid,row['encrypted_content'])
     if hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()!=row['content_hash']:raise GoogleError('Draft changed. Review again.')
     return ident,digest,content
 
 
-def make_draft(uid, text, structured=False):
+def make_draft(uid, text, structured=False, channel='telegram'):
     """Direct user command only. Exact reviewed recipient lists; no attachments."""
     db.q("DELETE FROM google_email_drafts WHERE expires_at<now() AND status='pending'",fetch="none")
+    if channel not in ('telegram','web'):raise GoogleError('Invalid draft channel')
     row=status(uid)
     if not row:raise GoogleError("Connect your own Google account first")
     if isinstance(text,dict):
@@ -299,26 +301,26 @@ def make_draft(uid, text, structured=False):
     serialized=json.dumps(content,sort_keys=True)
     digest=hashlib.sha256(serialized.encode()).hexdigest()
     ident=secrets.token_hex(5)
-    db.q("DELETE FROM google_email_drafts WHERE user_id=%s AND status='pending'",(uid,),"none")
-    db.q("INSERT INTO google_email_drafts(id,user_id,encrypted_content,content_hash,expires_at) VALUES(%s,%s,%s,%s,now()+interval '10 minutes')",(ident,uid,encrypt(uid,content),digest),"none")
+    db.q("DELETE FROM google_email_drafts WHERE user_id=%s AND origin=%s AND status='pending'",(uid,channel),"none")
+    db.q("INSERT INTO google_email_drafts(id,user_id,encrypted_content,content_hash,origin,expires_at) VALUES(%s,%s,%s,%s,%s,now()+interval '10 minutes')",(ident,uid,encrypt(uid,content),digest,channel),"none")
     display=f"Draft only, not sent. Expires in 10 minutes.\nFrom: {content['from']}\nTo: {', '.join(to)}\nCC: {', '.join(cc) or 'none'}\nBCC: {', '.join(bcc) or 'none'}\nAttachments: none.\nSubject: {content['subject']}\n\n{content['body']}"
     if structured:return {"text":display+"\n\nReply with edit/change/rewrite instructions to revise. Tap Send or say 'send it'. Say 'cancel' to discard.","id":ident,"hash":digest[:12]}
     return display+f"\n\nSend exactly this: /email_send {ident} {digest[:12]}\nCancel: /email_cancel {ident}"
 
 
 def current_draft(uid):
-    rows=db.q("SELECT id,content_hash FROM google_email_drafts WHERE user_id=%s AND status='pending' AND expires_at>now()",(uid,),"all")
+    rows=db.q("SELECT id,content_hash FROM google_email_drafts WHERE user_id=%s AND origin='telegram' AND status='pending' AND expires_at>now()",(uid,),"all")
     if len(rows)!=1:raise GoogleError("No single current draft to confirm. Create or review a fresh email first.")
     return rows[0]["id"],rows[0]["content_hash"][:12]
 
 
 
-def send_draft(uid, ident, short_hash):
+def send_draft(uid, ident, short_hash, channel='telegram'):
     if db.kv_get('google_signature_pending_'+str(uid),None):raise GoogleError('Finish your signature name and review the new draft first.')
     import base64
     from email.message import EmailMessage
     # Atomic claim prevents replay and duplicate sends. Never retry an uncertain send.
-    row=db.q("UPDATE google_email_drafts SET status='sending' WHERE id=%s AND user_id=%s AND status='pending' AND expires_at>now() AND left(content_hash,12)=%s RETURNING encrypted_content,content_hash",(ident,uid,short_hash),"one")
+    row=db.q("UPDATE google_email_drafts SET status='sending' WHERE id=%s AND user_id=%s AND origin=%s AND status='pending' AND expires_at>now() AND left(content_hash,12)=%s RETURNING encrypted_content,content_hash",(ident,uid,channel,short_hash),"one")
     if not row:raise GoogleError("Draft expired, already used, or confirmation did not match")
     try:
         content=decrypt(uid,row["encrypted_content"])
@@ -341,6 +343,6 @@ def send_draft(uid, ident, short_hash):
         raise GoogleError("Send stopped or outcome is uncertain. Check Gmail Sent before creating another draft.") from None
 
 
-def cancel_draft(uid, ident):
-    db.q("DELETE FROM google_email_drafts WHERE id=%s AND user_id=%s AND status='pending'",(ident,uid),"none")
+def cancel_draft(uid, ident, channel='telegram'):
+    db.q("DELETE FROM google_email_drafts WHERE id=%s AND user_id=%s AND origin=%s AND status='pending'",(ident,uid,channel),"none")
     return "Pending draft removed if it existed. No email sent."

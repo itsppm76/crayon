@@ -110,9 +110,11 @@ def test_private_routes_require_session(config):
 
 def test_history_scope_from_session(config):
     calls=[];config.setattr(A,'session',lambda h:{'user_id':17,'name':'N'})
-    config.setattr(W,'history',lambda uid:calls.append(uid) or [])
+    config.setattr(W,'history',lambda uid,before=None:calls.append((uid,before)) or {'messages':[]})
     h=Handler('/web/history?uid=99',{'Origin':A.origin(),'Authorization':'Bearer x'})
-    H.handle(h,'GET');assert calls==[17] and h.code==200
+    H.handle(h,'GET');assert calls==[] and h.code==400
+    h=Handler('/web/history?before=90',{'Origin':A.origin(),'Authorization':'Bearer x'})
+    H.handle(h,'GET');assert calls==[(17,'90')] and h.code==200
 
 def test_chat_cannot_supply_uid(config):
     config.setattr(A,'session',lambda h:{'user_id':17,'name':'N'})
@@ -152,6 +154,7 @@ def test_artifacts_bounded_plain_output():
 
 def test_dispatch_does_not_use_telegram_confirmation(config):
     import cr_memory as M,cr_agent as Brain
+    config.setattr(W.db,'q',lambda *a,**k:{'user_id':17})
     config.setattr(M,'touch_user',lambda *a:None)
     config.setattr(Brain,'respond',lambda *a,**k:pytest.fail('must not run model/confirmation'))
     for s in ('yes','send it','connect Google','read my inbox','forget name','computer calculate 2+2'):
@@ -223,3 +226,42 @@ def test_poll_exact_origin_and_shape(config):
     H.handle(h,'POST',b'{"verifier":"a"}');assert h.code==403
     h=Handler('/web/login-poll',{'Origin':A.origin(),'Content-Type':'application/json'})
     H.handle(h,'POST',b'{"verifier":"a","uid":17}');assert h.code==400
+
+
+def test_history_pagination_bound_and_media_placeholder(config):
+    calls=[]
+    rows=[{'id':i,'role':'user','content':'[User sent media: image/png]','ts':'2026-10-09'} for i in range(100,49,-1)]
+    config.setattr(W.db,'q',lambda sql,p=(),fetch='all':calls.append((sql,p)) or rows)
+    r=W.history(17,'101')
+    assert len(r['messages'])==50 and r['has_more'] and r['before']=='51'
+    assert calls[0][1]==(17,101) and all(m['media_missing'] for m in r['messages'])
+    with pytest.raises(ValueError):W.history(17,'1 OR 1=1')
+
+
+def test_upload_validation_and_replay(config):
+    import base64
+    body={'data':base64.b64encode(b'hello').decode(),'mime':'text/plain','name':'a.txt','caption':'read it','request_id':'a'*43}
+    config.setattr(W.db,'q',lambda *a,**k:{'state':'done'})
+    config.setattr(W.POOL,'submit',lambda *a:pytest.fail('duplicate must not process'))
+    assert W.upload({'user_id':17,'name':'N'},body)['state']=='done'
+    for change in ({'data':'invalid$$'},{'caption':'password: veryprivate123'},{'data':'a'*26666673},{'uid':99}):
+        with pytest.raises(ValueError):W.upload({'user_id':17,'name':'N'},{**body,**change})
+
+
+def test_upload_raw_bytes_not_stored(config):
+    import base64
+    calls=[]
+    def q(sql,p=(),fetch='all'):
+        calls.append((sql,p))
+        if sql.startswith('SELECT state'):return None
+        if 'AS n' in sql:return {'n':0}
+        if sql.startswith('INSERT'):return {'id':'a'*43}
+    config.setattr(W.db,'q',q);config.setattr(W.POOL,'submit',lambda *a:None)
+    config.setattr(W,'encode',lambda v:json.dumps(v))
+    body={'data':base64.b64encode(b'RAW_UPLOAD_BYTES').decode(),'mime':'text/plain','name':'a.txt','caption':'read','request_id':'a'*43}
+    try:
+        W.upload({'user_id':17,'name':'N'},body)
+        stored=next(p for sql,p in calls if sql.startswith('INSERT'))
+        assert 'RAW_UPLOAD_BYTES' not in str(stored) and body['data'] not in str(stored)
+        assert 'raw_retained' in str(stored)
+    finally:W.SLOTS.release()

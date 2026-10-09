@@ -9,6 +9,7 @@ def owner(uid):
 URL='https://www.googleapis.com/calendar/v3/calendars/primary/events'
 def init():
     db.q("CREATE TABLE IF NOT EXISTS google_calendar_drafts(id TEXT PRIMARY KEY,user_id BIGINT NOT NULL,encrypted_content TEXT NOT NULL,content_hash TEXT NOT NULL,status TEXT DEFAULT 'pending',expires_at TIMESTAMPTZ NOT NULL)",fetch='none')
+    db.q("ALTER TABLE google_calendar_drafts ADD COLUMN IF NOT EXISTS origin TEXT DEFAULT 'telegram'",fetch='none')
 def validate(content):
     if not isinstance(content,dict):raise G.GoogleError('Invalid calendar preview')
     if set(content)!={'account','summary','start','end','timezone'} and set(content)!={'account','summary','start','end','timezone','guests','reminder_minutes'}:raise G.GoogleError('Unexpected calendar fields')
@@ -23,7 +24,7 @@ def validate(content):
         if b<=a or (b-a).total_seconds()>86400 or a<=datetime.now(timezone.utc):raise ValueError()
     except Exception:raise G.GoogleError('Use future ISO start/end with offsets matching the timezone; duration under 24 hours') from None
     return content
-def preview(uid,title,start,end,tz,guests=None,reminder_minutes=None):
+def preview(uid,title,start,end,tz,guests=None,reminder_minutes=None,channel='telegram'):
     owner(uid)
     init();db.q("DELETE FROM google_calendar_drafts WHERE expires_at<now()",fetch='none');account=G.status(uid).get('email')
     if not account:raise G.GoogleError('Connect Google first')
@@ -31,20 +32,20 @@ def preview(uid,title,start,end,tz,guests=None,reminder_minutes=None):
     if looks_like_secret(title):raise G.GoogleError('Title appears to contain a secret')
     c=validate({'account':account,'summary':clean_text(title),'start':start,'end':end,'timezone':tz,'guests':guests or [],'reminder_minutes':reminder_minutes})
     h=hashlib.sha256(json.dumps(c,sort_keys=True).encode()).hexdigest();ident=secrets.token_hex(8)
-    db.q("DELETE FROM google_calendar_drafts WHERE user_id=%s AND status='pending'",(uid,),'none')
-    db.q("INSERT INTO google_calendar_drafts(id,user_id,encrypted_content,content_hash,expires_at) VALUES(%s,%s,%s,%s,now()+interval '10 minutes')",(ident,uid,G.encrypt(uid,c),h),'none')
-    db.kv_set('calendar_reviewed_'+str(uid),[ident,h[:12]])
+    db.q("DELETE FROM google_calendar_drafts WHERE user_id=%s AND origin=%s AND status='pending'",(uid,channel),'none')
+    db.q("INSERT INTO google_calendar_drafts(id,user_id,encrypted_content,content_hash,origin,expires_at) VALUES(%s,%s,%s,%s,%s,now()+interval '10 minutes')",(ident,uid,G.encrypt(uid,c),h,channel),'none')
+    db.kv_set('calendar_reviewed_'+str(uid)+('_web' if channel=='web' else ''),[ident,h[:12]])
     human_start=datetime.fromisoformat(start).strftime('%A, %d %B %Y, %I:%M %p %z')
     human_end=datetime.fromisoformat(end).strftime('%A, %d %B %Y, %I:%M %p %z')
     return {'id':ident,'hash':h[:12],'text':'Calendar preview only, not booked. Expires in 10 minutes.\nAccount: '+account+'\nCalendar: primary\nTitle: '+c['summary']+'\nWhen: '+human_start+' to '+human_end+'\nExact start: '+start+'\nExact end: '+end+'\nTimezone: '+tz+'\nGuests: '+(', '.join(c['guests']) or 'none')+'\nNotifications: '+('email invitations will be sent to listed guests' if c['guests'] else 'none')+'\nReminder: '+('Google default' if reminder_minutes is None else str(reminder_minutes)+' minutes before, popup')+'\nPrivate primary-calendar event. No video link. Existing events checked again before Create. Creating is not a venue/service booking.'}
-def cancel(uid,ident):
+def cancel(uid,ident,channel='telegram'):
     owner(uid)
-    init();db.q("DELETE FROM google_calendar_drafts WHERE id=%s AND user_id=%s AND status='pending'",(ident,uid),'none');return 'Preview cancelled. No calendar event created.'
-def create(uid,ident,h):
+    init();db.q("DELETE FROM google_calendar_drafts WHERE id=%s AND user_id=%s AND origin=%s AND status='pending'",(ident,uid,channel),'none');return 'Preview cancelled. No calendar event created.'
+def create(uid,ident,h,channel='telegram'):
     owner(uid)
     init()
-    if db.kv_get('calendar_reviewed_'+str(uid),None)!=[ident,h]:raise G.GoogleError('Review the current preview first')
-    row=db.q("UPDATE google_calendar_drafts SET status='creating' WHERE id=%s AND user_id=%s AND status='pending' AND expires_at>now() AND left(content_hash,12)=%s RETURNING encrypted_content,content_hash",(ident,uid,h),'one')
+    if db.kv_get('calendar_reviewed_'+str(uid)+('_web' if channel=='web' else ''),None)!=[ident,h]:raise G.GoogleError('Review the current preview first')
+    row=db.q("UPDATE google_calendar_drafts SET status='creating' WHERE id=%s AND user_id=%s AND origin=%s AND status='pending' AND expires_at>now() AND left(content_hash,12)=%s RETURNING encrypted_content,content_hash",(ident,uid,channel,h),'one')
     if not row:raise G.GoogleError('Preview expired, changed or already used')
     try:
         c=G.decrypt(uid,row['encrypted_content']);validate(c)

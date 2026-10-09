@@ -23,6 +23,7 @@ SCHEMA = '''CREATE TABLE IF NOT EXISTS web_requests(
 
 def init():
     auth.init()
+    __import__('cr_web_actions').init()
     db.q(SCHEMA, fetch='none')
 
 
@@ -59,6 +60,8 @@ def dispatch(uid, name, text):
     marker = cr_channel.channel.set('web')
     try:
         with M.user_lock(uid):
+            if not db.q('SELECT user_id FROM web_sessions WHERE user_id=%s AND expires_at>now() LIMIT 1',(uid,),'one'):
+                raise ValueError('Account was deleted. Start again in Telegram.')
             out = WebOut()
             if looks_like_secret(text):
                 return [{'kind':'text','text':'That looks like a secret. It was not sent to the model or saved. Do not paste credentials here.'}]
@@ -74,11 +77,11 @@ def dispatch(uid, name, text):
             if simple in ('show my memory','/memory'):
                 return [{'kind':'text','text':M.render_memory(uid)}]
             if simple in ('help','/help'):
-                return [{'kind':'text','text':'Web foundation: chat, shared memory, notes, tasks, research, calculations, CSV/charts and reminders. Reminders currently arrive in your Telegram DM, not browser push. Google, reviewed sends, uploads, computer and group rooms are being connected next and are unavailable here for now.'}]
+                return [{'kind':'text','text':'Web foundation: chat, shared memory, notes, tasks, research, calculations, CSV/charts and reminders. Reminders currently arrive in your Telegram DM, not browser push. Uploads use the + button. Google reads and reviewed sends use Menu > Connections / actions. Computer and group rooms are not enabled.'}]
             # Do not fall into the model for features whose channel review is not implemented yet.
             import re
             if re.search(r'(?i)\b(gmail|inbox|email|e-mail|calendar|google|workspace|github|sheet|doc|computer|browser|browse|booking|book|delete|wipe|forget|digest|proactive|watch)\b', text) or text.startswith(('/email','/google','/connect','/calendar','/work','/delete','/forget')):
-                return [{'kind':'text','text':'This feature is not enabled on web yet. Use your private Telegram Crayon chat while its web review and account controls are being connected. No external action was made.'}]
+                return [{'kind':'text','text':'For Google reads, email/calendar/Sheet previews use Menu > Connections / actions. Computer, rooms and deletion are not enabled in web chat. No external action was made.'}]
             if simple in ('yes','confirm','go ahead','do it','send it'):
                 return [{'kind':'text','text':'Web confirmations are not enabled yet. Nothing was sent or deleted.'}]
             # Never consume a pending action created in another channel.
@@ -101,7 +104,7 @@ def submit(user, body):
     old = db.q('SELECT state FROM web_requests WHERE user_id=%s AND id=%s', (uid,ident), 'one')
     if old:
         return {'request_id':ident,'state':old['state']}
-    count = db.q("SELECT count(*) AS n FROM web_requests WHERE user_id=%s AND created_at>now()-interval '24 hours'", (uid,), 'one')['n']
+    count = db.q("SELECT (SELECT count(*) FROM web_requests WHERE user_id=%s AND created_at>now()-interval '24 hours')+(SELECT count(*) FROM messages WHERE user_id=%s AND role='user' AND ts>now()-interval '24 hours') AS n", (uid,uid), 'one')['n']
     if count >= C.DAILY_MESSAGE_CAP:
         raise ValueError('Daily free-tier message limit reached.')
     if not SLOTS.acquire(blocking=False):
@@ -154,6 +157,62 @@ def activity(uid):
         'items':decode(r['encrypted']).get('items',[]) if r['state'] in ('done','blocked') else []} for r in reversed(rows)]
 
 
-def history(uid):
-    rows=db.q('SELECT role,content,ts FROM messages WHERE user_id=%s ORDER BY id DESC LIMIT 40',(uid,))
-    return list(reversed([{'role':r['role'],'text':r['content'],'time':str(r['ts'])} for r in rows]))
+def history(uid, before=None):
+    if before is not None and (not isinstance(before,str) or not before.isdigit() or not 0<int(before)<10**18):
+        raise ValueError('Invalid history cursor.')
+    rows=db.q('SELECT id,role,content,ts FROM messages WHERE user_id=%s'+(' AND id<%s' if before else '')+' ORDER BY id DESC LIMIT 51',
+              (uid,int(before)) if before else (uid,))
+    page=rows[:50]
+    return {'messages':list(reversed([{'id':r['id'],'role':r['role'],'text':r['content'],'time':str(r['ts']),
+        'media_missing':r['content'].startswith('[User sent media:')} for r in page])),
+        'has_more':len(rows)>50,'before':str(page[-1]['id']) if page else None}
+
+
+def upload(user, body):
+    import os, cr_media
+    if set(body)!={'data','mime','name','caption','request_id'}:
+        raise ValueError('Invalid upload fields.')
+    if not isinstance(body['name'],str) or not 1<=len(body['name'])<=200 or not isinstance(body['mime'],str) or len(body['mime'])>100:
+        raise ValueError('Invalid file metadata.')
+    if not isinstance(body['caption'],str) or len(body['caption'])>8000 or looks_like_secret(body['caption']):
+        raise ValueError('Invalid caption or secret detected.')
+    if not isinstance(body['data'],str) or len(body['data'])>26666672:
+        raise ValueError('Upload limit is 20 MB.')
+    try: data=base64.b64decode(body['data'],validate=True)
+    except Exception: raise ValueError('Invalid upload encoding.') from None
+    if not data or len(data)>cr_media.MAX_BYTES:raise ValueError('Upload limit is 20 MB.')
+    ident=body['request_id'];uid=user['user_id']
+    if not isinstance(ident,str) or not auth.PATTERN.fullmatch(ident):raise ValueError('Invalid request ID.')
+    old=db.q('SELECT state FROM web_requests WHERE user_id=%s AND id=%s',(uid,ident),'one')
+    if old:return {'request_id':ident,'state':old['state']}
+    count=db.q("SELECT (SELECT count(*) FROM web_requests WHERE user_id=%s AND created_at>now()-interval '24 hours')+(SELECT count(*) FROM messages WHERE user_id=%s AND role='user' AND ts>now()-interval '24 hours') AS n",(uid,uid),'one')['n']
+    if count>=C.DAILY_MESSAGE_CAP:raise ValueError('Daily free-tier message limit reached.')
+    if not SLOTS.acquire(blocking=False):raise ValueError('Crayon is busy. Wait before uploading.')
+    name=os.path.basename(body['name']);mime=cr_media.normalize_mime(body['mime'],name)
+    try:
+        row=db.q('INSERT INTO web_requests(id,user_id,encrypted) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING RETURNING id',
+            (ident,uid,encode({'name':name,'mime':mime,'bytes':len(data),'caption':body['caption'],'raw_retained':False})),'one')
+        if row:POOL.submit(_upload_run,uid,ident,user['name'],data,mime,name,body['caption'])
+        else:SLOTS.release()
+    except Exception:SLOTS.release();raise
+    return {'request_id':ident,'state':'queued'}
+
+
+def _upload_run(uid,ident,username,data,mime,name,caption):
+    try:
+        row=db.q("UPDATE web_requests SET state='running',updated_at=now() WHERE user_id=%s AND id=%s AND state='queued' RETURNING id",(uid,ident),'one')
+        if not row:return
+        import cr_media,cr_memory as M
+        try:
+            with M.user_lock(uid):
+                if not db.q('SELECT user_id FROM web_sessions WHERE user_id=%s AND expires_at>now() LIMIT 1',(uid,),'one'):raise ValueError('Account was deleted.')
+                M.touch_user(uid,username)
+                response=cr_media.analyze(data,mime,caption,name)
+                M.add_message(uid,'user','[User sent media: '+mime+'] '+name+' '+caption)
+                M.add_message(uid,'assistant','[Media analysis summary; raw file not retained] '+clean_text(response)[:3000])
+            items=[{'kind':'text','text':clean_text(response)}];state='done'
+        except Exception as e:
+            items=[{'kind':'text','text':'Upload stopped: '+(str(e)[:200] if isinstance(e,ValueError) else 'Media processing failed. No analysis confirmed.')}];state='blocked'
+        db.q('UPDATE web_requests SET state=%s,encrypted=%s,updated_at=now() WHERE user_id=%s AND id=%s',
+             (state,encode({'items':items,'file_receipt':{'name':name,'mime':mime,'bytes':len(data),'raw_retained':False}}),uid,ident),'none')
+    finally:SLOTS.release()

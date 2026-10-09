@@ -13,9 +13,14 @@
 <body>
 <header>
   <div class="brand"><img src="./crayon.svg" alt="" width="28" height="28"><span>Crayon</span></div>
-  <span id="identity">Signed out</span><button id="login" class="ghost">Log in with Telegram</button><button id="logout" class="ghost hide">Log out</button><button id="new" class="ghost" title="Start a new chat">Clear view</button>
+  <button id="menu" class="ghost" aria-expanded="false">Menu</button><span id="identity">Signed out</span><button id="login" class="ghost">Log in with Telegram</button><button id="logout" class="ghost hide">Log out</button><button id="new" class="ghost" title="Start a new chat">Clear view</button>
 </header>
-<main id="scroll">
+<nav id="panel" class="hide" aria-label="Crayon controls">
+<button data-command="/help">Help</button><button data-command="my tasks">Tasks</button><button data-command="show my memory">Memory</button><button data-command="my reminders">Reminders</button>
+<button id="history">Full history</button><button id="activity">Web activity / files</button><button id="connections">Connections / actions</button>
+<p>History has recorded text. Older Telegram files were not retained. New uploads are read without saving raw bytes.</p>
+</nav>
+<main id="scroll"><button id="older" class="ghost hide">Load earlier messages</button>
   <section id="hero">
     <img src="./crayon.svg" alt="Crayon" class="face" width="96" height="96">
     <h1>What can I help with?</h1>
@@ -31,12 +36,12 @@
 </main>
 <footer>
   <form id="form" autocomplete="off">
-    <textarea id="input" rows="1" maxlength="8000" disabled placeholder="Message Crayon" aria-label="Message Crayon"></textarea>
+    <button id="attach" type="button" class="ghost" aria-label="Upload image or file">+</button><input id="file" type="file" class="hide"><textarea id="input" rows="1" maxlength="8000" disabled placeholder="Message Crayon" aria-label="Message Crayon"></textarea>
     <button id="send" type="submit" aria-label="Send">
       <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </form>
-  <p class="note">Crayon is an AI and can make mistakes. Chat uses your Telegram identity and memory. Reminders currently arrive in Telegram. Google, sends, uploads, computer and rooms are being connected next. <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
+  <p class="note">Crayon is an AI and can make mistakes. Chat uses your Telegram identity and memory. Reminders currently arrive in Telegram. Uploads up to 20 MB. Raw uploads are not retained. Google reads and exact-reviewed actions are in Menu. Computer and rooms stay locked. <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
 </footer>
 <script src="./app.js"></script>
 </body>

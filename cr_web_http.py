@@ -56,11 +56,11 @@ def handle(h, method, raw=b''):
             reply(h,204,'','text/plain',True,{'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600'})
             return True
         if method=='GET' and p.path=='/web/status':
-            reply(h,200,{'stage':'private foundation','login_configured':A.configured(),'rooms':False,'external_actions':False,'uploads':False,'computer':False},cors=True)
+            reply(h,200,{'stage':'private foundation','login_configured':A.configured(),'rooms':False,'external_actions':'exact web review only','uploads':True,'computer':False},cors=True)
             return True
         if method=='POST':
-            if h.headers.get('Content-Type','').split(';')[0]!='application/json' or len(raw)>40000:
-                raise ValueError('JSON body required, maximum 40 KB.')
+            if h.headers.get('Content-Type','').split(';')[0]!='application/json' or len(raw)>(28000000 if p.path=='/web/upload' else 40000):
+                raise ValueError('JSON body required; request size limit exceeded.')
             body=json.loads(raw)
             if not isinstance(body,dict): raise ValueError('Invalid JSON body.')
         else: body={}
@@ -79,9 +79,22 @@ def handle(h, method, raw=b''):
         elif method=='GET' and p.path=='/web/me':
             reply(h,200,{'id':user['user_id'],'name':user['name']},cors=True)
         elif method=='GET' and p.path=='/web/history':
-            reply(h,200,{'messages':W.history(user['user_id'])},cors=True)
+            q=parse_qs(p.query)
+            if set(q)-{'before'} or any(len(v)!=1 for v in q.values()):raise ValueError('Invalid history query.')
+            reply(h,200,W.history(user['user_id'],q.get('before',[None])[0]),cors=True)
         elif method=='GET' and p.path=='/web/activity':
             reply(h,200,{'activity':W.activity(user['user_id'])},cors=True)
+        elif method=='GET' and p.path=='/web/connections':
+            reply(h,200,__import__('cr_web_actions').connections(user['user_id']),cors=True)
+        elif method=='POST' and p.path in ('/web/action-preview','/web/action-confirm','/web/private-read','/web/connect'):
+            import cr_web_actions as X
+            if p.path=='/web/action-preview':result=X.preview(user['user_id'],h.headers.get('Authorization',''),body)
+            elif p.path=='/web/action-confirm':result=X.confirm(user['user_id'],h.headers.get('Authorization',''),body)
+            elif p.path=='/web/private-read':result=X.read(user['user_id'],body)
+            else:result=X.connect(user['user_id'],body)
+            reply(h,200,result,cors=True)
+        elif method=='POST' and p.path=='/web/upload':
+            reply(h,202,W.upload(user,body),cors=True)
         elif method=='POST' and p.path=='/web/chat':
             reply(h,202,W.submit(user,body),cors=True)
         elif method=='GET' and p.path=='/web/result':
@@ -90,6 +103,8 @@ def handle(h, method, raw=b''):
             reply(h,200,W.result(user['user_id'],q['id'][0]),cors=True)
         else:
             reply(h,404,{'error':'Web feature not enabled.'},cors=True)
+    except __import__('cr_google').GoogleError as e:
+        reply(h,400,{'error':str(e)[:250]},cors=origin==A.origin())
     except A.AuthError as e:
         reply(h,401,{'error':str(e)},cors=origin==A.origin())
     except (UnicodeError, json.JSONDecodeError):

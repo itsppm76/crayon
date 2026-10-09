@@ -77,7 +77,7 @@ def test_send_cross_user_rejected(monkeypatch):
         return None
     monkeypatch.setattr(G.db,'q',q)
     with pytest.raises(G.GoogleError):G.send_draft(22,'draftid','hash')
-    assert seen==[('draftid',22,'hash')]
+    assert seen==[('draftid',22,'telegram','hash')]
 
 
 def test_draft_hash_tampering_fails_closed(monkeypatch):

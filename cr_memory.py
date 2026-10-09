@@ -182,7 +182,7 @@ def delete_all(uid):
     db.q("DELETE FROM kv WHERE key LIKE %s OR (key LIKE 'group_review_%%' AND value->>'uid'=%s)", ('group_audience_v1_'+str(uid)+'_%',str(uid)), 'none')
     import cr_web_app
     cr_web_app.init()
-    for table in ("web_requests", "web_sessions", "web_login_codes"):
+    for table in ("web_requests", "web_sessions", "web_login_codes", "web_action_reviews"):
         db.q("DELETE FROM " + table + " WHERE user_id=%s", (uid,), "none")
     db.q("DELETE FROM users WHERE user_id=%s", (uid,), "none")  # first: blocks late background writes
     for t in ("facts", "messages", "notes", "reminders"):
