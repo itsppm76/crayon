@@ -170,10 +170,10 @@ def poll_login(verifier):
 def _new_session(row):
     token = secrets.token_urlsafe(32)
     db.q('DELETE FROM web_sessions WHERE expires_at<now()', fetch='none')
-    db.q('INSERT INTO web_sessions(token_hash,user_id,name,expires_at) VALUES(%s,%s,%s,now()+interval \'30 minutes\')',
+    db.q('INSERT INTO web_sessions(token_hash,user_id,name,expires_at) VALUES(%s,%s,%s,now()+interval \'7 days\')',
          (digest(token), row['user_id'], row['name']), 'none')
     db.audit(row['user_id'], 'web_login')
-    return {'token': token, 'expires_in': 1800, 'user': {'id': row['user_id'], 'name': row['name']}}
+    return {'token': token, 'expires_in': 604800, 'user': {'id': row['user_id'], 'name': row['name']}}
 
 
 def session(header):

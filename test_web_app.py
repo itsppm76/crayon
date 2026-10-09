@@ -68,7 +68,7 @@ def test_exchange_stores_only_hashed_token(config):
     r=A.exchange('a'*43,'b'*43)
     stored=next(p for sql,p in calls if sql.startswith('INSERT INTO web_sessions'))
     assert stored[0]==A.digest(r['token']) and stored[0]!=r['token']
-    assert r['user']['id']==17 and r['expires_in']==1800
+    assert r['user']['id']==17 and r['expires_in']==604800
 
 def test_session_never_takes_client_uid(config):
     calls=[];config.setattr(A.db,'q',lambda sql,p=(),fetch='all':calls.append((sql,p)) or {'user_id':17,'name':'N'})
@@ -160,12 +160,13 @@ def test_dispatch_does_not_use_telegram_confirmation(config):
     for s in ('yes','send it','connect Google','read my inbox','forget name','computer calculate 2+2'):
         assert W.dispatch(17,'N',s)[0]['kind']=='text'
 
-def test_frontend_session_tab_storage_only():
+def test_frontend_session_browser_storage_and_revocation():
     from pathlib import Path
     s=Path('docs/app.js').read_text()
-    assert 'localStorage' not in s and 'sessionStorage' in s
+    assert 'localStorage' in s and 'sessionStorage' not in s
     assert "await call('me')" in s and 'saved.expires<=Date.now()' in s
-    assert 'sessionStorage.removeItem' in s
+    assert 'localStorage.removeItem' in s
+    assert "addEventListener('storage'" in s
     assert "e.origin!==API||e.source!==popup" in s
     assert '.innerHTML' not in s
     assert 'session_id' not in s

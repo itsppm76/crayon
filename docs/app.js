@@ -3,8 +3,9 @@
   const API='https://crayon-v1.onrender.com', $=s=>document.querySelector(s);
   let token='', popup=null, verifier='', busy=false, timer=null, loginTimer=null, loginBusy=false, loginDeadline=0;
   const SESSION_KEY='crayon.web.session';
-  function saveSession(value,expires){try{sessionStorage.setItem(SESSION_KEY,JSON.stringify({token:value,expires}));}catch(e){status('Browser storage is blocked; login will not survive refresh.');}}
-  function dropSession(){try{sessionStorage.removeItem(SESSION_KEY);}catch(e){}}
+  function saveSession(value,expires){try{localStorage.setItem(SESSION_KEY,JSON.stringify({token:value,expires}));}catch(e){status('Browser storage is blocked; login will not survive reopening.');}}
+  window.addEventListener('storage',e=>{if(e.key===SESSION_KEY&&!e.newValue){signedOut();status('Logged out in another tab.');}});
+  function dropSession(){try{localStorage.removeItem(SESSION_KEY);}catch(e){}}
   function sessionTimer(expires){clearTimeout(timer);timer=setTimeout(()=>{signedOut();status('Session expired. Log in again.');},Math.max(0,expires-Date.now()));}
   const urls=[];let historyBefore=null,historyMore=false;
   const random=()=>{const b=new Uint8Array(32);crypto.getRandomValues(b);return btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
@@ -74,7 +75,7 @@
   $('#form').onsubmit=e=>{e.preventDefault();ask();};$('#input').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask();}};$('#input').oninput=controls;
   document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{if(!token){status('Log in with Telegram to use your Crayon account.');return;}$('#input').value=b.dataset.prompt||b.textContent;controls();$('#input').focus();});
   async function restoreSession(){
-    let saved;try{saved=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');}catch(e){dropSession();}
+    let saved;try{saved=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch(e){dropSession();}
     if(!saved||typeof saved.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(saved.token)||typeof saved.expires!=='number'||saved.expires<=Date.now()){dropSession();return false;}
     token=saved.token;status('Checking your saved session...');
     try{const user=await call('me');const expires=Math.min(saved.expires,user.expires_at*1000);if(!Number.isFinite(expires)||expires<=Date.now()){signedOut();return false;}saveSession(token,expires);sessionTimer(expires);$('#identity').textContent=user.name||'Telegram user '+user.id;controls();await loadHistory(false);return true;}
