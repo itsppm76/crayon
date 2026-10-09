@@ -19,7 +19,12 @@ def preview(uid,header,body):
     init()
     if set(body)!={'kind','fields'} or not isinstance(body['fields'],dict):raise ValueError('Invalid action preview.')
     kind,f=body['kind'],body['fields'];payload={}
-    if kind=='forget':
+    if kind=='form':
+        import cr_booking as B
+        if set(f)!={'adapter','values'} or not isinstance(f['adapter'],str) or not isinstance(f['values'],dict):raise ValueError('Exact adapter and fields required.')
+        d=B.preview(uid,f['adapter'],f['values'])
+        payload={'id':d['id'],'hash':d['hash']};text=d['text']
+    elif kind=='forget':
         import cr_memory as M,re
         if set(f)!={'key'} or not isinstance(f['key'],str) or not re.fullmatch('[a-z0-9_]{1,100}',f['key']):raise ValueError('Select one exact saved fact key.')
         rows=[x for x in M.facts(uid,100) if x['key']==f['key']]
@@ -60,9 +65,13 @@ def confirm(uid,header,body):
     kind,p=data['kind'],data['payload']
     try:
         if body['decision']=='cancel':
-            if kind=='email':G.cancel_draft(uid,p['id'],channel='web')
+            if kind=='form':__import__('cr_booking').cancel(uid,p['id'])
+            elif kind=='email':G.cancel_draft(uid,p['id'],channel='web')
             elif kind=='calendar':__import__('cr_calendar_draft').cancel(uid,p['id'],channel='web')
             text='Cancelled. No external action made.'
+        elif kind=='form':
+            r=__import__('cr_booking').submit(uid,p['id'],p['hash'])
+            text='Form receipt: '+json.dumps(r,ensure_ascii=False)+'\nA controlled form receipt is not proof of a real reservation.'
         elif kind=='email':text=G.send_draft(uid,p['id'],p['hash'],channel='web')
         elif kind=='calendar':text=__import__('cr_calendar_draft').create(uid,p['id'],p['hash'],channel='web')
         elif kind=='forget':

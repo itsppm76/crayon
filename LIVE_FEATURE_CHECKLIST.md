@@ -107,3 +107,6 @@ Web Menu > Check-ins / digests reviews the private in-app destination, check-ins
 
 ## Exact saved-fact removal
 Web Menu > Forget saved fact reviews one exact key/value and removes it only after account/session-bound one-use confirmation. Changed values require a new review. Telegram `/forget KEY` continues to remove a named saved fact. This does not erase chat history, notes, provider copies or all account data. Full web account-data deletion remains unshipped; no all-data promise is made while computer file/identity cleanup is unresolved.
+
+## Controlled free-form review on both surfaces
+Web Connections > Review free HTML form and Telegram `/public_form ADAPTER | JSON` now use the same deployment-reviewed adapter checks. Each exact preview names the destination, terms and disclosed fields; web confirmation is additionally session-bound. Demo requires TEST ONLY identity and is not a real booking. Dynamic Calendly/Google appointment booking remains disabled and unaccepted. No paid form or unknown provider is silently substituted. Computer worker must be awake; no automatic retries after uncertainty.

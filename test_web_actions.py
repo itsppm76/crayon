@@ -103,3 +103,12 @@ def test_forget_compare_before_delete(config):
     config.setattr(X.db,'q',q);config.setattr(M,'user_lock',lambda uid:contextlib.nullcontext())
     assert 'other records were not deleted' in X.confirm(17,'Bearer '+'a'*43,{'review_id':'r','hash':digest,'decision':'confirm'})['text']
     assert next(p for sql,p in calls if sql.startswith('DELETE FROM facts'))==(17,'color','blue')
+
+def test_form_web_preview_keeps_session_ticket(config):
+    import cr_booking as B
+    calls=[]
+    config.setattr(B,'preview',lambda uid,adapter,values:{'id':'form_id','hash':'form_hash','text':'Destination and exact disclosed fields. Controlled demo only.'})
+    config.setattr(X.db,'q',lambda sql,p=(),*a,**kw:calls.append((sql,p)))
+    result=X.preview(17,'Bearer '+'a'*43,{'kind':'form','fields':{'adapter':'demo','values':{'name':'TEST ONLY'}}})
+    saved=next(p for sql,p in calls if sql.startswith('INSERT'))
+    assert saved[1:3]==(17,A.digest('a'*43)) and result['kind']=='form'
