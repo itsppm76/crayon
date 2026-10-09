@@ -48,3 +48,27 @@ class Connections(unittest.TestCase):
         for k in ('GOOGLE_WORKSPACE_CLIENT_SECRET','GITHUB_OAUTH_CLIENT_SECRET','CRAYON_VAULT_MASTER_KEY'):
             with patch.dict(os.environ,{k:'synthetic-confidential-value'}):
                 self.assertEqual(cr_safety.redact('synthetic-confidential-value'),'[redacted]')
+    def test_workspace_callback_wrong_scope_never_stores(self):
+        class Reply:
+            status_code=200
+            def json(self):return {'scope':'openid email','refresh_token':'synthetic','access_token':'synthetic'}
+        class Client:
+            def __init__(self,*a,**k):pass
+            def __enter__(self):return self
+            def __exit__(self,*a):pass
+            def post(self,*a,**k):return Reply()
+        with patch.object(X,'_state',return_value={'user_id':77,'encrypted_verifier':'cipher'}),patch.object(G,'decrypt',return_value={'provider':'workspace','verifier':'v'}),patch.object(X.httpx,'Client',Client),patch.object(X.db,'q') as q:
+            with self.assertRaises(G.GoogleError):X.complete('a'*40,'code','workspace')
+            q.assert_not_called()
+    def test_github_callback_broad_scope_never_stores(self):
+        class Reply:
+            status_code=200
+            def json(self):return {'scope':'repo,read:user','access_token':'synthetic'}
+        class Client:
+            def __init__(self,*a,**k):pass
+            def __enter__(self):return self
+            def __exit__(self,*a):pass
+            def post(self,*a,**k):return Reply()
+        with patch.object(X,'_state',return_value={'user_id':77,'encrypted_verifier':'cipher'}),patch.object(G,'decrypt',return_value={'provider':'github','verifier':'v'}),patch.object(X.httpx,'Client',Client),patch.object(X.db,'q') as q:
+            with self.assertRaises(G.GoogleError):X.complete('a'*40,'code','github')
+            q.assert_not_called()
