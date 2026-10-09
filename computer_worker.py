@@ -46,13 +46,17 @@ def main():
     # Deployment-controlled session cap, never set through a bot job. Default25min.
     raw=int(os.environ.get('CRAYON_WORKER_SESSION_SECONDS','1500'))
     until=time.monotonic()+max(60,min(raw,21600))
+    confirmed=False
     while time.monotonic()<until:
         try:
             job=post('/computer/next',run('status',{}))
+            if not confirmed:
+                print('Crayon bridge heartbeat confirmed',flush=True);confirmed=True
             if job:
                 try:result=run(job['operation'],job['args'])
                 except Exception as e:result={'ok':False,'verified':False,'error':str(e)[:160]}
                 post('/computer/result',{'id':job['id'],'result':result})
-        except Exception:pass
+        except Exception as e:
+            print('Crayon bridge error: '+type(e).__name__+' status='+str(getattr(e,'code','none')),flush=True)
         time.sleep(5)
 if __name__=='__main__':main()

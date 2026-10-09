@@ -109,14 +109,15 @@ class Handler(BaseHTTPRequestHandler):
             import cr_whatsapp as W
             code=W.handle_webhook(raw,self.headers.get("X-Hub-Signature-256"))
             return self._send(code,"ok" if code==200 else "forbidden")
-        if self.path in ('/computer/next','/computer/result'):
+        if self.path in ('/computer/next','/computer/result','/computer/boot'):
             import hmac,cr_computer as K
             token=C.env('CRAYON_BRIDGE_TOKEN')
             got=self.headers.get('Authorization','').removeprefix('Bearer ')
             if not token or not hmac.compare_digest(got,token):return self._send(403,'forbidden')
             if n>1500000:return self._send(413,'too large')
             try:
-                if self.path=='/computer/next':result=K.next_job(body)
+                if self.path=='/computer/boot':result=K.record_boot(body)
+                elif self.path=='/computer/next':result=K.next_job(body)
                 else:K.complete(body['id'],body['result']);result={'ok':True}
                 return self._send(200,json.dumps(result),'application/json')
             except Exception:return self._send(400,'invalid request')

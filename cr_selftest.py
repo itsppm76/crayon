@@ -6,6 +6,8 @@ import cr_telegram as tg
 
 
 def run(body):
+    if body.get("boot_diagnostics"):
+        return {"ok":True,"boot":db.kv_get("computer_boot_report"),"heartbeat":db.kv_get("computer_heartbeat")}
     if body.get("wake_fixture"):
         import cr_computer, cr_wake, os, time
         started=time.monotonic()
