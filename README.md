@@ -16,7 +16,7 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-142_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-198_passed-22A06B?style=for-the-badge)
 
 [**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
@@ -26,11 +26,11 @@
 
 ## 💬 WhatsApp
 
-Crayon also runs on the WhatsApp Cloud API, as a second channel on the same brain. Set the `WHATSAPP_*` variables from `.env.example` and point Meta's webhook at `/whatsapp/webhook`. Full steps and limits: [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
+The shared repository includes optional WhatsApp Cloud API code. This Telegram deployment does not run WhatsApp; the separate instance is maintained by its owner. Set the `WHATSAPP_*` variables from `.env.example` and point Meta's webhook at `/whatsapp/webhook`. Full steps and limits: [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
 
-## ✅ Tonight's release: v2.33.1
+## ✅ October 9 beta closeout
 
-142 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
+198 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
 
 ### Overnight task power (2.33.1)
 
@@ -39,8 +39,8 @@ Crayon also runs on the WhatsApp Cloud API, as a second channel on the same brai
 - `Background research: topic` is a plain-language shortcut for the same explicit brief queue; `my work queue` shows status.
 - `/work brief topic`: queues a bounded assignment starter from fetched public sources: answer, sourced points, possible outline and gaps. AI draft, not submission-ready; exact fetched URLs are checked, claim support remains fallible.
 - `/work plan Title | research topic | calculate 2+2` : 1-3 explicit internal steps. Supported: public research/source receipts, public page text, bounded Decimal arithmetic (28-digit precision) and briefs. No Google, shell, website actions, email/calendar writes or messages to other people.
-- `/work list`, `show ID`, `pause ID`, `resume ID`, `cancel ID`, `export ID`: persistent progress and TXT report/CSV source ledger. 3 active jobs and 3 new jobs/person/24h, 10 total/24h. Research runs on its own bounded worker thread so it does not hold up the reminder loop. State-bound Show/Pause/Resume/Cancel/Export buttons are built; callback controls code-tested, real popup/button proof pending morning. Uncertain completion-message delivery is not automatically retried; results remain available in the queue. Interrupted steps block without retry; quiet hours delay completion notifications. Default quiet hours 21:00-09:00.
-- Scheduled model jobs are read-only at tool enforcement. New internal queue has live deployed captured tests for two-step queue, brief, work TXT/CSV export, pause/resume/cancel, cross-user isolation, task creation/dashboard/chart-export and quiet-hour deferral (real database/source/model paths, no Telegram send). Morning real-Telegram queue/brief/export proof is still pending.
+- `/work list`, `show ID`, `pause ID`, `resume ID`, `cancel ID`, `export ID`: persistent progress and TXT report/CSV source ledger. 3 active jobs and 3 new jobs/person/24h, 10 total/24h. Research runs on its own bounded worker thread so it does not hold up the reminder loop. State-bound Show/Pause/Resume/Cancel/Export buttons are built; callback controls code-tested, real Show results and Export TXT buttons passed October 9. Uncertain completion-message delivery is not automatically retried; results remain available in the queue. Interrupted steps block without retry; quiet hours delay completion notifications. Default quiet hours 21:00-09:00.
+- Scheduled model jobs are read-only at tool enforcement. New internal queue has live deployed captured tests for two-step queue, brief, work TXT/CSV export, pause/resume/cancel, cross-user isolation, task creation/dashboard/chart-export and quiet-hour deferral (real database/source/model paths, no Telegram send). Real Telegram two-step arithmetic queue, single completion, Show results and TXT export passed October 9. General brief claim support remains fallible.
 - Inbox attention reports now have short sections and decoded HTML entities; owner's real Telegram rendering checked.
 
 ### Who gets what
@@ -48,9 +48,9 @@ Crayon also runs on the WhatsApp Cloud API, as a second channel on the same brai
 | Access tier | Available features | Limits |
 | :--- | :--- | :--- |
 | Everyone using the bot | Chat, personal memory/review/forget/wipe, notes, reminders, tracked tasks, goal plans, web search/page reading, bounded research, sandboxed maths, currency/unit conversion, CSV/charts, review-only message drafts, opt-in digests/nudges and quiet hours | Each person's private data stays separate. Free-host timing and model output are best-effort. |
-| Named Google test users who connect their own account | Gmail/calendar reads, encrypted reviewed email Send/Cancel, private primary-calendar preview/Cancel | Google OAuth is still in testing mode, not open to arbitrary accounts. Each user needs their own personal connection link. Calendar Create needs optional write-scope reconnect and an approved live test. |
+| Named Google test users who connect their own account | Gmail reads and encrypted reviewed email Send/Cancel on their own connection; calendar is owner-only | Google OAuth is still in testing mode, not open to arbitrary accounts. Each user needs their own personal connection link. Calendar Create needs optional write-scope reconnect and an approved live test. |
 | Owner + approved computer testers | Computer status, arithmetic, public HTTPS browser screenshots; fixed World Bank research-to-chart demo | 5 execution jobs/tester/day, 20 owner/day, 30 total/day, failures included. Shared free machine must be awake. Tester access code-tested; another person's live test still pending. |
-| Owner only | Text-file create/read on the computer; lifecycle/setup controls; opt-in hourly email-watch beta | Mail watch is OFF and scheduled delivery is not yet live-proven. Owner files are not shared with testers. |
+| Owner only | Text-file create/read on the computer; lifecycle/setup controls; opt-in hourly email-watch beta | Mail watch was enabled October 9 at 13:59 IST. First automatic poll proof remains pending. Owner files are not shared with testers. |
 
 ### Live checks and UX
 
@@ -67,11 +67,11 @@ Crayon also runs on the WhatsApp Cloud API, as a second channel on the same brai
 
 | Feature | Exact status |
 | :--- | :--- |
-| Automatic computer wake | Integration and opt-in startup hook built, disabled. GitHub lifecycle-token creation blocked; real wake/worker-start/idle-stop proof still required. Not shipped. |
-| Hourly email watch | Deployed owner-only opt-in beta, OFF. Bounded sender/subject/provider-snippet excerpts, quiet hours, no bodies or Gemini processing. Scheduled delivery still needs a live check. |
-| Calendar Create | Deployed, awaiting optional Google write-scope reconnect and exact owner-approved live Create. Private primary calendar only, no attendees/invitations/Meet. |
+| Automatic computer wake | Enabled after real cold start, worker-ready, calculation and idle-stop proof October 9. Free quota, stop-usage budget and idle policy remain. |
+| Hourly email watch | Deployed owner-only opt-in beta, enabled October 9 at 13:59 IST. Bounded sender/subject/provider-snippet excerpts, quiet hours, no bodies or Gemini processing. Scheduled delivery still needs a live check. |
+| Calendar Create | Deployed, awaiting optional Google write-scope reconnect and exact owner-approved live Create. Owner primary calendar only; optional explicit guest invites and popup reminders after exact Create. No Meet. |
 | Group welcome / other-user computer proof | Code-tested; real group-add and tester-chat checks pending. |
-| Public form/booking interaction | Roadmap only. No forms, logins, commerce or payments implemented. |
+| Public form/booking interaction | Reviewed public HTML-form foundation and controlled demo implemented. Local fresh-Chromium exact-one-POST acceptance passed. Live worker demo and dynamic Google appointment/Calendly adapter acceptance remain open. No provider booking claimed. |
 
 Safety remains: review before sends/writes, secret interception/redaction, per-user isolation, bounded jobs/tools/reads, untrusted-page handling, public-IP and sensitive-portal checks. Google mail/calendar results bypass Gemini. $0 budget guard unchanged; no payment initiated.
 
@@ -317,7 +317,7 @@ Slash commands remain optional power controls: `/goal`, `/memory_review`, `/proa
 
 ### Computer and browser are a beta, not an unrestricted operator
 
-The owner's GitHub student allowance includes180core-hours, about90actual hours at2cores, and20GB-month storage. A$0 Codespaces budget with stop-usage was verified before creation. Compute is used while awake; storage while the Codespace exists. The outbound worker session defaults to25minutes. A deployment-controlled session can be bounded up to6hours for an approved build; the bot cannot change it. Start the existing Codespace and worker manually for now. A disabled auto-wake module is deployed, but token and live lifecycle/startup proof remain. Stop when finished. Never raise the budget as a workaround.
+The owner's GitHub student allowance includes180core-hours, about90actual hours at2cores, and20GB-month storage. A$0 Codespaces budget with stop-usage was verified before creation. Compute is used while awake; storage while the Codespace exists. The outbound worker session defaults to25minutes. A deployment-controlled session can be bounded up to6hours for an approved build; the bot cannot change it. Auto-wake is enabled after real cold-start and idle-stop acceptance. Manual start is still a recovery option. Stop when finished. Never raise the budget as a workaround.
 
 Browser can visit public HTTPS sites, including Instagram and YouTube. Login/access walls are captured honestly. Known banking, webmail, patient and transaction portals are blocked by hostname/path rules; this backstop is not a perfect category classifier. No imported account cookies, no forms, logins, posting, purchases, downloads or unrestricted scripts. Only approved testers can use browser/arithmetic. Owner files stay owner-only. Details: [COMPUTER_SETUP.md](COMPUTER_SETUP.md).
 
@@ -331,12 +331,21 @@ Each user requests their own short link in their own private Crayon chat. Never 
 
 Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is not active. Additional testers are not enabled until their Telegram IDs are verified.142 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is enabled after October 9 lifecycle proof. Additional testers are not enabled until their Telegram IDs are verified.198 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
 
 ### Mail checks and private calendar previews (2.27.0)
 
 Say `turn on email checks` to opt into hourly sender/subject/provider-snippet checking during awake hours (owner beta); `turn off email checks` stops it. IMPORTANT/starred labels and subject keywords guide conservative triage, with bounded provider snippet excerpts, not a full-content AI summary. Nothing goes to Gemini, no replies or actions follow email instructions, and free-host timing is best-effort. Quiet hours default21:00-09:00.
 
-`/calendar_slot Title | ISO start with offset | ISO end with offset | IANA timezone` shows a private primary-calendar preview with Create/Cancel. Preview/Cancel live passed. Actual Create still needs optional `enable calendar booking` Google write-permission reconnect and owner approval. No attendees/invitations/Meet; conflicts rechecked, one-use review, no uncertain-write retry. No live event write claimed.
+`/calendar_slot Title | ISO start with offset | ISO end with offset | IANA timezone` shows a private primary-calendar preview with Create/Cancel. Preview/Cancel live passed. Actual Create still needs optional `enable calendar booking` Google write-permission reconnect and owner approval. Optional explicit guest emails and popup reminder minutes; no Meet; conflicts rechecked, one-use review, no uncertain-write retry. No live event write claimed.
 
-The Telegram command menu now includes browse/computer/research/CSV/chart/mail/calendar/updates controls. Auto-wake integration and opt-in startup hook are built but disabled; token creation and live lifecycle/startup proof remain; not shipped. Public-form interaction is design only.
+The Telegram command menu now includes browse/computer/research/CSV/chart/mail/calendar/updates controls. Auto-wake is enabled after real cold-start/worker/calculation/idle-stop proof. Public-form foundation is implemented; dynamic provider booking is not accepted.
+
+### October 9 live acceptance and remaining gates
+
+- Real Telegram work queue, dashboard, recorded completion, CSV and chart export passed. Silent WAV correctly reported no speech; blue video and PDF embedded code passed after LangChain changes.
+- Tagged groups: anyone may request public search/news. No private memory, Google-account data, reminders, computer jobs or write actions enter group lookup. News replies list dated index headlines and publishers, not independently verified article summaries. Real owner group news query returned dated headlines October 9 at 14:32; owner replied Fixed.
+- Gemini stays primary. Optional OpenRouter fallback uses only `openrouter/free` with zero-price limits, no data collection, and supported-parameter requirement. Live forced-primary-failure fixture returned FALLBACK_READY. Automatic fallback is still OFF at this checkpoint. Gemini file URIs and non-image inline media are never forwarded to it.
+- Calendar is owner-only for reads, reconnect, preview, Create and Cancel. `/calendar_slot Title | ISO start | ISO end | timezone | guests-or-none | popup-minutes-or-default` previews account, primary calendar, exact times, guests and notification policy. Guest invites fire only after the reviewed Create tap; account self is included. No live Create or invitation claimed. Reconnect via `enable calendar booking` before Create.
+- Public form demo: `/public_form demo | {"name":"TEST ONLY","note":"controlled demo"}`. Ten-minute encrypted owner-only draft, page/field/destination fingerprint, exact payload, one-use approval, no uncertain retry. Only controlled demo is configured. No Google/Calendly dynamic-slot compatibility claim.
+- Pending: first hourly mail poll proof, live worker controlled form test, Google write-scope reconnect and reviewed event test, docs final pixels, external Google public approval. Never pay for a security assessment without owner confirmation.
