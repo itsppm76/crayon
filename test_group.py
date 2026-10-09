@@ -155,3 +155,8 @@ def test_group_audience_consent_before_any_data(monkeypatch):
     assert A.consent(22,-991,'read my inbox',out)
     assert not A.consent(23,-991,'read my inbox',out)
     assert not A.consent(22,-992,'read my inbox',out)
+
+
+def test_group_optin_phrase_routes_to_consent():
+    import cr_group_actions as A
+    assert A.action_request('enable my group actions')

@@ -6,6 +6,7 @@ import cr_db as db
 
 
 def action_request(text):
+    if text.strip().lower()=='enable my group actions':return True
     return bool(re.search(r'(?i)\b(email|e-mail|gmail|inbox|mail|calendar|remind|reminders?|tasks?|memory|remember|forget|delete|privacy|computer|browse|research|files?|chart|csv|digest|notes?|save|work|project)\b', text) or text.startswith('/'))
 
 
