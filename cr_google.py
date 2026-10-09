@@ -164,6 +164,8 @@ def disconnect(uid):
     import cr_calendar_draft
     cr_calendar_draft.init()
     db.q("DELETE FROM google_calendar_drafts WHERE user_id=%s",(uid,),"none")
+    import cr_booking
+    cr_booking.init();db.q("DELETE FROM public_form_drafts WHERE user_id=%s",(uid,),"none")
     db.kv_set("google_compose_"+str(uid),None)
     db.kv_set("google_mail_results_"+str(uid),None)
     db.kv_set("google_reviewed_"+str(uid),None)
