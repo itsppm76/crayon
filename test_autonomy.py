@@ -115,3 +115,11 @@ def test_mail_clean_entities(monkeypatch):
     monkeypatch.setattr(W.G,'request',request)
     text,_=W.scan(W.OWNER,{'email':'owner@example.com','since':0,'seen':[]})
     assert "Let's work" in text and "didn't" in text and '&#' not in text and '<sam@' not in text
+
+def test_mail_status_readonly(monkeypatch):
+    monkeypatch.setattr(W.db,'kv_get',lambda *a:None)
+    monkeypatch.setattr(G,'request',lambda *a:pytest.fail('status must not read mail'))
+    assert 'off' in W.status(W.OWNER)
+    monkeypatch.setattr(W.db,'kv_get',lambda *a:{'email':'test@example.com','checked':100,'paused':True})
+    assert 'paused' in W.status(W.OWNER) and 'timestamp alone' in W.status(W.OWNER)
+    with pytest.raises(G.GoogleError):W.status(12)
