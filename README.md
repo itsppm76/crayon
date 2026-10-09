@@ -287,7 +287,7 @@ Small assistant. Honest status. Room to grow.
 | ✍️ Message drafts | Recipient/fact-grounded review-only drafts | No third-party message auto-send |
 | 🌅 Daily controls | Opt-in proactive nudges, morning/evening digests, quiet hours | Free-host timing is best-effort |
 | 💛 Chat UX | Local reactions, plain text, natural-language controls, buttons, timed progress | Serialized progress prevents late fillers after response |
-| 👥 Group chat | Exact @crayon_v1_bot mentions; no private memory/account actions | Tagged reply and untagged-ignore live-proven; add-welcome code exists, live add test pending |
+| 👥 Group chat | Exact mentions; requester-owned actions after member audience opt-in | Tagged reply and untagged-ignore live-proven; add-welcome code exists, live add test pending |
 | 🔐 Google beta | Encrypted per-user OAuth, short personal links, Gmail and primary Calendar reads | Named testers only,7-day token expiry possible; no mailbox data sent to Gemini |
 | 📧 Reviewed email | Ten-minute encrypted drafts, exact-content Send/Cancel, stale-button protection | Owner reviewed real send proven; no CC/BCC/attachments or uncertain-send retry |
 | 🌐 Public reader | Bounded HTTP page reads, redirects checked, explicit failures |1MB/12k-character caps; no login/JavaScript/paywall bypass |
@@ -344,7 +344,7 @@ The Telegram command menu now includes browse/computer/research/CSV/chart/mail/c
 ### October 9 live acceptance and remaining gates
 
 - Real Telegram work queue, dashboard, recorded completion, CSV and chart export passed. Silent WAV correctly reported no speech; blue video and PDF embedded code passed after LangChain changes.
-- Tagged groups: anyone may request public search/news. No private memory, Google-account data, reminders, computer jobs or write actions enter group lookup. News replies list dated index headlines and publishers, not independently verified article summaries. Real owner group news query returned dated headlines October 9 at 14:32; owner replied Fixed.
+- Tagged groups: anyone may request public search/news. Public lookup remains isolated. The2.35 group action route separately supports requester-owned actions after that member opts into the group audience; no ambient private history. News replies list dated index headlines and publishers, not independently verified article summaries. Real owner group news query returned dated headlines October 9 at 14:32; owner replied Fixed.
 - Gemini stays primary. Optional OpenRouter fallback uses only `openrouter/free` with zero-price limits, no data collection, and supported-parameter requirement. Live forced-primary-failure fixture returned FALLBACK_READY. Automatic fallback enabled and deployed 14:41 IST; stored setting read back on. Gemini file URIs and non-image inline media are never forwarded to it.
 - Calendar is owner-only for reads, reconnect, preview, Create and Cancel. `/calendar_slot Title | ISO start | ISO end | timezone | guests-or-none | popup-minutes-or-default` previews account, primary calendar, exact times, guests and notification policy. Guest invites fire only after the reviewed Create tap; account self is included. No live Create or invitation claimed. Reconnect via `enable calendar booking` before Create.
 - Public form demo: `/public_form demo | {"name":"TEST ONLY","note":"controlled demo"}`. Ten-minute encrypted owner-only draft, page/field/destination fingerprint, exact payload, one-use approval, no uncertain retry. Only controlled demo is configured. No Google/Calendly dynamic-slot compatibility claim.
