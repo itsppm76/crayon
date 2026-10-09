@@ -1,5 +1,12 @@
 # Change log
 
+## October 9, 2026 - auth callback recovery
+
+- Ignore inert Google callback metadata while keeping unique code/state, PKCE, cookie and signed identity checks.
+- Friendly return-to-Crayon pages on provider navigation errors; original-tab notification stops polling.
+- Failure-category logs contain no OAuth values. Regression tests cover metadata, duplicate/missing/blank state and script escaping.
+- Version both frontend CSS and JS to avoid mixing old styles with new login markup.
+
 ## October 9, 2026 - web release and recovery
 
 - GitHub Pages frontend and Telegram OIDC identity mapping to existing member records.
