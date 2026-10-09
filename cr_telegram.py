@@ -180,7 +180,8 @@ def handle_update(upd, out=None):
             progress=ProgressOut(out,chat_id,((12,"On it. Give me a moment."),(25,"Still working on it. I'll send the answer when it's ready."))).start()
             try:
                 out.typing(chat_id)
-                progress.send(chat_id,cr_group.answer(msg))
+                reply=cr_group.answer(msg)
+                progress.send(chat_id,reply,markup=getattr(reply,'markup',None))
             finally:progress.stop()
             return
         if uid > 0:
