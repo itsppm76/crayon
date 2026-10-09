@@ -242,6 +242,10 @@ def valid_signature_name(name):
 def sender_name(uid):
     # Display handles and model-extracted facts are not email identity.
     stored=db.kv_get('google_signature_name_'+str(uid),None)
+    if not stored and int(uid)==1898030949:
+        # Owner explicitly chose Pratham on9Oct2026; never seed other members.
+        db.kv_set('google_signature_name_'+str(uid),encrypt(uid,{'name':'Pratham'}))
+        stored=db.kv_get('google_signature_name_'+str(uid),None)
     if not stored:return ''
     try:name=decrypt(uid,stored).get('name','')
     except Exception:return ''
