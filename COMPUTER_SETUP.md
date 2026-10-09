@@ -22,4 +22,8 @@ This is not a general account-operating assistant. Browser requests/screenshots 
 
 Transient browser results and task text in computer_jobs are removed after30minutes on the next connected-worker poll; stopped computers do not run cleanup. No screenshot is added to personal memory.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.102 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.142 local tests in the current suite; tester behavior code-tested, no impersonation or live test from another person's chat.
+
+## Current overnight release:2.33.1
+
+The internal task/work queue runs on Render and does not require the Codespaces worker. Automatic host wake and the post-start hook remain disabled: lifecycle-token creation is blocked, and real wake, worker-start and idle-stop tests are still required. `.devcontainer/devcontainer.json` now has the correct root path; that source check is not a live startup proof. Keep the current computer session bounded and verify its heartbeat before using it.
