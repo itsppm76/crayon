@@ -61,6 +61,7 @@ def redirect_uri():
 
 
 def begin(uid, calendar_write=False):
+    if calendar_write and uid!=1898030949:raise GoogleError("Calendar beta is owner-only.")
     if not configured():
         raise GoogleError("Google setup is not active yet")
     if int(uid)<=0:
@@ -84,7 +85,7 @@ def authorization_url(state):
     if not row:raise GoogleError('Invalid or expired connection link')
     return "https://accounts.google.com/o/oauth2/v2/auth?"+urlencode({
         "client_id":C.env("GOOGLE_CLIENT_ID"),"redirect_uri":redirect_uri(),"response_type":"code",
-        "scope":" ".join([x.replace("calendar.events.readonly","calendar.events") if db.kv_get("oauth_calendar_write_"+hashed,False) else x for x in SCOPES]),"access_type":"offline","prompt":"consent","state":state})
+        "scope":" ".join([x.replace("calendar.events.readonly","calendar.events") if db.kv_get("oauth_calendar_write_"+hashed,False) else x for x in SCOPES if 'calendar.' not in x or row['user_id']==1898030949]),"access_type":"offline","prompt":"consent","state":state})
 
 
 def complete(state, code):
@@ -132,6 +133,7 @@ def _access(uid):
 
 
 def request(uid, url, params=None):
+    if 'www.googleapis.com/calendar/' in url and uid!=1898030949:raise GoogleError('Calendar beta is owner-only.')
     # Read-only allowlist. Sending/draft endpoints cannot be reached through this function.
     if not (re.fullmatch(r"https://gmail\.googleapis\.com/gmail/v1/users/me/messages(?:/[A-Za-z0-9_-]+)?",url) and not url.endswith("/send") or
             url == "https://www.googleapis.com/calendar/v3/calendars/primary/events"):
@@ -215,6 +217,7 @@ def read_message(uid, ident):
 
 
 def calendar(uid):
+    if uid!=1898030949:raise GoogleError("Calendar beta is owner-only.")
     from datetime import datetime, timezone, timedelta
     now=datetime.now(timezone.utc)
     data=request(uid,"https://www.googleapis.com/calendar/v3/calendars/primary/events",{
