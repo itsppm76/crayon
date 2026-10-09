@@ -51,6 +51,9 @@ def test_confirm_cannot_overwrite_identity(env):
         calls.append((sql,p))
         return {'encrypted':A._cipher().encrypt(json.dumps(data).encode()).decode(),'content_hash':digest} if sql.startswith('DELETE FROM web_google_reviews') else None
     env.setattr(G.db,'q',q)
+    import cr_accounts
+    from test_accounts import Conn
+    env.setattr(cr_accounts.db,'_conn',lambda:Conn())
     with pytest.raises(ValueError,match='already linked'):G.confirm({'user_id':17,'name':'N'},'Bearer '+'t'*43,{'review_id':'r'*43,'hash':digest,'decision':'confirm'})
     assert 'ON CONFLICT DO NOTHING' in calls[-1][0]
     assert calls[0][1][1:3]==(17,A.digest('t'*43))
@@ -61,7 +64,7 @@ def test_confirm_cancel_no_identity_write(env):
     r=G.confirm({'user_id':17},'Bearer '+'t'*43,{'review_id':'r'*43,'hash':'a'*64,'decision':'cancel'})
     assert 'Cancelled' in r['text'] and len(calls)==1
 
-def test_unlinked_google_cannot_use_matching_email(env):
+def test_new_google_uses_verified_subject_account_mapping(env):
     data={'state':'a'*43,'verifier':'v'*48,'nonce':'n'};calls=[]
     def q(sql,p=(),fetch='all'):
         calls.append((sql,p))
@@ -72,8 +75,11 @@ def test_unlinked_google_cannot_use_matching_email(env):
         def json(self):return {'id_token':'token'}
     env.setattr(G.httpx,'post',lambda *a,**k:Response())
     env.setattr(G,'validate',lambda *a:{'subject':'google-sub','email':'existing@example.com','google_name':'N'})
-    with pytest.raises(A.AuthError,match='not linked'):G.callback('a'*43,'code','b'*43)
-    assert calls[-1][1]==('google-sub',) and 'email' not in calls[-1][0]
+    import cr_accounts
+    identities=[];env.setattr(cr_accounts,'google_account',lambda i:identities.append(i) or {'user_id':10**15,'name':'N'})
+    G.callback('a'*43,'code','b'*43)
+    assert identities[0]['subject']=='google-sub'
+    assert calls[-1][1][2]==10**15
 
 def test_link_callback_requires_original_active_session(env):
     data={'state':'a'*43,'verifier':'v'*48,'nonce':'n','uid':17,'name':'N','session':'sessionhash'}

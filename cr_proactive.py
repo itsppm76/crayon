@@ -42,7 +42,7 @@ def digest_text(uid):
     return "\n".join(lines)
 
 def tick(out, only_user=None):
-    cond = "user_id=%s" if only_user is not None else "user_id>0"
+    cond = "user_id=%s" if only_user is not None else "user_id>0 AND user_id<1000000000000000"
     rows = db.q("SELECT user_id,settings FROM users WHERE " + cond, (only_user,) if only_user is not None else ())
     sent=[]
     for row in rows:

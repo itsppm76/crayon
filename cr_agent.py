@@ -108,7 +108,7 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False, channe
         contents.append(llm.user(text))
     system = build_system(uid) if not degraded and chat_id>=0 else SYSTEM.format(now=datetime.now().strftime("%c"), tz="", memory="(Group request: no private history or ambient personal memory. Only retrieve this requester's records when explicitly asked here.)" if chat_id<0 else "(memory is temporarily unavailable)")
     if channel_name == "web":
-        system += "\nYou are answering in the authenticated web app. Existing Telegram identity/memory is shared. Reminders currently arrive in the Telegram DM. No Google, external sends, browser/computer, scheduled model jobs or group access from web yet. Never claim those happened. Do not use Telegram formatting or say a file was delivered to Telegram."
+        system += "\nYou are answering in the authenticated web app. The verified Crayon account owns this shared memory. Telegram is a separate linked delivery route; browser-only accounts have no Telegram destination. Do not promise Telegram sync or reminders without a linked route. No Google, external sends, browser/computer, scheduled model jobs or group access from web yet. Never claim those happened. Do not use Telegram formatting or say a file was delivered to Telegram."
     ctx = {"uid": uid, "chat_id": chat_id, "meta": meta, "readonly":readonly}
     if goal_mode and not readonly:
         plan = llm.ask_json("Make 2-4 concrete steps for this goal using only Crayon's available tools. "

@@ -23,7 +23,9 @@ SCHEMA = '''CREATE TABLE IF NOT EXISTS web_requests(
 
 def init():
     auth.init()
+    __import__('cr_web_email_auth').init()
     __import__('cr_web_google_auth').init()
+    __import__('cr_accounts').init()
     __import__('cr_web_actions').init()
     __import__('cr_history').init()
     db.q(SCHEMA, fetch='none')
@@ -63,8 +65,11 @@ def dispatch(uid, name, text):
     try:
         with M.user_lock(uid):
             if not db.q('SELECT user_id FROM web_sessions WHERE user_id=%s AND expires_at>now() LIMIT 1',(uid,),'one'):
-                raise ValueError('Account was deleted. Start again in Telegram.')
+                raise ValueError('Account was deleted. Sign in again.')
             out = WebOut()
+            import cr_accounts
+            destination=cr_accounts.telegram_destination(uid)
+            chat_destination=destination or uid
             if looks_like_secret(text):
                 return [{'kind':'text','text':'That looks like a secret. It was not sent to the model or saved. Do not paste credentials here.'}]
             M.touch_user(uid, name)
@@ -79,7 +84,7 @@ def dispatch(uid, name, text):
             if simple in ('show my memory','/memory'):
                 return [{'kind':'text','text':M.render_memory(uid)}]
             if simple in ('help','/help'):
-                return [{'kind':'text','text':'Web foundation: chat, shared memory, notes, tasks, research, calculations, CSV/charts and reminders. Reminders currently arrive in your Telegram DM, not browser push. Uploads use the + button. Google reads and reviewed sends use Menu > Connections / actions. Computer and group rooms are not enabled.'}]
+                return [{'kind':'text','text':'Web foundation: chat, shared memory, notes, tasks, research, calculations, CSV/charts and reminders. Reminders need a linked Telegram delivery route; browser-only reminders are not enabled yet. Uploads use the + button. Google reads and reviewed sends use Menu > Connections / actions. Computer and group rooms are not enabled.'}]
             # Do not fall into the model for features whose channel review is not implemented yet.
             import re
             if re.search(r'(?i)\b(gmail|inbox|email|e-mail|calendar|google|workspace|github|sheet|doc|computer|browser|browse|booking|book|delete|wipe|forget|digest|proactive|watch)\b', text) or text.startswith(('/email','/google','/connect','/calendar','/work','/delete','/forget')):
@@ -87,7 +92,7 @@ def dispatch(uid, name, text):
             if simple in ('yes','confirm','go ahead','do it','send it'):
                 return [{'kind':'text','text':'Web confirmations are not enabled yet. Nothing was sent or deleted.'}]
             # Never consume a pending action created in another channel.
-            reply, meta = A.respond(uid, uid, text, name, channel_name='web')
+            reply, meta = A.respond(uid, chat_destination, text, name, channel_name='web')
             out.send(uid, reply)
             for item in meta.get('artifacts', []):
                 out.artifact(uid, item)
@@ -135,12 +140,15 @@ def _run(uid, ident):
                 import re
                 if looks_like_secret(data['input']) or re.search(r'(?i)\b(gmail|inbox|email|e-mail|calendar|google|workspace|github|sheet|doc|computer|browser|browse|booking|book|delete|wipe|forget|digest|proactive|watch)\b',data['input']) or data['input'].startswith(('/email','/google','/connect','/calendar','/work','/delete','/forget')):
                     raise StopIteration
+                import cr_accounts
+                destination=cr_accounts.telegram_destination(uid)
+                if destination is None:raise StopIteration
                 import cr_telegram
                 channel_out=cr_telegram.Out()
-                channel_out.send(uid,'[From web] '+data['input'])
+                channel_out.send(destination,'[From web] '+data['input'])
                 for item in items:
-                    if item['kind']=='text':channel_out.send(uid,item['text'])
-                    elif item['kind']=='artifact':channel_out.artifact(uid,{'filename':item['name'],'mime':item['mime'],'data':base64.b64decode(item['data'])})
+                    if item['kind']=='text':channel_out.send(destination,item['text'])
+                    elif item['kind']=='artifact':channel_out.artifact(destination,{'filename':item['name'],'mime':item['mime'],'data':base64.b64decode(item['data'])})
             except StopIteration:pass
             except Exception:
                 items.append({'kind':'text','text':'Web reply completed, but Telegram sync was not confirmed. No automatic resend. Check your Telegram chat.'})
@@ -235,10 +243,14 @@ def _upload_run(uid,ident,username,data,mime,name,caption):
                 M.add_message(uid,'assistant','[Media analysis summary; raw file not retained] '+clean_text(response)[:3000])
             items=[{'kind':'text','text':clean_text(response)}];state='done'
             try:
+                import cr_accounts
+                destination=cr_accounts.telegram_destination(uid)
+                if destination is None:raise StopIteration
                 import cr_telegram
                 channel_out=cr_telegram.Out()
-                channel_out.send(uid,'[Web upload] '+name+' ('+mime+'). Original file not retained here.')
-                channel_out.send(uid,clean_text(response))
+                channel_out.send(destination,'[Web upload] '+name+' ('+mime+'). Original file not retained here.')
+                channel_out.send(destination,clean_text(response))
+            except StopIteration:pass
             except Exception:items.append({'kind':'text','text':'Upload analysis completed, but Telegram sync was not confirmed. No automatic resend.'})
         except Exception as e:
             items=[{'kind':'text','text':'Upload stopped: '+(str(e)[:200] if isinstance(e,ValueError) else 'Media processing failed. No analysis confirmed.')}];state='blocked'

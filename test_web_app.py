@@ -71,6 +71,8 @@ def test_exchange_stores_only_hashed_token(config):
     assert r['user']['id']==17 and r['expires_in']==604800
 
 def test_session_never_takes_client_uid(config):
+    import cr_web_email_auth
+    config.setattr(cr_web_email_auth,'session_check',lambda *a:None)
     calls=[];config.setattr(A.db,'q',lambda sql,p=(),fetch='all':calls.append((sql,p)) or {'user_id':17,'name':'N'})
     assert A.session('Bearer '+'b'*43)['user_id']==17
     assert calls[0][1]==(A.digest('b'*43),)
@@ -321,3 +323,18 @@ def test_mirror_failure_not_retried(config):
     config.setattr(W.db,'q',q)
     W.SLOTS.acquire();W._run(17,'a'*43)
     assert len(sent)==1 and 'No automatic resend' in str(writes)
+
+def test_browser_only_account_never_mirrors_to_telegram(config):
+    import cr_telegram
+    config.setattr(cr_telegram,'Out',lambda:pytest.fail('No Telegram route'))
+    config.setattr(W,'decode',lambda v:{'input':'hello','name':'N'})
+    config.setattr(W,'encode',lambda v:json.dumps(v))
+    config.setattr(W,'dispatch',lambda *a:[{'kind':'text','text':'reply'}])
+    config.setattr(W.db,'q',lambda sql,p=(),fetch='all':{'encrypted':'data'} if sql.startswith("UPDATE web_requests SET state='running'") else None)
+    W.SLOTS.acquire();W._run(10**15,'a'*43)
+
+
+def test_browser_only_reminder_rejected_without_dead_delivery(config):
+    config.setattr(T.db,'q',lambda *a:None)
+    r=T.set_reminder({'uid':10**15,'chat_id':10**15},'Test',in_minutes=5)
+    assert not r['ok'] and 'No reminder was created' in r['error']

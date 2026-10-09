@@ -178,13 +178,16 @@ def _new_session(row):
 
 def session(header):
     if not isinstance(header, str) or not header.startswith('Bearer ') or not PATTERN.fullmatch(header[7:]):
-        raise AuthError('Log in with Telegram first.')
+        raise AuthError('Sign in to Crayon first.')
     row = db.q('SELECT user_id,name,expires_at FROM web_sessions WHERE token_hash=%s AND expires_at>now()', (digest(header[7:]),), 'one')
     if not row:
         raise AuthError('Your web session expired. Log in again.')
+    __import__('cr_web_email_auth').session_check(digest(header[7:]))
     return row
 
 
 def logout(header):
     if isinstance(header, str) and header.startswith('Bearer '):
         db.q('DELETE FROM web_sessions WHERE token_hash=%s', (digest(header[7:]),), 'none')
+        __import__('cr_web_email_auth').init()
+        db.q('DELETE FROM web_email_sessions WHERE token_hash=%s',(digest(header[7:]),),'none')

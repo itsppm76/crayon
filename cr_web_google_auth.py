@@ -1,4 +1,4 @@
-"""Google login for explicitly linked Telegram identities. No email matching or data scopes."""
+"""Google login with provider-independent accounts and reviewed legacy links. No email matching or data scopes."""
 import hashlib,hmac,json,re,secrets,time
 from urllib.parse import urlencode
 import httpx,jwt
@@ -64,12 +64,12 @@ def callback(state,code,cookie):
     # Access/refresh tokens are not retained. Login grants no data integration permissions.
     if 'uid' in data:
         active=db.q('SELECT user_id FROM web_sessions WHERE token_hash=%s AND user_id=%s AND expires_at>now()',(data['session'],data['uid']),'one')
-        if not active:raise A.AuthError('Original Telegram session ended. Link again while signed in.')
+        if not active:raise A.AuthError('Original Crayon session ended. Link again while signed in.')
         payload={**identity,'uid':data['uid'],'telegram_name':data['name']};digest=hashlib.sha256(json.dumps(payload,sort_keys=True).encode()).hexdigest();ident=secrets.token_urlsafe(32)
         db.q("INSERT INTO web_google_reviews(id,user_id,session_hash,challenge,encrypted,content_hash,expires_at) VALUES(%s,%s,%s,%s,%s,%s,now()+interval '5 minutes')",(ident,data['uid'],data['session'],row['challenge'],A._cipher().encrypt(json.dumps(payload).encode()).decode(),digest),'none')
         return 'review'
-    linked=db.q('SELECT g.user_id,g.name FROM web_google_identities g JOIN users u ON u.user_id=g.user_id WHERE g.subject=%s',(identity['subject'],),'one')
-    if not linked:raise A.AuthError('This Google account is not linked. Sign in with Telegram once, then use Link Google login in Menu.')
+    import cr_accounts
+    linked=cr_accounts.google_account(identity)
     handoff=secrets.token_urlsafe(32)
     db.q("INSERT INTO web_login_codes(code_hash,challenge,user_id,name,expires_at) VALUES(%s,%s,%s,%s,now()+interval '5 minutes')",(A.digest(handoff),row['challenge'],linked['user_id'],linked['name']),'none')
     return handoff
@@ -79,7 +79,7 @@ def review(user,header,verifier):
     row=db.q('SELECT id,encrypted,content_hash FROM web_google_reviews WHERE user_id=%s AND session_hash=%s AND challenge=%s AND expires_at>now()',(user['user_id'],A.digest(header[7:]),A.challenge(verifier)),'one')
     if not row:return {'pending':True}
     data=json.loads(A._cipher().decrypt(row['encrypted'].encode()))
-    return {'review_id':row['id'],'hash':row['content_hash'],'text':'Link Google login to this existing Crayon account?\nTelegram: '+str(user['name'])+' (ID '+str(user['user_id'])+')\nGoogle: '+data['email']+'\nThis will let that Google account open the same private memory and history. No Gmail, Calendar or Workspace access is granted.','google_email':data['email']}
+    return {'review_id':row['id'],'hash':row['content_hash'],'text':'Link Google login to this existing Crayon account?\nCrayon: '+str(user['name'])+' (ID '+str(user['user_id'])+')\nGoogle: '+data['email']+'\nThis will let that Google account open the same private memory and history. No Gmail, Calendar or Workspace access is granted.','google_email':data['email']}
 
 def confirm(user,header,body):
     if set(body)!={'review_id','hash','decision'} or body['decision'] not in ('confirm','cancel') or not isinstance(body['review_id'],str) or not A.PATTERN.fullmatch(body['review_id']) or not isinstance(body['hash'],str) or not re.fullmatch(r'[a-f0-9]{64}',body['hash']):raise ValueError('Invalid linking decision.')
@@ -88,7 +88,7 @@ def confirm(user,header,body):
     if body['decision']=='cancel':return {'text':'Cancelled. Google login was not linked.'}
     data=json.loads(A._cipher().decrypt(row['encrypted'].encode()))
     if hashlib.sha256(json.dumps(data,sort_keys=True).encode()).hexdigest()!=row['content_hash'] or data['uid']!=user['user_id']:raise ValueError('Link review changed.')
-    linked=db.q('INSERT INTO web_google_identities(subject,user_id,email,name) VALUES(%s,%s,%s,%s) ON CONFLICT DO NOTHING RETURNING user_id',(data['subject'],user['user_id'],data['email'],user['name']),'one')
-    if not linked:raise ValueError('Google or Telegram account already linked. No accounts merged or overwritten.')
+    import cr_accounts
+    cr_accounts.link_legacy_google(data,user['user_id'],user['name'])
     db.audit(user['user_id'],'web_google_link')
     return {'text':'Google login linked. Both sign-in methods now open this same Crayon memory and history.'}

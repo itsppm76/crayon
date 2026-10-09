@@ -17,7 +17,7 @@ def tick(out=None, only_user=None):
         import cr_telegram as tg
         out = tg.Out()
     db.q("UPDATE reminders SET status='pending' WHERE status='sending' AND claimed_at < now() - interval '3 minutes'", (), "none")
-    cond, params = ("AND user_id=%s", (only_user,)) if only_user is not None else ("AND user_id>0", ())
+    cond, params = ("AND user_id=%s", (only_user,)) if only_user is not None else ("AND user_id>0 AND user_id<1000000000000000", ())
     rows = db.q(f"""UPDATE reminders SET status='sending', claimed_at=now() WHERE id IN (
                       SELECT id FROM reminders WHERE status='pending' AND due_at <= now() {cond}
                       ORDER BY due_at LIMIT 10 FOR UPDATE SKIP LOCKED) RETURNING *""", params)
@@ -55,7 +55,7 @@ def nudge(out=None):
         out = tg.Out()
     import cr_tools as T
     rows = db.q("""UPDATE tasks SET last_nudge=now() WHERE id IN (
-                     SELECT t.id FROM tasks t WHERE t.user_id>0 AND t.status='active' AND t.updated_at < now() - interval '20 hours'
+                     SELECT t.id FROM tasks t WHERE t.user_id>0 AND t.user_id<1000000000000000 AND t.status='active' AND t.updated_at < now() - interval '20 hours'
                      AND (t.last_nudge IS NULL OR t.last_nudge < now() - interval '22 hours')
                      AND EXISTS (SELECT 1 FROM subtasks s WHERE s.task_id=t.id AND s.status<>'done')
                      ORDER BY t.updated_at LIMIT 5 FOR UPDATE SKIP LOCKED) RETURNING id,user_id,chat_id,title""", ())

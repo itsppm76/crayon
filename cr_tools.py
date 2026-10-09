@@ -84,6 +84,9 @@ def list_notes(ctx):
       "Schedule a reminder that Crayon will actually send in this chat at the due time. Give 'at' as an ISO 8601 datetime in the user's timezone (e.g. 2026-10-09T08:00:00+05:30) computed from the current time, or 'in_minutes'. recurrence: '', 'daily' or 'weekly'.",
       {"text": S, "at": S, "in_minutes": {"type": "integer"}, "recurrence": S}, ["text"], RISK_WRITE)
 def set_reminder(ctx, text, at="", in_minutes=None, recurrence=""):
+    import cr_accounts
+    if cr_accounts.standalone(ctx['uid']) and cr_accounts.telegram_destination(ctx['uid']) is None:
+        return {'ok':False,'verified':False,'error':'Reminder delivery is not enabled for browser-only accounts yet. No reminder was created.'}
     tz = user_tz(ctx["uid"])
     if in_minutes:
         due = datetime.now(timezone.utc) + timedelta(minutes=int(in_minutes))

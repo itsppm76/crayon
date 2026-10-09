@@ -83,7 +83,10 @@ def handle(h, method, raw=b''):
             reply(h,204,'','text/plain',True,{'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600'})
             return True
         if method=='GET' and p.path=='/web/status':
-            reply(h,200,{'stage':'private foundation','login_configured':A.configured(),'google_login_configured':__import__('cr_web_google_auth').configured(),'rooms':False,'external_actions':'exact web review only','uploads':True,'computer':False},cors=True)
+            reply(h,200,{'stage':'private foundation','login_configured':A.configured(),'google_login_configured':__import__('cr_web_google_auth').configured(),'email_login_configured':C.env('CRAYON_EMAIL_AUTH_ENABLED')=='on','rooms':False,'external_actions':'exact web review only','uploads':True,'computer':False},cors=True)
+            return True
+        if method=='GET' and p.path=='/web/email/config':
+            reply(h,200,__import__('cr_web_email_auth').config(),cors=True)
             return True
         if method=='POST':
             if h.headers.get('Content-Type','').split(';')[0]!='application/json' or len(raw)>(28000000 if p.path=='/web/upload' else 40000):
@@ -103,8 +106,15 @@ def handle(h, method, raw=b''):
             if set(body)!={'challenge'}:raise ValueError('Invalid Google login request.')
             reply(h,200,{'url':__import__('cr_web_google_auth').begin(body['challenge'])},cors=True)
             return True
+        if method=='POST' and p.path=='/web/email/session':
+            reply(h,200,__import__('cr_web_email_auth').exchange(body),cors=True)
+            return True
         user=A.session(h.headers.get('Authorization',''))
-        if method=='POST' and p.path=='/web/google/link-start':
+        if method=='POST' and p.path=='/web/email/link-preview':
+            reply(h,200,__import__('cr_web_email_auth').link_preview(user,h.headers.get('Authorization',''),body),cors=True)
+        elif method=='POST' and p.path=='/web/email/link-confirm':
+            reply(h,200,__import__('cr_web_email_auth').link_confirm(user,h.headers.get('Authorization',''),body),cors=True)
+        elif method=='POST' and p.path=='/web/google/link-start':
             if set(body)!={'challenge'}:raise ValueError('Invalid Google link request.')
             reply(h,200,{'url':__import__('cr_web_google_auth').begin(body['challenge'],user,h.headers.get('Authorization',''))},cors=True)
         elif method=='POST' and p.path=='/web/google/link-poll':
