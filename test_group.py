@@ -30,3 +30,45 @@ def test_group_tools_disabled(monkeypatch):
         return {'text':'Hi'}
     monkeypatch.setattr(G.llm,'generate',gen)
     assert G.answer({'text':'@crayon_v1_bot explain gravity'})=='Hi'
+
+def test_group_news_explicit_public_lookup(monkeypatch):
+    import cr_web as W
+    calls=[]
+    monkeypatch.setattr(W,'news',lambda q,n,day:calls.append((q,day)) or {'items':[{'title':'Test news','url':'https://news.google.com/test','source':'Publisher','published':'2026-10-09T10:00:00+05:30'}],'day':None})
+    monkeypatch.setattr(G.llm,'generate',lambda *a,**kw:(_ for _ in ()).throw(AssertionError('no unsupported model news')))
+    r=G.answer({'text':'@crayon_v1_bot tell me the latest AI news now','from':{'id':7555366869}})
+    assert calls and 'Test news' in r and 'https://news.google.com/test' in r
+
+def test_group_yesterday_resolves_date(monkeypatch):
+    import cr_web as W
+    from datetime import datetime,timedelta
+    from zoneinfo import ZoneInfo
+    calls=[]
+    monkeypatch.setattr(W,'news',lambda q,n,day:calls.append(day) or {'items':[]})
+    G.answer({'text':'@crayon_v1_bot yesterday news of india','from':{'id':1898030949}})
+    assert calls==[datetime.now(ZoneInfo('Asia/Calcutta')).date()-timedelta(days=1)]
+
+def test_group_private_and_unknown_lookup_blocked(monkeypatch):
+    import cr_web as W
+    monkeypatch.setattr(W,'news',lambda *a:(_ for _ in ()).throw(AssertionError('blocked')))
+    assert 'never read' in G.answer({'text':'@crayon_v1_bot search my inbox','from':{'id':1898030949}})
+
+def test_group_lookup_failure_no_fluff(monkeypatch):
+    import cr_web as W
+    monkeypatch.setattr(W,'news',lambda *a:(_ for _ in ()).throw(RuntimeError('HTTP503')))
+    r=G.answer({'text':'@crayon_v1_bot latest news','from':{'id':1898030949}})
+    assert 'failed' in r and 'happy' not in r and 'cutoff' not in r
+
+def test_news_date_filter(monkeypatch):
+    import cr_web as W
+    from datetime import date
+    import httpx
+    xml=b'<rss><channel><item><title>old</title><pubDate>Wed, 07 Oct 2026 10:00:00 GMT</pubDate><link>https://news.google.com/old</link></item><item><title>fresh</title><source>Publisher</source><pubDate>Thu, 08 Oct 2026 10:00:00 GMT</pubDate><link>https://news.google.com/fresh</link></item><item><title>unsafe</title><pubDate>Thu, 08 Oct 2026 11:00:00 GMT</pubDate><link>http://localhost/private</link></item></channel></rss>'
+    monkeypatch.setattr(W._c,'get',lambda *a,**kw:httpx.Response(200,content=xml))
+    r=W.news('India',3,date(2026,10,8));assert [i['title'] for i in r['items']]==['fresh']
+
+
+def test_public_news_any_tagged_user(monkeypatch):
+    import cr_web as W
+    monkeypatch.setattr(W,'news',lambda *a:{'items':[]})
+    assert 'No dated news results' in G.answer({'text':'@crayon_v1_bot latest news','from':{'id':12}})
