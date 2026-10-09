@@ -112,3 +112,13 @@ def test_form_web_preview_keeps_session_ticket(config):
     result=X.preview(17,'Bearer '+'a'*43,{'kind':'form','fields':{'adapter':'demo','values':{'name':'TEST ONLY'}}})
     saved=next(p for sql,p in calls if sql.startswith('INSERT'))
     assert saved[1:3]==(17,A.digest('a'*43)) and result['kind']=='form'
+
+def test_form_web_confirmation_result_excludes_image(config):
+    import hashlib,cr_booking as B
+    data={'kind':'form','payload':{'id':'form','hash':'short'},'text':'Reviewed exact form'}
+    digest=hashlib.sha256(json.dumps(data,sort_keys=True).encode()).hexdigest()
+    row={'encrypted':A._cipher().encrypt(json.dumps(data).encode()).decode(),'content_hash':digest}
+    config.setattr(X.db,'q',lambda sql,*a,**kw:row if sql.startswith('UPDATE') and "'claimed'" in sql else None)
+    config.setattr(B,'submit',lambda *a:{'ok':True,'verified':True,'note':'Controlled test received','screenshot':'PRIVATE_BASE64'})
+    r=X.confirm(17,'Bearer '+'a'*43,{'review_id':'r','hash':digest,'decision':'confirm'})
+    assert 'PRIVATE_BASE64' not in r['text'] and 'not proof of a real reservation' in r['text']

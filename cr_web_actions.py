@@ -71,7 +71,7 @@ def confirm(uid,header,body):
             text='Cancelled. No external action made.'
         elif kind=='form':
             r=__import__('cr_booking').submit(uid,p['id'],p['hash'])
-            text='Form receipt: '+json.dumps(r,ensure_ascii=False)+'\nA controlled form receipt is not proof of a real reservation.'
+            text='Form result: '+json.dumps({k:r[k] for k in ('ok','verified','url','note','error') if k in r},ensure_ascii=False)+'\nA controlled form receipt is not proof of a real reservation. If unconfirmed, check the destination before any retry.'
         elif kind=='email':text=G.send_draft(uid,p['id'],p['hash'],channel='web')
         elif kind=='calendar':text=__import__('cr_calendar_draft').create(uid,p['id'],p['hash'],channel='web')
         elif kind=='forget':
