@@ -136,7 +136,7 @@ def analyze(data, mime, caption="", filename="", progress=None):
                 parts=[{"inlineData":{"mimeType":mime,"data":base64.b64encode(data).decode()}}]
             else:
                 if progress:
-                    progress("Big media file: uploading it for temporary processing. I'll remove that upload when I'm done.")
+                    progress("Uploading this media for temporary processing. I'll remove that upload when I'm done.")
                 client=httpx.Client(timeout=httpx.Timeout(120,connect=15))
                 part,name=_file_part(client,data,mime,progress)
                 parts=[part]
