@@ -289,7 +289,7 @@ Small assistant. Honest status. Room to grow.
 | 💛 Chat UX | Local reactions, plain text, natural-language controls, buttons, timed progress | Serialized progress prevents late fillers after response |
 | 👥 Group chat | Exact mentions; requester-owned actions after member audience opt-in | Tagged reply and untagged-ignore live-proven; add-welcome code exists, live add test pending |
 | 🔐 Google beta | Encrypted per-user OAuth, short personal links, Gmail and primary Calendar reads | Named testers only,7-day token expiry possible; no mailbox data sent to Gemini |
-| 📧 Reviewed email | Ten-minute encrypted drafts, exact-content Send/Cancel, stale-button protection | Owner reviewed real send proven; no CC/BCC/attachments or uncertain-send retry |
+| 📧 Reviewed email | Ten-minute encrypted drafts, exact-content Send/Cancel, stale-button protection | Owner reviewed real send proven; multi-To/CC/BCC reviewed; no attachments or uncertain-send retry |
 | 🌐 Public reader | Bounded HTTP page reads, redirects checked, explicit failures |1MB/12k-character caps; no login/JavaScript/paywall bypass |
 | 🔎 Deep research | Bounded multi-source reads; comparison subject/context searches | Official Notion/Obsidian comparison retested; citations/model synthesis remain fallible |
 | 🧮 Conversions | Dated Frankfurter currency and Decimal unit conversion | Real currency/unit tests passed; not a live FX quote, fees excluded |

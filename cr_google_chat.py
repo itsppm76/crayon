@@ -67,6 +67,8 @@ def handle(uid,chat,text,msg,out):
         out.send(chat,'Google actions need a request directly from you, not forwarded content.');return True
     try:
         if confirm:
+            if state and not t.startswith('cancel'):
+                out.send(chat,'Finish and review the pending email first. No older draft will be sent.');return True
             if db.kv_get('google_review_chat_'+str(uid),uid)!=chat:
                 out.send(chat,'Review your draft in this chat before confirming it.');return True
             if t.startswith('cancel'):

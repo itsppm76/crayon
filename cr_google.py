@@ -257,6 +257,7 @@ def make_draft(uid, text, structured=False):
     if not to or len(to)+len(cc)+len(bcc)>15:raise GoogleError('Use at least one To recipient and at most15 total recipients.')
     if len(set(x.lower() for x in to+cc+bcc))!=len(to+cc+bcc):raise GoogleError('A recipient is in more than one field. Review To/CC/BCC.')
     if not isinstance(subject,str) or not isinstance(body,str) or not subject.strip() or len(subject)>200 or not body.strip() or len(body)>10000:raise GoogleError('Subject/body is empty or too long')
+    if '\r' in subject or '\n' in subject:raise GoogleError('Subject must be one line.')
     from cr_safety import looks_like_secret,clean_text
     if looks_like_secret(json.dumps(text)):raise GoogleError('Draft appears to contain a secret')
     content={'from':row['email'],'to':to,'cc':cc,'bcc':bcc,'subject':clean_text(subject),'body':clean_text(body)}

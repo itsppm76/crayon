@@ -112,3 +112,12 @@ def test_pending_recipient_keeps_multiline_body(monkeypatch,store):
     assert H.handle(10,10,'sam@example.com',{},T.CaptureOut())
     assert seen[0]['body']=='Dear Sam,\nFull draft' and seen[0]['cc']==['c@example.com']
     assert seen[0]['to']==['sam@example.com']
+
+
+def test_pending_compose_cannot_send_old_review(monkeypatch,store):
+    import time
+    store['google_compose_10']={'subject':'New','body':'New body','until':time.time()+500,'chat':10}
+    store['google_reviewed_10']=['old','hash']
+    monkeypatch.setattr(H.G,'send_draft',lambda *a:pytest.fail('old draft sent'))
+    out=T.CaptureOut();H.handle(10,10,'send it',{},out)
+    assert 'pending email' in out.sent[0]['text']
