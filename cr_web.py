@@ -183,3 +183,29 @@ def search(query, n=5):
         except Exception as e:
             errs.append(f"{name}: {type(e).__name__} {str(e)[:60]}")
     raise RuntimeError("all search providers failed: " + "; ".join(errs))
+
+def news(query,n=4,day=None):
+    """Dated Google News RSS headline index. Headlines are source reports, not verified article facts."""
+    import xml.etree.ElementTree as ET
+    from datetime import datetime,timedelta
+    from email.utils import parsedate_to_datetime
+    from zoneinfo import ZoneInfo
+    zone=ZoneInfo('Asia/Calcutta');now=datetime.now(zone)
+    after=day or now.date()-timedelta(days=1);before=after+timedelta(days=1) if day else now.date()+timedelta(days=1)
+    q=query[:250]+' after:'+after.isoformat()+' before:'+before.isoformat()
+    r=_c.get('https://news.google.com/rss/search',params={'q':q,'hl':'en-IN','gl':'IN','ceid':'IN:en'},timeout=12)
+    if r.status_code!=200:raise RuntimeError('News index unavailable')
+    if len(r.content)>500000:raise RuntimeError('News index too large')
+    root=ET.fromstring(r.content);items=[]
+    for item in root.findall('./channel/item'):
+        try:
+            published=parsedate_to_datetime(item.findtext('pubDate','')).astimezone(zone)
+            if not after<=published.date()<before or published>now:continue
+            source=_strip(item.findtext('source',''))
+            if source.lower() in ('linkedin','facebook','instagram','x','twitter','youtube'):continue
+            link=item.findtext('link','');u=urlparse(link)
+            if u.scheme!='https' or u.hostname!='news.google.com':continue
+            items.append({'title':_strip(item.findtext('title',''))[:220],'url':link,'source':_strip(item.findtext('source',''))[:80],'published':published.isoformat()})
+            if len(items)>=n:break
+        except (ValueError,TypeError):continue
+    return {'items':items,'query':query[:250],'day':day.isoformat() if day else None,'note':'Google News index headlines only. Article contents not independently verified.'}
