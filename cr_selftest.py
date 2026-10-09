@@ -12,7 +12,21 @@ def run(body):
         import cr_computer, cr_wake, os, time
         started=time.monotonic()
         if body["wake_fixture"]=="calculate":
-            result=cr_computer.execute(cr_computer.OWNER,"calculate",{"expression":"20*(3+2)/4"},test_wake=True)
+            import re
+            key=body.get("idempotency_key", "")
+            if not isinstance(key,str) or not re.fullmatch(r"[A-Za-z0-9_-]{8,80}",key):
+                return {"ok":False,"error":"A unique idempotency_key is required for the start fixture"}
+            claim="wake_fixture:"+key
+            row=db.q("INSERT INTO kv(key,value) VALUES(%s,%s::jsonb) ON CONFLICT(key) DO NOTHING RETURNING key",(claim,'{"state":"running"}'),"one")
+            if not row:
+                stored=db.kv_get(claim) or {}
+                return {"ok":True,"duplicate":True,"fixture_status":stored}
+            try:
+                result=cr_computer.execute(cr_computer.OWNER,"calculate",{"expression":"20*(3+2)/4"},test_wake=True)
+            except Exception as e:
+                db.kv_set(claim,{"state":"failed","reason":type(e).__name__})
+                raise
+            db.kv_set(claim,{"state":"done","result":result})
         elif body["wake_fixture"]=="idle_stop":
             cr_wake.idle_stop(test=True);result={"last_activity":db.kv_get("computer_last_activity",0)}
         else:return {"ok":False,"error":"Unsupported wake fixture"}
