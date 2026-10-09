@@ -16,6 +16,14 @@ def file_id(value):
 def range_name(value):
     if not re.fullmatch(r"(?:[A-Za-z0-9 _-]{1,80}!)?[A-Z]{1,3}[1-9][0-9]{0,4}(?::[A-Z]{1,3}[1-9][0-9]{0,4})?",value or ''):
         raise G.GoogleError('Use a bounded A1 range, for example Sheet1!A1:C10.')
+    span=value.split('!')[-1].split(':')
+    def pos(cell):
+        match=re.fullmatch(r'([A-Z]+)([0-9]+)',cell);col=0
+        for c in match[1]:col=col*26+ord(c)-64
+        return col,int(match[2])
+    start=pos(span[0]);end=pos(span[-1])
+    if end[0]<start[0] or end[1]<start[1] or (end[0]-start[0]+1)*(end[1]-start[1]+1)>200:
+        raise G.GoogleError('Use an ascending range of at most200 cells.')
     return value
 
 

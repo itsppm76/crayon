@@ -200,7 +200,7 @@ def handle_update(upd, out=None):
             db.kv_set("tg_latest_"+str(uid), {"chat_id":chat_id,"message_id":msg.get("message_id"),
                 "media":any(msg.get(k) for k in ("photo","voice","audio","document","video","video_note","animation","sticker"))})
         text = msg.get("text")
-        if text and (text.startswith(("/email_send", "/email_draft", "/connect_google")) or __import__("re").search(r"\b(email|gmail|inbox|mail|calendar|send|google)\b",text,__import__("re").I)) and (msg.get("forward_origin") or msg.get("forward_from") or msg.get("via_bot")):
+        if text and (text.startswith(("/email_send", "/email_draft", "/connect_google")) or __import__("re").search(r"\b(email|gmail|inbox|mail|calendar|send|google|workspace|github|sheet|doc)\b",text,__import__("re").I)) and (msg.get("forward_origin") or msg.get("forward_from") or msg.get("via_bot")):
             out.send(chat_id, "Google actions need a direct command from you, not forwarded content.")
             return
         if any(msg.get(k) for k in ("photo","voice","audio","document","video","video_note","animation","sticker")) or not text:
@@ -251,6 +251,18 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
                 row=X.status(uid,provider);out.send(chat_id,provider+': '+row['identity'] if row else 'Not connected: '+provider)
             else:out.send(chat_id,'Local '+provider+' credentials removed. '+('Provider revocation confirmed.' if X.disconnect(uid,provider) else 'Remove access in the provider account too.'))
         except Exception:out.send(chat_id,'Connection unavailable or expired; no account change confirmed.')
+        return
+    ws=re.fullmatch(r'(?i)(?:read sheet|read doc) ([A-Za-z0-9_-]{15,150})(?: (.+))?',text.strip())
+    if ws:
+        if chat_id!=uid:out.send(chat_id,'Workspace data stays in your private DM in this beta.');return
+        try:
+            import cr_workspace as W
+            if text.lower().startswith('read sheet'):
+                result=W.sheet_read(uid,ws.group(1),ws.group(2) or 'A1:J20')
+                out.send(chat_id,'Sheet '+result.get('range','')+'\n'+__import__('json').dumps(result.get('values',[]),ensure_ascii=False))
+            else:
+                result=W.doc_read(uid,ws.group(1));out.send(chat_id,result['title']+'\n\n'+result['text'])
+        except Exception:out.send(chat_id,'Workspace read not confirmed. Check your Workspace connection, file permission and bounded range.')
         return
     gh=re.fullmatch(r'(?i)github digest ([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)',text.strip())
     if gh:
