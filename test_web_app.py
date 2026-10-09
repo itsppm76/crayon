@@ -193,3 +193,33 @@ def test_provider_decode_error_safe_http(config):
     H.handle(h,'GET')
     assert h.code==503
     assert b'utf-8' not in h.wfile.getvalue() and b'Start login again' in h.wfile.getvalue()
+
+
+def test_poll_login_bound_to_verifier(config):
+    calls=[]
+    config.setattr(A.db,'q',lambda sql,p=(),fetch='all':calls.append((sql,p)) or None)
+    assert A.poll_login('a'*43)=={'pending':True}
+    assert calls[0][1]==(A.challenge('a'*43),)
+    assert 'DELETE' in calls[0][0] and 'expires_at>now()' in calls[0][0]
+    with pytest.raises(A.AuthError):A.poll_login('guess')
+
+
+def test_poll_login_one_use_session(config):
+    calls=[]
+    def q(sql,p=(),fetch='all'):
+        calls.append((sql,p))
+        return {'user_id':17,'name':'N'} if sql.startswith('DELETE FROM web_login_codes WHERE challenge=') else None
+    config.setattr(A.db,'q',q);config.setattr(A.db,'audit',lambda *a:None)
+    r=A.poll_login('a'*43)
+    assert r['user']['id']==17
+    assert next(p for sql,p in calls if sql.startswith('INSERT INTO web_sessions'))[0]==A.digest(r['token'])
+
+
+def test_poll_exact_origin_and_shape(config):
+    config.setattr(A,'poll_login',lambda v:{'pending':True})
+    h=Handler('/web/login-poll',{'Origin':A.origin(),'Content-Type':'application/json'})
+    H.handle(h,'POST',b'{"verifier":"a"}');assert h.code==200
+    h=Handler('/web/login-poll',{'Origin':'https://evil.test','Content-Type':'application/json'})
+    H.handle(h,'POST',b'{"verifier":"a"}');assert h.code==403
+    h=Handler('/web/login-poll',{'Origin':A.origin(),'Content-Type':'application/json'})
+    H.handle(h,'POST',b'{"verifier":"a","uid":17}');assert h.code==400

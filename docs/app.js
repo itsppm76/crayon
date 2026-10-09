@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const API='https://crayon-v1.onrender.com', $=s=>document.querySelector(s);
-  let token='', popup=null, verifier='', busy=false, timer=null;
+  let token='', popup=null, verifier='', busy=false, timer=null, loginTimer=null, loginBusy=false, loginDeadline=0;
   const urls=[];
   const random=()=>{const b=new Uint8Array(32);crypto.getRandomValues(b);return btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
   const challenge=async s=>btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -11,9 +11,30 @@
   function bubble(role,text){$('#hero').classList.add('hide');const row=document.createElement('div');row.className='msg '+(role==='user'?'user':'ai');if(role!=='user'){const i=document.createElement('img');i.src='./crayon.svg';i.alt='';i.className='av';row.append(i);}const b=document.createElement('div');b.className='bubble';b.textContent=text;row.append(b);$('#log').append(row);$('#scroll').scrollTop=$('#scroll').scrollHeight;return b;}
   function item(x){if(x.kind==='text')bubble('ai',x.text);else if(x.kind==='artifact'){const b=bubble('ai','');const bytes=Uint8Array.from(atob(x.data),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([bytes],{type:x.mime}));urls.push(url);if(['image/png','image/jpeg','image/webp'].includes(x.mime)){const img=document.createElement('img');img.src=url;img.alt=x.name;img.className='artifact-image';b.append(img);}const a=document.createElement('a');a.href=url;a.download=x.name;a.textContent='Download '+x.name;a.className='artifact';b.append(a);}}
   async function call(path,body){const r=await fetch(API+'/web/'+path,{method:body===undefined?'GET':'POST',credentials:'omit',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});const j=await r.json();if(!r.ok){if(r.status===401&&path!=='session')signedOut();throw new Error(j.error||'Request not confirmed.');}return j;}
-  function signedOut(){token='';verifier='';busy=false;clearTimeout(timer);clearView();$('#identity').textContent='Signed out';controls();}
-  $('#login').onclick=async()=>{popup=window.open('about:blank','crayon-login','width=520,height=720');if(!popup){status('Allow the login popup, then try again.');return;}verifier=random();const ch=await challenge(verifier);popup.location=API+'/web/auth/start?challenge='+encodeURIComponent(ch);status('Approve Crayon login in Telegram. No phone or message permission requested.');};
-  window.addEventListener('message',async e=>{if(e.origin!==API||e.source!==popup||!verifier||e.data?.type!=='crayon-login'||typeof e.data.code!=='string')return;const v=verifier;verifier='';try{const j=await call('session',{code:e.data.code,verifier:v});token=j.token;$('#identity').textContent=j.user.name||'Telegram user '+j.user.id;controls();clearView();status('Private foundation connected. Background alerts and reminders still arrive in Telegram.');timer=setTimeout(()=>{signedOut();status('Session expired. Log in again.');},j.expires_in*1000);const h=await call('history');h.messages.forEach(m=>bubble(m.role,m.text));const a=await call('activity');a.activity.forEach(r=>{if(r.state==='done')r.items.forEach(item);else if(['queued','running','blocked'].includes(r.state))bubble('ai','Web request '+r.state+' ('+r.created_at+'). No automatic retry.');});}catch(err){status(err.message);}});
+  function signedOut(){token='';verifier='';busy=false;clearTimeout(timer);clearTimeout(loginTimer);clearView();$('#identity').textContent='Signed out';controls();}
+  $('#login').onclick=async()=>{popup=window.open('about:blank','crayon-login','width=520,height=720');if(!popup){status('Allow the login popup, then try again.');return;}clearTimeout(loginTimer);verifier=random();const ch=await challenge(verifier);popup.location=API+'/web/auth/start?challenge='+encodeURIComponent(ch);status('Approve Crayon login in Telegram, then return to this tab.');const current=verifier;loginDeadline=Date.now()+300000;loginTimer=setTimeout(()=>finishLogin(current,loginDeadline),1000);};
+  async function finishLogin(v,deadline){
+    if(v!==verifier||loginBusy)return;
+    loginBusy=true;
+    try{
+      const j=await call('login-poll',{verifier:v});
+      if(v!==verifier)return;
+      if(j.pending){
+        if(Date.now()>deadline){verifier='';status('Login expired. Tap Log in with Telegram to start again.');}
+        else loginTimer=setTimeout(()=>finishLogin(v,deadline),3000);
+        return;
+      }
+      verifier='';clearTimeout(loginTimer);token=j.token;
+      $('#identity').textContent=j.user.name||'Telegram user '+j.user.id;controls();clearView();
+      status('Private foundation connected. Background alerts and reminders still arrive in Telegram.');
+      timer=setTimeout(()=>{signedOut();status('Session expired. Log in again.');},j.expires_in*1000);
+      const h=await call('history');h.messages.forEach(m=>bubble(m.role,m.text));
+      const a=await call('activity');a.activity.forEach(r=>{if(r.state==='done')r.items.forEach(item);else if(['queued','running','blocked'].includes(r.state))bubble('ai','Web request '+r.state+' ('+r.created_at+'). No automatic retry.');});
+    }catch(err){status(err.message);if(v===verifier&&Date.now()<deadline)loginTimer=setTimeout(()=>finishLogin(v,deadline),5000);}
+    finally{loginBusy=false;}
+  }
+  window.addEventListener('message',e=>{if(e.origin!==API||e.source!==popup||!verifier||e.data?.type!=='crayon-login')return;clearTimeout(loginTimer);finishLogin(verifier,loginDeadline);});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&verifier){clearTimeout(loginTimer);finishLogin(verifier,loginDeadline);}});
   $('#logout').onclick=async()=>{try{await call('logout',{});}catch(e){}signedOut();status('Logged out. Stored memory/history was not deleted.');};
   $('#new').onclick=()=>{clearView();status('View cleared only. Your saved history and memory are unchanged.');};
   async function ask(){const text=$('#input').value.trim();if(!token||busy||!text)return;busy=true;controls();bubble('user',text);$('#input').value='';const id=random();try{await call('chat',{message:text,request_id:id});status('Queued. The free host can take a moment to wake.');for(let n=0;n<150;n++){await new Promise(r=>setTimeout(r,2000));if(!token)return;const r=await call('result?id='+encodeURIComponent(id));status(r.state==='running'?'Crayon is working. This request will not be automatically repeated.':'Request '+r.state);if(['done','blocked'].includes(r.state)){r.items.forEach(item);if(r.state==='blocked'&&!r.items.length)bubble('ai','Request stopped or was interrupted. Check your records before trying again.');break;}if(n===149)status('Still pending. Check the activity feed after logging in again; no duplicate request was sent.');}}catch(err){bubble('ai',err.message+' If processing started, check activity before retrying.');}finally{busy=false;controls();}}

@@ -144,7 +144,7 @@ def callback(state, code, cookie):
     uid, name = validate_id_token(r.json()['id_token'], data['nonce'])
     handoff = secrets.token_urlsafe(32)
     db.q('DELETE FROM web_login_codes WHERE expires_at<now()', fetch='none')
-    db.q('INSERT INTO web_login_codes(code_hash,challenge,user_id,name,expires_at) VALUES(%s,%s,%s,%s,now()+interval \'60 seconds\')',
+    db.q('INSERT INTO web_login_codes(code_hash,challenge,user_id,name,expires_at) VALUES(%s,%s,%s,%s,now()+interval \'5 minutes\')',
          (digest(handoff), row['challenge'], uid, name), 'none')
     return handoff
 
@@ -156,6 +156,18 @@ def exchange(code, verifier):
                (digest(code), challenge(verifier)), 'one')
     if not row:
         raise AuthError('Login handoff expired or already used.')
+    return _new_session(row)
+
+
+def poll_login(verifier):
+    if not isinstance(verifier, str) or not PATTERN.fullmatch(verifier):
+        raise AuthError('Invalid login verifier.')
+    row = db.q('DELETE FROM web_login_codes WHERE challenge=%s AND expires_at>now() RETURNING user_id,name',
+               (challenge(verifier),), 'one')
+    return _new_session(row) if row else {'pending': True}
+
+
+def _new_session(row):
     token = secrets.token_urlsafe(32)
     db.q('DELETE FROM web_sessions WHERE expires_at<now()', fetch='none')
     db.q('INSERT INTO web_sessions(token_hash,user_id,name,expires_at) VALUES(%s,%s,%s,now()+interval \'30 minutes\')',

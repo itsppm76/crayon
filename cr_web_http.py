@@ -45,7 +45,7 @@ def handle(h, method, raw=b''):
             if set(q)!={'code','state'} or any(len(v)!=1 for v in q.values()): raise A.AuthError('Invalid login response.')
             code=A.callback(q['state'][0],q['code'][0],cookies['crayon_oidc'].value if 'crayon_oidc' in cookies else '')
             nonce=secrets.token_urlsafe(24)
-            body='<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crayon login</title><p>Login checked. Return to your Crayon window.</p><script nonce="'+nonce+'">if(window.opener){window.opener.postMessage('+json.dumps({'type':'crayon-login','code':code})+','+json.dumps(A.origin())+');window.close();}</script>'
+            body='<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crayon login</title><p>Login checked. Return to the original Crayon tab to finish signing in.</p><script nonce="'+nonce+'">if(window.opener){window.opener.postMessage('+json.dumps({'type':'crayon-login','code':code})+','+json.dumps(A.origin())+');window.close();}</script>'
             reply(h,200,body,'text/html',extra={'Set-Cookie':'crayon_oidc=; Path=/web/auth; Max-Age=0; Secure; HttpOnly; SameSite=Lax', 'Content-Security-Policy':"default-src 'none'; script-src 'nonce-"+nonce+"'; base-uri 'none'; frame-ancestors 'none'"})
             return True
         # Same-origin public status has no private contents. Cross-origin API requires exact origin.
@@ -67,6 +67,10 @@ def handle(h, method, raw=b''):
         if method=='POST' and p.path=='/web/session':
             if set(body)!={'code','verifier'}: raise ValueError('Invalid exchange.')
             reply(h,200,A.exchange(body['code'],body['verifier']),cors=True)
+            return True
+        if method=='POST' and p.path=='/web/login-poll':
+            if set(body)!={'verifier'}: raise ValueError('Invalid login poll.')
+            reply(h,200,A.poll_login(body['verifier']),cors=True)
             return True
         user=A.session(h.headers.get('Authorization',''))
         if method=='POST' and p.path=='/web/logout':
