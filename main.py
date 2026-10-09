@@ -126,11 +126,12 @@ class Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         if n<0 or n>(28000000 if self.path.split('?',1)[0]=='/web/upload' else 1500000):return self._send(413,"too large")
         if self.path.split('?',1)[0]=='/web/upload':
-            import cr_web_auth as A
+            import cr_web_auth as A, cr_web_http
             try:
                 if self.headers.get('Origin')!=A.origin():return self._send(403,'Origin not allowed')
                 A.session(self.headers.get('Authorization',''))
-            except A.AuthError:return self._send(401,'Login required')
+            except A.AuthError:
+                return cr_web_http.reply(self,401,{'error':'Log in with Telegram first.'},cors=self.headers.get('Origin')==A.origin())
         raw = self.rfile.read(n) if n else b""
         import cr_web_http
         if cr_web_http.handle(self, "POST", raw): return
