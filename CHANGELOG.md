@@ -15,3 +15,10 @@
 - 317 local tests passed; captured desktop/mobile checks. Owner-device post-fix recovery acceptance pending.
 
 See [release checklist](WEB_RELEASE_CHECKLIST.md) for remaining parity work and deliberately locked features. No paid tier/payment setup, no acceptance-test email/calendar/Sheet write.
+
+## Google login addition (October 9, 21:16 IST)
+
+- Dedicated Google OIDC client with basic identity scopes, state/cookie/nonce/S256 PKCE, signed token checks.
+- Explicit session-bound review links stable Google subject to existing Telegram UID; no email matching, account merge or silent integration permissions.
+- Unlinked users start with Telegram and link once; Google external Testing restrictions remain.
+- 325 local tests passed. Configuration rollout and real owner link/login acceptance still pending at this checkpoint.

@@ -23,6 +23,7 @@ SCHEMA = '''CREATE TABLE IF NOT EXISTS web_requests(
 
 def init():
     auth.init()
+    __import__('cr_web_google_auth').init()
     __import__('cr_web_actions').init()
     __import__('cr_history').init()
     db.q(SCHEMA, fetch='none')

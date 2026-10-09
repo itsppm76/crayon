@@ -48,6 +48,20 @@ def handle(h, method, raw=b''):
             body='<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crayon login</title><p>Login checked. Return to the original Crayon tab to finish signing in.</p><script nonce="'+nonce+'">if(window.opener){window.opener.postMessage('+json.dumps({'type':'crayon-login','code':code})+','+json.dumps(A.origin())+');window.close();}</script>'
             reply(h,200,body,'text/html',extra={'Set-Cookie':'crayon_oidc=; Path=/web/auth; Max-Age=0; Secure; HttpOnly; SameSite=Lax', 'Content-Security-Policy':"default-src 'none'; script-src 'nonce-"+nonce+"'; base-uri 'none'; frame-ancestors 'none'"})
             return True
+        if method=='GET' and p.path in ('/web/google/auth/start','/web/google/auth/callback'):
+            import cr_web_google_auth as GA
+            q=parse_qs(p.query)
+            if p.path.endswith('/start'):
+                if set(q)!={'state'} or len(q['state'])!=1:raise A.AuthError('Invalid Google login start.')
+                url,cookie=GA.start(q['state'][0])
+                reply(h,302,'','text/plain',extra={'Location':url,'Set-Cookie':'crayon_google_oidc='+cookie+'; Path=/web/google/auth; Max-Age=300; Secure; HttpOnly; SameSite=Lax'})
+            else:
+                if set(q)!={'code','state'} or any(len(v)!=1 for v in q.values()):raise A.AuthError('Google login cancelled or invalid.')
+                cookies=SimpleCookie(h.headers.get('Cookie',''));GA.callback(q['state'][0],q['code'][0],cookies['crayon_google_oidc'].value if 'crayon_google_oidc' in cookies else '')
+                nonce=secrets.token_urlsafe(24)
+                page='<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crayon Google login</title><p>Google identity checked. Return to the original Crayon tab to finish signing in or review the account link.</p><script nonce="'+nonce+'">if(window.opener){window.opener.postMessage({type:"crayon-login"},'+json.dumps(A.origin())+');window.close();}</script>'
+                reply(h,200,page,'text/html',extra={'Set-Cookie':'crayon_google_oidc=; Path=/web/google/auth; Max-Age=0; Secure; HttpOnly; SameSite=Lax','Content-Security-Policy':"default-src 'none'; script-src 'nonce-"+nonce+"'; base-uri 'none'; frame-ancestors 'none'"})
+            return True
         # Same-origin public status has no private contents. Cross-origin API requires exact origin.
         if origin != A.origin():
             reply(h,403,{'error':'Origin not allowed.'})
@@ -56,7 +70,7 @@ def handle(h, method, raw=b''):
             reply(h,204,'','text/plain',True,{'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600'})
             return True
         if method=='GET' and p.path=='/web/status':
-            reply(h,200,{'stage':'private foundation','login_configured':A.configured(),'rooms':False,'external_actions':'exact web review only','uploads':True,'computer':False},cors=True)
+            reply(h,200,{'stage':'private foundation','login_configured':A.configured(),'google_login_configured':__import__('cr_web_google_auth').configured(),'rooms':False,'external_actions':'exact web review only','uploads':True,'computer':False},cors=True)
             return True
         if method=='POST':
             if h.headers.get('Content-Type','').split(';')[0]!='application/json' or len(raw)>(28000000 if p.path=='/web/upload' else 40000):
@@ -72,8 +86,20 @@ def handle(h, method, raw=b''):
             if set(body)!={'verifier'}: raise ValueError('Invalid login poll.')
             reply(h,200,A.poll_login(body['verifier']),cors=True)
             return True
+        if method=='POST' and p.path=='/web/google/login-start':
+            if set(body)!={'challenge'}:raise ValueError('Invalid Google login request.')
+            reply(h,200,{'url':__import__('cr_web_google_auth').begin(body['challenge'])},cors=True)
+            return True
         user=A.session(h.headers.get('Authorization',''))
-        if method=='POST' and p.path=='/web/logout':
+        if method=='POST' and p.path=='/web/google/link-start':
+            if set(body)!={'challenge'}:raise ValueError('Invalid Google link request.')
+            reply(h,200,{'url':__import__('cr_web_google_auth').begin(body['challenge'],user,h.headers.get('Authorization',''))},cors=True)
+        elif method=='POST' and p.path=='/web/google/link-poll':
+            if set(body)!={'verifier'}:raise ValueError('Invalid Google link poll.')
+            reply(h,200,__import__('cr_web_google_auth').review(user,h.headers.get('Authorization',''),body['verifier']),cors=True)
+        elif method=='POST' and p.path=='/web/google/link-confirm':
+            reply(h,200,__import__('cr_web_google_auth').confirm(user,h.headers.get('Authorization',''),body),cors=True)
+        elif method=='POST' and p.path=='/web/logout':
             A.logout(h.headers.get('Authorization',''))
             reply(h,200,{'ok':True},cors=True)
         elif method=='GET' and p.path=='/web/me':

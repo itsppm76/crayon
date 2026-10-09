@@ -13,11 +13,11 @@
 <body>
 <header>
   <div class="brand"><img src="./crayon.svg" alt="" width="28" height="28"><span>Crayon</span></div>
-  <button id="menu" class="ghost" aria-expanded="false">Menu</button><span id="identity">Signed out</span><button id="login" class="ghost">Log in with Telegram</button><button id="logout" class="ghost hide">Log out</button><button id="new" class="ghost" title="Start a new chat">Clear view</button>
+  <button id="menu" class="ghost" aria-expanded="false">Menu</button><span id="identity">Signed out</span><button id="login" class="ghost">Log in with Telegram</button><button id="google-login" class="ghost">Log in with Google</button><button id="logout" class="ghost hide">Log out</button><button id="new" class="ghost" title="Start a new chat">Clear view</button>
 </header>
 <nav id="panel" class="hide" aria-label="Crayon controls">
 <button data-command="/help">Help</button><button data-command="my tasks">Tasks</button><button data-command="show my memory">Memory</button><button data-command="my reminders">Reminders</button>
-<button id="history">Full history</button><button id="activity">Web activity / files</button><button id="connections">Connections / actions</button>
+<button id="history">Full history</button><button id="activity">Web activity / files</button><button id="google-link">Link Google login</button><button id="connections">Connections / actions</button>
 <p>History has recorded text. Older Telegram files were not retained. New uploads are read without saving raw bytes.</p>
 </nav>
 <main id="scroll"><button id="older" class="ghost hide">Load earlier messages</button>
@@ -43,6 +43,6 @@
   </form>
   <p class="note">Crayon is an AI and can make mistakes. Chat uses your Telegram identity and memory. Reminders currently arrive in Telegram. Uploads up to 20 MB. Raw uploads are not retained. Google reads and exact-reviewed actions are in Menu. Computer and rooms stay locked. <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
 </footer>
-<script src="./app.js?v=20261009-recovery2"></script>
+<script src="./app.js?v=20261009-google-login1"></script>
 </body>
 </html>

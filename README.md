@@ -16,7 +16,7 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-317_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-325_passed-22A06B?style=for-the-badge)
 ![Pages](https://img.shields.io/badge/GitHub_Pages-web_live-FF6B6B?style=for-the-badge&logo=githubpages&logoColor=white)
 ![Login](https://img.shields.io/badge/Telegram_login-7_days-26A5E4?style=for-the-badge)
 ![Parity](https://img.shields.io/badge/full_parity-in_progress-FFC93C?style=for-the-badge)
@@ -26,6 +26,10 @@
 </div>
 
 ---
+
+## 🔑 Google login update (configuration/acceptance in progress)
+
+Google sign-in uses the same Crayon account, never a new chat history inferred from email. Sign in with Telegram once, choose **Link Google login** in Menu, authenticate with Google, then review the exact Telegram/Google pair. Future Google sign-ins open that same memory/history. Google subject ID is the stable key; collisions are rejected, not merged. Login requests only `openid email profile` and does not connect Gmail/Calendar/Workspace. Current Google Cloud project is in external Testing, so named Google testers only. Provider tokens from login are not retained. Real owner link/login acceptance remains pending. 325 local tests passed.
 
 ## 🌐 Web app: current release
 
