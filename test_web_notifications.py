@@ -45,3 +45,30 @@ def test_web_computer_and_work_dispatch(monkeypatch):
     monkeypatch.setattr(Q,'handle',lambda uid,chat,text,out:out.send(chat,'work_'+str(uid)))
     assert '12' in W.dispatch(12,'User','/computer status')[0]['text']
     assert W.dispatch(12,'User','/work list')[0]['text']=='work_12'
+
+def test_proactive_web_review_validation(monkeypatch):
+    import cr_proactive as P
+    monkeypatch.setattr(P.db,'q',lambda *a,**k:pytest.fail('DB before validation'))
+    for body in ({},{'proactive':True,'digest':'both','quiet_start':21,'quiet_end':9,'accept':False},{'proactive':True,'digest':'both','quiet_start':True,'quiet_end':9,'accept':True}):
+        with pytest.raises(ValueError):P.web_update(1000000000000001,body)
+
+def test_standalone_proactive_private_inapp(monkeypatch):
+    import cr_proactive as P,cr_web_notifications as N
+    from datetime import datetime,timezone
+    uid=1000000000000001
+    settings={'proactive':False,'digest':'morning','delivery':'web','quiet_start':0,'quiet_end':0}
+    def q(sql,params=(),*args,**kw):
+        if sql.startswith('SELECT user_id,settings'):return [{'user_id':uid,'settings':settings.copy()}]
+        if sql.startswith('UPDATE users SET settings=jsonb_set'):
+            import json
+            settings[params[0][0]]=json.loads(params[1]);return
+        raise AssertionError(sql)
+    monkeypatch.setattr(P.db,'q',q)
+    monkeypatch.setattr(P.T,'now_local',lambda uid:datetime(2026,10,10,10,tzinfo=timezone.utc))
+    monkeypatch.setattr(P,'digest_text',lambda uid:'Private digest')
+    sent=[];monkeypatch.setattr(N,'publish',lambda *a:sent.append(a))
+    class Out:
+        def send(self,*a):pytest.fail('No invented Telegram delivery')
+    assert P.tick(Out())==['digest_morning']
+    assert P.tick(Out())==[]
+    assert sent==[(uid,'Private digest','proactive:digest_morning:2026-10-10')]

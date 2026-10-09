@@ -16,6 +16,7 @@ def set_option(uid, chat_id, key, value):
     s = settings(uid)
     s[key] = value
     s["chat_id"] = chat_id
+    s["delivery"] = "telegram"
     db.q("UPDATE users SET settings=%s::jsonb WHERE user_id=%s", (json.dumps(s), uid), "none")
     return settings(uid).get(key) == value
 
@@ -42,14 +43,15 @@ def digest_text(uid):
     return "\n".join(lines)
 
 def tick(out, only_user=None):
-    cond = "user_id=%s" if only_user is not None else "user_id>0 AND user_id<1000000000000000"
+    cond = "user_id=%s" if only_user is not None else "user_id>0"
     rows = db.q("SELECT user_id,settings FROM users WHERE " + cond, (only_user,) if only_user is not None else ())
     sent=[]
     for row in rows:
         uid = row["user_id"]
         s = {**DEFAULT, **(row["settings"] or {})}
         chat_id = s.get("chat_id")
-        if not chat_id or not (s.get("proactive") or s.get("digest") != "off"):
+        web_only=s.get("delivery")=="web"
+        if (not chat_id and not web_only) or not (s.get("proactive") or s.get("digest") != "off"):
             continue
         n = T.now_local(uid)
         if not awake(n.hour, int(s["quiet_start"]), int(s["quiet_end"])):
@@ -69,10 +71,31 @@ def tick(out, only_user=None):
                 messages.append(("proactive_date", "Coming up in the next 2 hours: " + due["text"], date))
         for key,text,value in messages[:2]:
             try:
-                out.send(chat_id,text)
+                if web_only:
+                    __import__("cr_web_notifications").publish(uid,text,"proactive:"+key+":"+value)
+                else:
+                    if only_user is None and chat_id!=uid:continue
+                    out.send(chat_id,text)
                 # Atomic field update preserves concurrent settings changes.
                 db.q("UPDATE users SET settings=jsonb_set(settings,%s,%s::jsonb) WHERE user_id=%s",([key],json.dumps(value),uid),"none")
                 sent.append(key)
             except Exception:
                 pass
     return sent
+
+def web_settings(uid):
+    s=settings(uid)
+    return {k:s.get(k,v) for k,v in DEFAULT.items()} | {'delivery':s.get('delivery','telegram'),'timezone':(mem.get_user(uid) or {}).get('timezone','Asia/Calcutta')}
+
+def web_update(uid,body):
+    if set(body)!={'proactive','digest','quiet_start','quiet_end','accept'} or body['accept'] is not True:raise ValueError('Review private delivery and quiet hours first.')
+    if type(body['proactive']) is not bool or body['digest'] not in ('off','morning','evening','both') or any(type(body[k]) is not int or not 0<=body[k]<=23 for k in ('quiet_start','quiet_end')):raise ValueError('Invalid private notification settings.')
+    # Explicit web setting changes select in-app delivery for this account, even if Telegram-linked.
+    # No private alerts go to inferred/group destinations.
+    mem.touch_user(uid)
+    with db._conn().transaction():
+        db.q('SELECT user_id FROM users WHERE user_id=%s FOR UPDATE',(uid,),'one')
+        for k in DEFAULT:
+            db.q("UPDATE users SET settings=jsonb_set(COALESCE(settings,'{}'::jsonb),%s,%s::jsonb) WHERE user_id=%s",([k],json.dumps(body[k]),uid),'none')
+        db.q("UPDATE users SET settings=jsonb_set(COALESCE(settings,'{}'::jsonb),%s,%s::jsonb) WHERE user_id=%s",(['delivery'],json.dumps('web'),uid),'none')
+    return {'text':'Saved. Optional digests/check-ins go to your private in-app Notifications, not Telegram or system push. Open the app to see them. Free-host timing is best-effort. Quiet hours use your account timezone.','settings':web_settings(uid)}

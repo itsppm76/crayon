@@ -111,7 +111,13 @@ def handle(h, method, raw=b''):
             reply(h,200,__import__('cr_web_email_auth').exchange(body),cors=True)
             return True
         user=A.session(h.headers.get('Authorization',''))
-        if p.path.startswith('/web/rooms'):
+        if p.path=='/web/proactive':
+            import cr_proactive as P
+            if method=='GET':result=P.web_settings(user['user_id'])
+            elif method=='POST':result=P.web_update(user['user_id'],body)
+            else:raise ValueError('Invalid settings action.')
+            reply(h,200,result,cors=True)
+        elif p.path.startswith('/web/rooms'):
             import cr_web_rooms as R
             uid=user['user_id']
             if method=='GET' and p.path=='/web/rooms':result={'rooms':R.list_for(uid),'notice':R.AUDIENCE}
