@@ -45,3 +45,5 @@ footer{padding:8px 16px calc(12px + env(safe-area-inset-bottom));background:line
 .user .media-missing,.user .message-time{color:#d5cbd1}
 
 .typing-bubble{display:flex;gap:10px;align-items:center;color:var(--mut);font-size:13px;padding:10px 0}.dots{white-space:nowrap}
+
+dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}dialog button{margin:8px 6px 0 0;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font:inherit}
