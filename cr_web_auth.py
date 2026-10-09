@@ -71,7 +71,7 @@ def _cipher():
         raise AuthError('Web login is not configured safely.') from None
 
 
-def begin(handshake):
+def begin(handshake,user=None,header=None):
     if not configured():
         raise AuthError('Telegram web login setup is not active yet.')
     if not isinstance(handshake, str) or not re.fullmatch(r'[A-Za-z0-9_-]{43}', handshake):
@@ -79,15 +79,30 @@ def begin(handshake):
     origin()
     init()
     state, cookie, verifier, nonce = (secrets.token_urlsafe(32) for _ in range(4))
-    blob = _cipher().encrypt(json.dumps({'state': state, 'verifier': verifier, 'nonce': nonce}).encode()).decode()
+    payload={'state':state,'verifier':verifier,'nonce':nonce}
+    if user:
+        if not __import__('cr_accounts').standalone(user['user_id']):raise AuthError('This consolidation path starts from a standalone Google/email account.')
+        payload.update(uid=user['user_id'],name=user['name'],session=digest(header[7:]))
+    blob = _cipher().encrypt(json.dumps(payload).encode()).decode()
     db.q('DELETE FROM web_login_states WHERE expires_at<now()', fetch='none')
     db.q('INSERT INTO web_login_states(state_hash,cookie_hash,challenge,encrypted,expires_at) VALUES(%s,%s,%s,%s,now()+interval \'5 minutes\')',
-         (digest(state), digest(cookie), handshake, blob), 'none')
+         (digest(state), '' if user else digest(cookie), handshake, blob), 'none')
     url = ISSUER + '/auth?' + urlencode({'client_id': C.env('TELEGRAM_OIDC_CLIENT_ID'),
         'redirect_uri': C.PUBLIC_URL.rstrip('/') + '/web/auth/callback', 'response_type': 'code',
         'scope': 'openid profile', 'state': state, 'nonce': nonce, 'code_challenge': challenge(verifier),
         'code_challenge_method': 'S256'})
-    return url, cookie
+    return (C.PUBLIC_URL.rstrip('/')+'/web/auth/start?merge_state='+state,'') if user else (url,cookie)
+
+
+def start_merge(state):
+    if C.env('CRAYON_ACCOUNT_MERGE_ENABLED')!='on':raise AuthError('Account consolidation is not enabled yet.')
+    if not isinstance(state,str) or not PATTERN.fullmatch(state):raise AuthError('Invalid merge login start.')
+    cookie=secrets.token_urlsafe(32)
+    row=db.q("UPDATE web_login_states SET cookie_hash=%s WHERE state_hash=%s AND cookie_hash='' AND expires_at>now() RETURNING encrypted",(digest(cookie),digest(state)),'one')
+    if not row:raise AuthError('Merge login start expired or already used.')
+    data=json.loads(_cipher().decrypt(row['encrypted'].encode()))
+    if 'uid' not in data:raise AuthError('Original account binding missing.')
+    return ISSUER+'/auth?'+urlencode({'client_id':C.env('TELEGRAM_OIDC_CLIENT_ID'),'redirect_uri':C.PUBLIC_URL.rstrip('/')+'/web/auth/callback','response_type':'code','scope':'openid profile','state':state,'nonce':data['nonce'],'code_challenge':challenge(data['verifier']),'code_challenge_method':'S256'}),cookie
 
 
 class TelegramJWKClient(jwt.PyJWKClient):
@@ -142,6 +157,13 @@ def callback(state, code, cookie):
               'client_id': C.env('TELEGRAM_OIDC_CLIENT_ID'), 'code_verifier': data['verifier']}, timeout=20)
     r.raise_for_status()
     uid, name = validate_id_token(r.json()['id_token'], data['nonce'])
+    if 'uid' in data:
+        if C.env('CRAYON_ACCOUNT_MERGE_ENABLED')!='on':raise AuthError('Consolidation is not enabled. Nothing moved.')
+        active=db.q('SELECT user_id FROM web_sessions WHERE token_hash=%s AND user_id=%s AND expires_at>now()',(data['session'],data['uid']),'one')
+        if not active:raise AuthError('Original session ended. Start the consolidation review again.')
+        # Both IDs are authenticated: existing signed-in session plus verified OIDC ID.
+        __import__('cr_account_merge').prepare_verified_review({'user_id':data['uid'],'name':data['name']},None,row['challenge'],uid,name,session_hash=data['session'])
+        return 'review'
     handoff = secrets.token_urlsafe(32)
     db.q('DELETE FROM web_login_codes WHERE expires_at<now()', fetch='none')
     db.q('INSERT INTO web_login_codes(code_hash,challenge,user_id,name,expires_at) VALUES(%s,%s,%s,%s,now()+interval \'5 minutes\')',

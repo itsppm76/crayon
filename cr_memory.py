@@ -58,15 +58,15 @@ def facts(uid, limit=60):
     return db.q("SELECT key,value,category,updated_at FROM facts WHERE user_id=%s ORDER BY updated_at DESC LIMIT %s", (uid, limit))
 
 
-def set_fact(uid, key, value, category="general", source="chat"):
+def set_fact(uid, key, value, category="general", source="chat", expected_epoch=None):
     key = re.sub(r"[^a-z0-9_]+", "_", key.lower()).strip("_")[:60]
     value = redact(value).strip()[:400]
     if not key or not value or looks_like_secret(value):
         return False
     db.q("""INSERT INTO facts(user_id,key,value,category,source)
-            SELECT %s,%s,%s,%s,%s WHERE EXISTS (SELECT 1 FROM users WHERE user_id=%s)
+            SELECT %s,%s,%s,%s,%s WHERE EXISTS (SELECT 1 FROM users WHERE user_id=%s AND (%s::bigint IS NULL OR memory_epoch=%s))
             ON CONFLICT(user_id,key) DO UPDATE SET value=EXCLUDED.value, category=EXCLUDED.category,
-            source=EXCLUDED.source, updated_at=now()""", (uid, key, value, category, source, uid), "none")
+            source=EXCLUDED.source, updated_at=now() WHERE EXISTS (SELECT 1 FROM users WHERE user_id=%s AND (%s::bigint IS NULL OR memory_epoch=%s))""", (uid, key, value, category, source, uid, expected_epoch, expected_epoch, uid, expected_epoch, expected_epoch), "none")
     # read-back: only report success if the row really holds the value
     row = db.q("SELECT value FROM facts WHERE user_id=%s AND key=%s", (uid, key), "one")
     return bool(row and row["value"] == value)
@@ -118,15 +118,16 @@ def extract_async(uid, user_text, reply):
 
 def _extract(uid, user_text, reply):
     try:
+        epoch=(get_user(uid) or {}).get('memory_epoch',0)
         existing = ", ".join(f["key"] for f in facts(uid, 80)) or "none"
         out = llm.ask_json(EXTRACT_PROMPT.format(existing=existing, user=user_text[:1500], assistant=reply[:600]),
                            default={"facts": [], "forget": []})
         n = 0
-        if not get_user(uid):  # user wiped their data while we were thinking
+        if not get_user(uid) or get_user(uid).get('memory_epoch',0)!=epoch:  # deletion/consolidation during model work
             return
         for f in (out.get("facts") or [])[:6]:
             if isinstance(f, dict) and f.get("key") and f.get("value"):
-                if set_fact(uid, str(f["key"]), str(f["value"]), str(f.get("category", "general")), "chat"):
+                if set_fact(uid, str(f["key"]), str(f["value"]), str(f.get("category", "general")), "chat", expected_epoch=epoch):
                     n += 1
         # Destructive changes are only made by explicit commands or confirmed tools.
         if n:
@@ -152,7 +153,7 @@ def maybe_summarize(uid):
                            temperature=0.2, max_tokens=500, thinking_budget=0)
         s = redact(out["text"])[:1500]
         if s:
-            db.q("UPDATE users SET summary=%s, summary_upto=%s WHERE user_id=%s", (s, old[-1]["id"], uid), "none")
+            db.q("UPDATE users SET summary=%s, summary_upto=%s WHERE user_id=%s AND memory_epoch=%s", (s, old[-1]["id"], uid, u.get("memory_epoch",0)), "none")
     except Exception as e:
         log.warning("summary failed: %s", redact(str(e))[:200])
 
@@ -182,6 +183,7 @@ def delete_all(uid):
     db.q("DELETE FROM kv WHERE key LIKE %s OR (key LIKE 'group_review_%%' AND value->>'uid'=%s)", ('group_audience_v1_'+str(uid)+'_%',str(uid)), 'none')
     import cr_web_app
     cr_web_app.init()
+    __import__('cr_account_merge').delete_review_data(uid)
     for table in ("web_requests", "web_sessions", "web_login_codes", "web_action_reviews", "channel_history", "web_google_identities", "web_google_reviews", "account_identities", "web_email_sessions", "web_email_reviews"):
         db.q("DELETE FROM " + table + " WHERE user_id=%s", (uid,), "none")
     db.q("DELETE FROM users WHERE user_id=%s", (uid,), "none")  # first: blocks late background writes

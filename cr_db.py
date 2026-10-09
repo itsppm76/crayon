@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users(
   user_id BIGINT PRIMARY KEY, name TEXT DEFAULT '', created_at TIMESTAMPTZ DEFAULT now(),
   last_seen TIMESTAMPTZ DEFAULT now(), tz TEXT DEFAULT '', summary TEXT DEFAULT '',
   summary_upto BIGINT DEFAULT 0, settings JSONB DEFAULT '{}'::jsonb);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS memory_epoch BIGINT NOT NULL DEFAULT 0;
 CREATE TABLE IF NOT EXISTS facts(
   id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL,
   category TEXT DEFAULT 'general', source TEXT DEFAULT 'chat', updated_at TIMESTAMPTZ DEFAULT now(),
@@ -88,6 +89,9 @@ def q(sql, params=(), fetch="all"):
                 return cur.fetchone()
             return cur.fetchall()
         except (psycopg.OperationalError, psycopg.InterfaceError):
+            # Never reconnect/retry one statement from inside an atomic transaction.
+            # A reconnect uses autocommit and could turn a failed merge into partial writes.
+            if getattr(getattr(_local,'c',None),'_num_transactions',0):raise
             _local.c = None
             if attempt:
                 raise

@@ -11,7 +11,7 @@
   const random=()=>{const b=new Uint8Array(32);crypto.getRandomValues(b);return btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
   const challenge=async s=>btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   function status(text){$('#status').textContent=text;}
-  function controls(){ document.body.classList.toggle('signed-out',!token);$('#auth-card').classList.toggle('hide',!!token);$('#auth-open').classList.toggle('hide',!!token);$('#signedin-hero').classList.toggle('hide',!token);$('#prompt-chips').classList.toggle('hide',!token); $('#attach').disabled=!token||busy;$('#input').disabled=!token;$('#send').disabled=!token||busy||!$('#input').value.trim();$('#login').classList.toggle('hide',!!token);$('#logout').classList.toggle('hide',!token);$('#google-login').classList.toggle('hide',!!token);$('#google-link').disabled=!token;$('#email-link').disabled=!token; }
+  function controls(){ document.body.classList.toggle('signed-out',!token);$('#auth-card').classList.toggle('hide',!!token);$('#auth-open').classList.toggle('hide',!!token);$('#signedin-hero').classList.toggle('hide',!token);$('#prompt-chips').classList.toggle('hide',!token); $('#attach').disabled=!token||busy;$('#input').disabled=!token;$('#send').disabled=!token||busy||!$('#input').value.trim();$('#login').classList.toggle('hide',!!token);$('#logout').classList.toggle('hide',!token);$('#google-login').classList.toggle('hide',!!token);$('#google-link').disabled=!token;$('#email-link').disabled=!token;$('#telegram-merge').disabled=!token; }
   function clearView(){historyBefore=null;historyMore=false;historyPaged=false;lastHistoryKey='';$('#older').classList.add('hide');urls.forEach(URL.revokeObjectURL);urls.length=0;$('#log').replaceChildren();$('#hero').classList.remove('hide');}
   function bubble(role,text){$('#hero').classList.add('hide');const row=document.createElement('div');row.className='msg '+(role==='user'?'user':'ai');if(role!=='user'){const i=document.createElement('img');i.src='./crayon.svg';i.alt='';i.className='av';row.append(i);}const b=document.createElement('div');b.className='bubble';b.textContent=text;row.append(b);$('#log').append(row);$('#scroll').scrollTop=$('#scroll').scrollHeight;return b;}
   function item(x){if(x.kind==='text')bubble('ai',x.text);else if(x.kind==='artifact'){const b=bubble('ai','');const bytes=Uint8Array.from(atob(x.data),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([bytes],{type:x.mime}));urls.push(url);if(['image/png','image/jpeg','image/webp'].includes(x.mime)){const img=document.createElement('img');img.src=url;img.alt=x.name;img.className='artifact-image';b.append(img);}const a=document.createElement('a');a.href=url;a.download=x.name;a.textContent='Download '+x.name;a.className='artifact';b.append(a);}}
@@ -22,6 +22,7 @@
   let emailClientPromise=null;
   $('#email-link').onclick=()=>{if(!token)return status('Sign in first.');$('#auth-email').value=prompt('Email address to link')||'';emailLogin(true);};
   $('#email-login').onclick=()=>emailLogin(false);
+  $('#telegram-merge').onclick=()=>{if(!token)return status('Sign in first.');startLogin('merge');};
   async function emailLogin(linkMode){
     const email=$('#auth-email').value.trim();if(!$('#auth-email').reportValidity()||!email)return status('Enter your email address.');
     try{
@@ -56,18 +57,25 @@
       button('Cancel',async()=>{await client.clear();d.close();});
     }catch(e){emailClientPromise=null;status(e.message);}
   }
-  async function startLogin(mode){loginMode=mode;popup=window.open('about:blank','crayon-login','width=520,height=720');if(!popup){status('Allow the login popup, then try again.');return;}clearTimeout(loginTimer);verifier=random();const ch=await challenge(verifier);try{popup.location=mode==='telegram'?API+'/web/auth/start?challenge='+encodeURIComponent(ch):(await call('google/'+(mode==='link'?'link-start':'login-start'),{challenge:ch})).url;}catch(e){popup.close();verifier='';status(e.message);return;}status(mode==='telegram'?'Approve Crayon login in Telegram, then return to this tab.':mode==='link'?'Choose Google, then return here to review the exact account link.':'Choose your Google account. Existing Telegram users can link Google from Menu while signed in.');const current=verifier;loginDeadline=Date.now()+300000;loginTimer=setTimeout(()=>finishLogin(current,loginDeadline),1000);};
+
+  function mergeReview(j){
+    const d=dialog('Review account consolidation');d.classList.add('auth-link-dialog');const p=document.createElement('pre');p.className='review';p.textContent=j.text;d.append(p);
+    const choices={};for(const conflict of j.conflicts){const label=document.createElement('label');label.textContent='Fact '+conflict.key;const select=document.createElement('select');for(const [value,text] of [['','Choose one explicitly'],['source','Keep source: '+conflict.source],['target','Keep Telegram: '+conflict.target]]){const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option);}select.onchange=()=>{if(select.value)choices[conflict.key]=select.value;else delete choices[conflict.key];};label.append(select);d.append(label);}
+    const buttons=[];for(const decision of ['confirm','cancel']){const b=document.createElement('button');b.textContent=decision==='confirm'?'Merge exactly as reviewed':'Keep separate accounts';b.className='ghost';buttons.push(b);b.onclick=async()=>{if(decision==='confirm'&&Object.keys(choices).length!==j.conflicts.length){status('Choose a value for every fact conflict.');return;}buttons.forEach(x=>x.disabled=true);try{const r=await call('account-merge/confirm',{review_id:j.review_id,hash:j.hash,decision,choices});if(decision==='confirm'){signedOut();clearView();}status(r.text);d.close();}catch(e){p.textContent=e.message+' No merge completion confirmed. Start a fresh review before retrying.';}};d.append(b);}
+  }
+  async function startLogin(mode){loginMode=mode;popup=window.open('about:blank','crayon-login','width=520,height=720');if(!popup){status('Allow the login popup, then try again.');return;}clearTimeout(loginTimer);verifier=random();const ch=await challenge(verifier);try{popup.location=mode==='telegram'?API+'/web/auth/start?challenge='+encodeURIComponent(ch):(await call(mode==='merge'?'account-merge/start':'google/'+(mode==='link'?'link-start':'login-start'),{challenge:ch})).url;}catch(e){popup.close();verifier='';status(e.message);return;}status(mode==='merge'?'Approve Telegram identity, then return here for an exact consolidation review. Nothing moves before confirmation.':mode==='telegram'?'Approve Crayon login in Telegram, then return to this tab.':mode==='link'?'Choose Google, then return here to review the exact account link.':'Choose your Google account. Existing Telegram users can link Google from Menu while signed in.');const current=verifier;loginDeadline=Date.now()+300000;loginTimer=setTimeout(()=>finishLogin(current,loginDeadline),1000);};
   async function finishLogin(v,deadline){
     if(v!==verifier||loginBusy)return;
     loginBusy=true;
     try{
-      const j=await call(loginMode==='link'?'google/link-poll':'login-poll',{verifier:v});
+      const j=await call(loginMode==='merge'?'account-merge/poll':loginMode==='link'?'google/link-poll':'login-poll',{verifier:v});
       if(v!==verifier)return;
       if(j.pending){
         if(Date.now()>deadline){verifier='';status('Sign-in expired. Try again.');}
         else loginTimer=setTimeout(()=>finishLogin(v,deadline),3000);
         return;
       }
+      if(loginMode==='merge'){verifier='';clearTimeout(loginTimer);mergeReview(j);return;}
       if(loginMode==='link'){verifier='';clearTimeout(loginTimer);const d=dialog('Link your Google account');d.classList.add('auth-link-dialog');const pre=document.createElement('pre');pre.textContent=j.text;d.append(pre);for(const decision of ['confirm','cancel']){const b=document.createElement('button');b.textContent=decision==='confirm'?'Link these accounts':'Cancel';b.onclick=async()=>{b.disabled=true;try{const r=await call('google/link-confirm',{review_id:j.review_id,hash:j.hash,decision});status(r.text);d.close();}catch(e){pre.textContent=e.message;}};d.append(b);}return;}
       verifier='';clearTimeout(loginTimer);token=j.token;saveSession(token,Date.now()+j.expires_in*1000);
       $('#identity').textContent=j.user.name||'Crayon user';controls();clearView();

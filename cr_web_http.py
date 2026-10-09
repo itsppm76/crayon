@@ -45,8 +45,9 @@ def handle(h, method, raw=b''):
     try:
         if method=='GET' and p.path=='/web/auth/start':
             q=parse_qs(p.query)
-            if set(q)!={'challenge'} or len(q['challenge'])!=1: raise ValueError('Invalid login start.')
-            url,cookie=A.begin(q['challenge'][0])
+            if set(q)=={'merge_state'} and len(q['merge_state'])==1:url,cookie=A.start_merge(q['merge_state'][0])
+            elif set(q)=={'challenge'} and len(q['challenge'])==1:url,cookie=A.begin(q['challenge'][0])
+            else:raise ValueError('Invalid login start.')
             reply(h,302,'','text/plain',extra={'Location':url,'Set-Cookie':'crayon_oidc='+cookie+'; Path=/web/auth; Max-Age=300; Secure; HttpOnly; SameSite=Lax'})
             return True
         if method=='GET' and p.path=='/web/auth/callback':
@@ -110,7 +111,20 @@ def handle(h, method, raw=b''):
             reply(h,200,__import__('cr_web_email_auth').exchange(body),cors=True)
             return True
         user=A.session(h.headers.get('Authorization',''))
-        if method=='POST' and p.path=='/web/email/link-preview':
+        if p.path.startswith('/web/account-merge/'):
+            if C.env('CRAYON_ACCOUNT_MERGE_ENABLED')!='on':raise ValueError('Reviewed account consolidation is not enabled yet. Nothing moved.')
+            import cr_account_merge as M
+            if method!='POST':raise ValueError('Invalid account merge method.')
+            if p.path=='/web/account-merge/start':
+                if set(body)!={'challenge'}:raise ValueError('Invalid merge start.')
+                url,cookie=A.begin(body['challenge'],user,h.headers.get('Authorization',''))
+                reply(h,200,{'url':url},cors=True)
+            elif p.path=='/web/account-merge/poll':
+                if set(body)!={'verifier'}:raise ValueError('Invalid merge poll.')
+                reply(h,200,M.poll_verified_review(user,h.headers.get('Authorization',''),body['verifier']),cors=True)
+            elif p.path=='/web/account-merge/confirm':reply(h,200,M.confirm_verified_review(user,h.headers.get('Authorization',''),body),cors=True)
+            else:raise ValueError('Invalid merge route.')
+        elif method=='POST' and p.path=='/web/email/link-preview':
             reply(h,200,__import__('cr_web_email_auth').link_preview(user,h.headers.get('Authorization',''),body),cors=True)
         elif method=='POST' and p.path=='/web/email/link-confirm':
             reply(h,200,__import__('cr_web_email_auth').link_confirm(user,h.headers.get('Authorization',''),body),cors=True)
