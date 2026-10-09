@@ -8,3 +8,5 @@ Pillow>=11,<13
 langchain-core==1.6.9
 langchain-google-genai==4.4.0
 langchain-openai==1.7.0
+
+PyJWT[crypto]>=2.10,<3

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crayon - ask me anything</title>
+<meta name="description" content="Crayon is a friendly AI assistant. Open the page and ask anything.">
+<meta property="og:title" content="Crayon">
+<meta property="og:description" content="A friendly AI assistant. Ask me anything.">
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><img src="./crayon.svg" alt="" width="28" height="28"><span>Crayon</span></div>
+  <span id="identity">Signed out</span><button id="login" class="ghost">Log in with Telegram</button><button id="logout" class="ghost hide">Log out</button><button id="new" class="ghost" title="Start a new chat">Clear view</button>
+</header>
+<main id="scroll">
+  <section id="hero">
+    <img src="./crayon.svg" alt="Crayon" class="face" width="96" height="96">
+    <h1>What can I help with?</h1>
+    <p class="sub">Your Crayon, now on the web. Log in to share your existing Telegram memory and history.</p>
+    <div class="chips">
+      <button class="chip">Explain something simply</button>
+      <button class="chip">Help me write a message</button>
+      <button class="chip" data-prompt="my tasks">My tasks</button>
+      <button class="chip" data-prompt="show my memory">My memory</button>
+    </div>
+  </section>
+  <p id="status" role="status"></p><section id="log" aria-live="polite"></section>
+</main>
+<footer>
+  <form id="form" autocomplete="off">
+    <textarea id="input" rows="1" maxlength="8000" disabled placeholder="Message Crayon" aria-label="Message Crayon"></textarea>
+    <button id="send" type="submit" aria-label="Send">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </form>
+  <p class="note">Crayon is an AI and can make mistakes. Chat uses your Telegram identity and memory. Reminders currently arrive in Telegram. Google, sends, uploads, computer and rooms are being connected next. <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
+</footer>
+<script src="./app.js"></script>
+</body>
+</html>

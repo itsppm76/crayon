@@ -87,14 +87,14 @@ def handle_confirmation(uid, chat_id, text):
     return f"I tried to do this ({p['label']}) but couldn't confirm it worked. Nothing is guaranteed; please check."
 
 
-def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False):
+def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False, channel_name="telegram"):
     """Handle one user message. Returns (reply_text, meta)."""
     meta = {"tools": [], "failed": [], "model": "", "user_text": text}
     degraded = False
     try:
         mem.touch_user(uid, name)
         mem.add_message(uid, "user", text)
-        conf = None if readonly else handle_confirmation(uid, chat_id, text)
+        conf = None if readonly or channel_name == "web" else handle_confirmation(uid, chat_id, text)
         if conf is not None:
             mem.add_message(uid, "assistant", conf)
             meta["confirmation"] = True
@@ -107,6 +107,8 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False):
     if not contents or contents[-1]["role"] != "user":
         contents.append(llm.user(text))
     system = build_system(uid) if not degraded and chat_id>=0 else SYSTEM.format(now=datetime.now().strftime("%c"), tz="", memory="(Group request: no private history or ambient personal memory. Only retrieve this requester's records when explicitly asked here.)" if chat_id<0 else "(memory is temporarily unavailable)")
+    if channel_name == "web":
+        system += "\nYou are answering in the authenticated web app. Existing Telegram identity/memory is shared. Reminders currently arrive in the Telegram DM. No Google, external sends, browser/computer, scheduled model jobs or group access from web yet. Never claim those happened. Do not use Telegram formatting or say a file was delivered to Telegram."
     ctx = {"uid": uid, "chat_id": chat_id, "meta": meta, "readonly":readonly}
     if goal_mode and not readonly:
         plan = llm.ask_json("Make 2-4 concrete steps for this goal using only Crayon's available tools. "

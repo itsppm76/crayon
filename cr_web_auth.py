@@ -1,0 +1,158 @@
+"""Server-side Telegram OIDC and one-use, verifier-bound browser handoff.
+No bot/client secrets, provider tokens or long-lived sessions in the Pages app.
+"""
+import base64
+import hashlib
+import hmac
+import json
+import re
+import secrets
+import time
+from urllib.parse import urlencode
+
+import httpx
+import jwt
+from cryptography.fernet import Fernet
+
+import cr_config as C
+import cr_db as db
+
+ISSUER = 'https://oauth.telegram.org'
+PATTERN = re.compile(r'[A-Za-z0-9_-]{40,100}')
+SCHEMA = '''
+CREATE TABLE IF NOT EXISTS web_login_states(
+ state_hash TEXT PRIMARY KEY, cookie_hash TEXT NOT NULL, challenge TEXT NOT NULL,
+ encrypted TEXT NOT NULL, expires_at TIMESTAMPTZ NOT NULL);
+CREATE TABLE IF NOT EXISTS web_login_codes(
+ code_hash TEXT PRIMARY KEY, challenge TEXT NOT NULL, user_id BIGINT NOT NULL,
+ name TEXT NOT NULL DEFAULT '', expires_at TIMESTAMPTZ NOT NULL);
+CREATE TABLE IF NOT EXISTS web_sessions(
+ token_hash TEXT PRIMARY KEY, user_id BIGINT NOT NULL, name TEXT NOT NULL DEFAULT '',
+ created_at TIMESTAMPTZ DEFAULT now(), expires_at TIMESTAMPTZ NOT NULL);
+'''
+
+
+class AuthError(Exception):
+    pass
+
+
+def origin():
+    value = C.env('CRAYON_WEB_ORIGIN', 'https://itsppm76.github.io').rstrip('/')
+    from urllib.parse import urlsplit
+    p = urlsplit(value)
+    if p.scheme != 'https' or not p.hostname or p.path or p.query or p.fragment or p.username or p.port:
+        raise AuthError('Web origin is not configured safely.')
+    return value
+
+
+def configured():
+    return bool(C.env('TELEGRAM_OIDC_CLIENT_ID') and C.env('TELEGRAM_OIDC_CLIENT_SECRET')
+                and C.env('CRAYON_WEB_ENCRYPTION_KEY') and db.available())
+
+
+def init():
+    for stmt in SCHEMA.split(';'):
+        if stmt.strip():
+            db.q(stmt, fetch='none')
+
+
+def digest(value):
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+def challenge(value):
+    return base64.urlsafe_b64encode(hashlib.sha256(value.encode()).digest()).rstrip(b'=').decode()
+
+
+def _cipher():
+    try:
+        return Fernet(C.env('CRAYON_WEB_ENCRYPTION_KEY').encode())
+    except Exception:
+        raise AuthError('Web login is not configured safely.') from None
+
+
+def begin(handshake):
+    if not configured():
+        raise AuthError('Telegram web login setup is not active yet.')
+    if not isinstance(handshake, str) or not re.fullmatch(r'[A-Za-z0-9_-]{43}', handshake):
+        raise AuthError('Invalid login request.')
+    origin()
+    init()
+    state, cookie, verifier, nonce = (secrets.token_urlsafe(32) for _ in range(4))
+    blob = _cipher().encrypt(json.dumps({'state': state, 'verifier': verifier, 'nonce': nonce}).encode()).decode()
+    db.q('DELETE FROM web_login_states WHERE expires_at<now()', fetch='none')
+    db.q('INSERT INTO web_login_states(state_hash,cookie_hash,challenge,encrypted,expires_at) VALUES(%s,%s,%s,%s,now()+interval \'5 minutes\')',
+         (digest(state), digest(cookie), handshake, blob), 'none')
+    url = ISSUER + '/auth?' + urlencode({'client_id': C.env('TELEGRAM_OIDC_CLIENT_ID'),
+        'redirect_uri': C.PUBLIC_URL.rstrip('/') + '/web/auth/callback', 'response_type': 'code',
+        'scope': 'openid profile', 'state': state, 'nonce': nonce, 'code_challenge': challenge(verifier),
+        'code_challenge_method': 'S256'})
+    return url, cookie
+
+
+def validate_id_token(token, nonce):
+    # Strict RS256 only. Never trust token-supplied jku/x5u URLs or algorithms.
+    client = jwt.PyJWKClient(ISSUER + '/.well-known/jwks.json', timeout=10)
+    key = client.get_signing_key_from_jwt(token).key
+    claims = jwt.decode(token, key, algorithms=['RS256'], audience=C.env('TELEGRAM_OIDC_CLIENT_ID'),
+                        issuer=ISSUER, options={'require': ['exp', 'iat', 'iss', 'aud', 'sub', 'nonce', 'id']}, leeway=5)
+    if not hmac.compare_digest(str(claims['nonce']), nonce):
+        raise AuthError('Login nonce did not match.')
+    if claims['iat'] > time.time() + 5 or claims['iat'] < time.time() - 300:
+        raise AuthError('Login token is too old.')
+    uid = claims['id']
+    if type(uid) is not int or not 0 < uid < 10**13:
+        raise AuthError('Telegram profile ID missing or invalid.')
+    return uid, str(claims.get('name') or '')[:100]
+
+
+def callback(state, code, cookie):
+    if not all(isinstance(x, str) and PATTERN.fullmatch(x) for x in (state, cookie)) or not isinstance(code, str) or not 1 <= len(code) <= 2048:
+        raise AuthError('Invalid or expired login.')
+    # Atomic consumption also prevents exchange retry after uncertain token response.
+    row = db.q('DELETE FROM web_login_states WHERE state_hash=%s AND cookie_hash=%s AND expires_at>now() RETURNING *',
+               (digest(state), digest(cookie)), 'one')
+    if not row:
+        raise AuthError('Login expired or was already used. Start again.')
+    data = json.loads(_cipher().decrypt(row['encrypted'].encode()))
+    if not hmac.compare_digest(data['state'], state):
+        raise AuthError('Login binding failed.')
+    r = httpx.post(ISSUER + '/token', auth=(C.env('TELEGRAM_OIDC_CLIENT_ID'), C.env('TELEGRAM_OIDC_CLIENT_SECRET')),
+        data={'grant_type': 'authorization_code', 'code': code, 'redirect_uri': C.PUBLIC_URL.rstrip('/') + '/web/auth/callback',
+              'client_id': C.env('TELEGRAM_OIDC_CLIENT_ID'), 'code_verifier': data['verifier']}, timeout=20)
+    r.raise_for_status()
+    uid, name = validate_id_token(r.json()['id_token'], data['nonce'])
+    handoff = secrets.token_urlsafe(32)
+    db.q('DELETE FROM web_login_codes WHERE expires_at<now()', fetch='none')
+    db.q('INSERT INTO web_login_codes(code_hash,challenge,user_id,name,expires_at) VALUES(%s,%s,%s,%s,now()+interval \'60 seconds\')',
+         (digest(handoff), row['challenge'], uid, name), 'none')
+    return handoff
+
+
+def exchange(code, verifier):
+    if not all(isinstance(x, str) and PATTERN.fullmatch(x) for x in (code, verifier)):
+        raise AuthError('Invalid login handoff.')
+    row = db.q('DELETE FROM web_login_codes WHERE code_hash=%s AND challenge=%s AND expires_at>now() RETURNING user_id,name',
+               (digest(code), challenge(verifier)), 'one')
+    if not row:
+        raise AuthError('Login handoff expired or already used.')
+    token = secrets.token_urlsafe(32)
+    db.q('DELETE FROM web_sessions WHERE expires_at<now()', fetch='none')
+    db.q('INSERT INTO web_sessions(token_hash,user_id,name,expires_at) VALUES(%s,%s,%s,now()+interval \'30 minutes\')',
+         (digest(token), row['user_id'], row['name']), 'none')
+    db.audit(row['user_id'], 'web_login')
+    return {'token': token, 'expires_in': 1800, 'user': {'id': row['user_id'], 'name': row['name']}}
+
+
+def session(header):
+    if not isinstance(header, str) or not header.startswith('Bearer ') or not PATTERN.fullmatch(header[7:]):
+        raise AuthError('Log in with Telegram first.')
+    row = db.q('SELECT user_id,name FROM web_sessions WHERE token_hash=%s AND expires_at>now()', (digest(header[7:]),), 'one')
+    if not row:
+        raise AuthError('Your web session expired. Log in again.')
+    return row
+
+
+def logout(header):
+    if isinstance(header, str) and header.startswith('Bearer '):
+        db.q('DELETE FROM web_sessions WHERE token_hash=%s', (digest(header[7:]),), 'none')

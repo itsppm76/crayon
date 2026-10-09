@@ -47,7 +47,14 @@ class Handler(BaseHTTPRequestHandler):
         tok = self.headers.get("Authorization", "").replace("Bearer ", "")
         return bool(C.ADMIN_TOKEN) and tok == C.ADMIN_TOKEN
 
+    def do_OPTIONS(self):
+        import cr_web_http
+        if not cr_web_http.handle(self, "OPTIONS"):
+            return self._send(404,"not found")
+
     def do_GET(self):
+        import cr_web_http
+        if cr_web_http.handle(self, "GET"): return
         if self.path.split("?",1)[0]=="/whatsapp/webhook":
             from urllib.parse import parse_qs,urlsplit
             import cr_whatsapp as W
@@ -119,6 +126,8 @@ class Handler(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         if n>1500000:return self._send(413,"too large")
         raw = self.rfile.read(n) if n else b""
+        import cr_web_http
+        if cr_web_http.handle(self, "POST", raw): return
         try:
             body = json.loads(raw or b"{}")
         except Exception:
@@ -195,6 +204,8 @@ def main():
         cr_whatsapp.init()
         import cr_connections
         cr_connections.init()
+        import cr_web_app
+        cr_web_app.init()
     except Exception as e:
         log.error("database init failed (running without persistence): %s", redact(str(e))[:200])
     if not C.TELEGRAM_TOKEN:

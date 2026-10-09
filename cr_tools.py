@@ -26,7 +26,9 @@ def tool(name, description, props=None, required=None, risk=RISK_SAFE):
 
 
 def declarations(readonly=False):
-    return [{"functionDeclarations": [t["decl"] for t in TOOLS.values() if not readonly or t["risk"]==RISK_SAFE and not t["decl"]["name"].startswith(("create_","computer_","draft_"))]}]
+    import cr_channel
+    allowed = cr_channel.WEB_TOOLS if cr_channel.channel.get() == "web" else TOOLS
+    return [{"functionDeclarations": [t["decl"] for t in TOOLS.values() if t["decl"]["name"] in allowed and (not readonly or t["risk"]==RISK_SAFE and not t["decl"]["name"].startswith(("create_","computer_","draft_")))]}]
 
 
 def user_tz(uid):
@@ -285,6 +287,9 @@ def _ask_confirmation(name, args, ctx):
 
 
 def run(name, args, ctx):
+    import cr_channel
+    if cr_channel.channel.get() == "web" and name not in cr_channel.WEB_TOOLS:
+        return {"ok": False, "verified": False, "error": "This feature is not enabled on web yet."}
     t = TOOLS.get(name)
     if ctx.get("readonly") and t and (t["risk"]!=RISK_SAFE or name.startswith(("create_","computer_","draft_"))):
         return {"ok":False,"verified":False,"error":"Scheduled work is read-only; changes need a direct user request."}
