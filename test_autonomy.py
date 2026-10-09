@@ -140,3 +140,24 @@ def test_nonowner_oauth_no_calendar(monkeypatch):
     from urllib.parse import urlsplit,parse_qs
     monkeypatch.setattr(G,'configured',lambda:True);monkeypatch.setattr(G.db,'q',lambda *a,**kw:{'user_id':7555366869});monkeypatch.setattr(G.db,'kv_get',lambda *a:True)
     assert 'calendar' not in parse_qs(urlsplit(G.authorization_url('a'*43)).query)['scope'][0]
+
+def test_guest_invites_and_reminder_exact_readback(monkeypatch):
+    import json,hashlib
+    c={**content(),'guests':['guest@example.com'],'reminder_minutes':20};digest=hashlib.sha256(json.dumps(c,sort_keys=True).encode()).hexdigest();writes=[]
+    monkeypatch.setattr(K.db,'q',lambda sql,*a,**kw:{'encrypted_content':'x','content_hash':digest} if 'RETURNING encrypted_content' in sql else None)
+    monkeypatch.setattr(K.db,'kv_get',lambda *a:['a1b2c3',digest[:12]]);monkeypatch.setattr(G,'decrypt',lambda *a:c);monkeypatch.setattr(G,'status',lambda *a:{'email':c['account']});monkeypatch.setattr(G,'request',lambda *a:{'items':[]});monkeypatch.setattr(G,'_access',lambda *a:'fake')
+    class Resp:
+        status_code=200
+        def __init__(self,data):self.data=data
+        def json(self):return self.data
+    class Client:
+        def __init__(self,**kw):pass
+        def __enter__(self):return self
+        def __exit__(self,*a):pass
+        def get(self,url,**kw):return Resp({'scope':'https://www.googleapis.com/auth/calendar.events'}) if url.endswith('tokeninfo') else Resp({**writes[0]['json'],'htmlLink':'https://calendar.google.com/test-fixture'})
+        def post(self,url,**kw):writes.append(kw);return Resp(kw['json'])
+    monkeypatch.setattr(G.httpx,'Client',Client)
+    assert 'Email delivery is not independently confirmed' in K.create(K.OWNER,'a1b2c3',digest[:12])
+    assert len(writes)==1 and writes[0]['params']=={'sendUpdates':'all'}
+    assert writes[0]['json']['attendees']==[{'email':'me@example.com'},{'email':'guest@example.com'}]
+    assert writes[0]['json']['reminders']=={'useDefault':False,'overrides':[{'method':'popup','minutes':20}]}
