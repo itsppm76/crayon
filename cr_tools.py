@@ -376,14 +376,16 @@ def computer_task(ctx,operation,args):
     return K.execute(ctx['uid'],operation,args)
 
 
-@tool("computer_browse", "Per-user fresh public-only browser on the connected computer. Public HTTPS websites, including Instagram and YouTube. Sensitive account/transaction portals and private-network addresses are blocked. Login/access walls can be screenshotted, never signed into. No login/forms/purchases. One URL and optional visible link text to follow, maximum2 pages. Returns screenshot to Telegram and plain action log.",
-      {"url":S,"follow_link_text":S},["url"])
-def computer_browse(ctx,url,follow_link_text=''):
+@tool("computer_browse", "Per-user fresh public-only browser on the connected computer. Public HTTPS websites, including Instagram and YouTube. Sensitive account portals/private-network addresses and transaction endpoints are blocked. Public cart/checkout page views are allowed, but no cart mutation, payment or order submission. Login/access walls can be screenshotted, never signed into. GET navigation only. No login/forms/purchases. Never guess product deep links. Read the homepage/catalog first, then use returned links or exact follow_link_text. Repeated identical catalog links are deduplicated. One URL and optional visible link text to follow, up to5 safe link steps via follow_links, maximum6 pages. Returns screenshot to Telegram and plain action log.",
+      {"url":S,"follow_link_text":S,"follow_links":{"type":"array","items":S}},["url"])
+def computer_browse(ctx,url,follow_link_text='',follow_links=None):
     import cr_computer as K,base64
     intent=ctx.get('meta',{}).get('user_text','')
     recipe=(bool(re.fullmatch(r'(?i)(?:run )?world bank research chart demo[.!]?',intent.strip())) and url=='https://api.worldbank.org/v2/country/IND;CHN;USA/indicator/NY.GDP.PCAP.CD?date=2024&format=json&per_page=3' and not follow_link_text)
-    if not recipe and not re.search(r'(?i)\b(browser|browse|screenshot|computer|codespace)\b',intent):return {'ok':False,'error':'Explicit browser request required'}
-    result=K.execute(ctx['uid'],'browse',{'url':url,'follow_link_text':follow_link_text})
+    if not recipe and not re.search(r'(?i)\b(browser|browse|screenshot|computer|codespace)\b|\b(?:open|go to|show me|show the).{0,100}\b(?:page|product|website)\b',intent):return {'ok':False,'error':'Explicit browser request required'}
+    result=K.execute(ctx['uid'],'browse',{'url':url,'follow_link_text':follow_link_text,'follow_links':follow_links or []})
+    if result.get('verified'):
+        K.db.kv_set('computer_public_page_'+str(ctx['uid']),{'at':__import__('time').time(),'pages':result.get('pages',[])})
     screenshot=result.pop('screenshot',None)
     if screenshot:
         data=base64.b64decode(screenshot,validate=True)

@@ -72,7 +72,7 @@ def test_public_social_and_login_walls_allowed(monkeypatch):
     monkeypatch.setattr(B.socket,'getaddrinfo',lambda *a:[(0,0,0,'',('1.1.1.1',443))])
     for url in ('https://www.instagram.com/accounts/login/','https://www.youtube.com','https://docs.github.com/login'):
         assert B.allowed(url)==url
-    for url in ('https://mail.google.com','https://chase.com','https://x.com/checkout','https://example.com/patient'):
+    for url in ('https://mail.google.com','https://chase.com','https://x.com/cart/add','https://example.com/patient'):
         with pytest.raises(ValueError):B.allowed(url)
 
 
@@ -81,4 +81,34 @@ def test_old_worker_file_claim_blocked(monkeypatch):
     monkeypatch.setattr(K.db,'q',lambda sql,args,mode:calls.append((sql,args)))
     monkeypatch.setattr(K.db,'kv_set',lambda *a:None)
     K.next_job({})
-    assert calls[-1][1]==(False,) and "operation NOT IN ('read_text','write_text','list_files')" in calls[-1][0]
+    assert calls[-1][1]==(False,False) and "operation NOT IN ('read_text','write_text','list_files')" in calls[-1][0]
+
+
+def test_checkout_view_only_and_no_cart_mutations(monkeypatch):
+    import computer_browser as B
+    monkeypatch.setattr(B.socket,'getaddrinfo',lambda *a:[(0,0,0,'',('1.1.1.1',443))])
+    assert B.allowed('https://example.com/checkout')
+    assert B.allowed('https://example.com/cart')
+    for url in ('https://example.com/cart/add?id=1','https://example.com/cart/clear','https://example.com/purchase/'):
+        with pytest.raises(ValueError):B.allowed(url)
+
+def test_browser_followup_gate_accepts_page_request(monkeypatch):
+    import cr_tools as T
+    monkeypatch.setattr(K,'execute',lambda *a:{'ok':False,'error':'test execution reached'})
+    r=T.computer_browse({'uid':12,'meta':{'user_text':'Can you open the Are You With Me T shirt details page and show me'}},'https://example.com')
+    assert r['error']=='test execution reached'
+
+def test_multistep_plan_boundaries(monkeypatch):
+    import computer_browser as B
+    monkeypatch.setattr(B.socket,'getaddrinfo',lambda *a:[(0,0,0,'',('1.1.1.1',443))])
+    B.validate_plan({'url':'https://example.com','follow_links':['Catalog','Product','Cart']})
+    for steps in ('Catalog',['x']*6,[True]):
+        with pytest.raises(ValueError):B.validate_plan({'url':'https://example.com','follow_links':steps})
+
+def test_verified_heartbeat_clears_starting(monkeypatch):
+    seen=[]
+    monkeypatch.setattr(K.db,'q',lambda *a:None)
+    monkeypatch.setattr(K.db,'kv_get',lambda key:'starting')
+    monkeypatch.setattr(K.db,'kv_set',lambda *a:seen.append(a))
+    K.next_job({'verified':True,'navigation_protocol':3})
+    assert ('computer_lifecycle_state','ready') in seen

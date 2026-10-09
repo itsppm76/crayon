@@ -37,7 +37,7 @@ def run(op,args,uid=None):
     if op=='browse':
         from computer_browser import browse
         return browse(args)
-    if op=='status':return {'ok':True,'verified':True,'system':platform.system(),'cpu':os.cpu_count(),'python':platform.python_version(),'account_files_protocol':2}
+    if op=='status':return {'ok':True,'verified':True,'system':platform.system(),'cpu':os.cpu_count(),'python':platform.python_version(),'account_files_protocol':2,'navigation_protocol':3}
     if op=='calculate':return {'ok':True,'verified':True,'value':arithmetic(args['expression'])}
     root=file_root(uid)
     if op=='list_files':return {'ok':True,'verified':True,'files':[p.name for p in root.iterdir() if p.is_file() and not p.is_symlink()][:100]}

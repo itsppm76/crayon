@@ -56,6 +56,8 @@ def execute(uid,operation,args,test_wake=False):
             try:awake=wake.ensure(lambda:status(uid)['ok'],test=True) if test_wake else wake.ensure(lambda:status(uid)['ok'])
             except Exception as e:return {'ok':False,'verified':False,'error':str(e)[:180]}
             if not awake:return {'ok':False,'error':'Computer did not become ready. Wake/configuration or shared host availability may need administrator recovery. No task completed.'}
+        if operation=='browse' and (db.kv_get('computer_heartbeat') or {}).get('info',{}).get('navigation_protocol')!=3:
+            return {'ok':False,'verified':False,'error':'Browser worker upgrade pending. No navigation performed.'}
         if operation in ('list_files','read_text','write_text') and (db.kv_get('computer_heartbeat') or {}).get('info',{}).get('account_files_protocol')!=2:
             return {'ok':False,'verified':False,'error':'Private file worker upgrade pending. No file access performed.'}
         if not reserve(uid):return {'ok':False,'error':'Daily computer beta cap reached.5 jobs per user,20 owner,30 total. No quota or paid-budget increase.'}
@@ -73,8 +75,10 @@ def next_job(info):
     # Browser payloads and task text are transient, not durable memory.
     db.q("DELETE FROM computer_jobs WHERE created_at<now()-interval '30 minutes'",(),'none')
     db.kv_set('computer_heartbeat',{'at':time.time(),'info':info})
+    if info.get('verified') and db.kv_get('computer_lifecycle_state')=='starting':db.kv_set('computer_lifecycle_state','ready')
     supports_files=info.get('account_files_protocol')==2
-    return db.q("UPDATE computer_jobs SET status='running' WHERE id=(SELECT id FROM computer_jobs WHERE status='pending' AND created_at>now()-interval '40 seconds' AND (%s OR operation NOT IN ('read_text','write_text','list_files')) ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id,user_id,operation,args",(supports_files,),'one')
+    supports_navigation=info.get('navigation_protocol')==3
+    return db.q("UPDATE computer_jobs SET status='running' WHERE id=(SELECT id FROM computer_jobs WHERE status='pending' AND created_at>now()-interval '40 seconds' AND (%s OR operation!='browse') AND (%s OR operation NOT IN ('read_text','write_text','list_files')) ORDER BY created_at FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id,user_id,operation,args",(supports_navigation,supports_files),'one')
 
 def complete(job,result):
     if not isinstance(result,dict) or len(json.dumps(result))>1500000:raise ValueError('Invalid result')
