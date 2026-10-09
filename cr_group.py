@@ -24,13 +24,35 @@ def answer(msg):
             if re.search(r'(?i)\bnews\b',text):
                 from datetime import datetime,timedelta
                 from zoneinfo import ZoneInfo
-                day=(datetime.now(ZoneInfo('Asia/Calcutta')).date()-timedelta(days=1)) if re.search(r'(?i)\byesterday\b',text) else datetime.now(ZoneInfo('Asia/Calcutta')).date() if re.search(r'(?i)\btoday\b',text) else None
-                query=re.sub(r'(?i)\b(tell|me|the|latest|news|now|yesterday|today|of|please)\b',' ',text)
-                query=re.sub(r'\s+',' ',query).strip() or 'top news'
-                found=W.news(query,3,day)
+                now=datetime.now(ZoneInfo('Asia/Calcutta'))
+                day=now.date()-timedelta(days=1) if re.search(r'(?i)\byesterday\b',text) else now.date() if re.search(r'(?i)\btoday\b',text) else None
+                explicit=re.search(r'(?i)\b(\d{1,2})(?:st|nd|rd|th)?\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})\b',text)
+                if explicit:
+                    try:day=datetime.strptime(explicit.group(1)+' '+explicit.group(2)[:3]+' '+explicit.group(3),'%d %b %Y').date()
+                    except ValueError:return 'That news date is not valid. Use a calendar date such as 8 Oct 2026.'
+                iso=re.search(r'\b\d{4}-\d{2}-\d{2}\b',text)
+                if iso:
+                    try:day=datetime.fromisoformat(iso.group()).date()
+                    except ValueError:return 'That news date is not valid.'
+                count=re.search(r'(?i)\b(?:top|give)\s+(\d{1,2})\b',text);n=min(5,max(1,int(count.group(1)))) if count else 3
+                topic=re.search(r'(?i)\bnews\s+(?:for|of|about|on|from)\s+(.+)',text)
+                query=topic.group(1) if topic else text
+                query=re.sub(r'(?i)\bfrom\s+\d.*$','',query)
+                if explicit:query=query.replace(explicit.group(),'')
+                if iso:query=query.replace(iso.group(),'')
+                query=re.sub(r'(?i)\b(tell|me|the|latest|news|now|yesterday|today|of|for|please|okay|give|top|what|is|s)\b|\b\d{1,2}\b',' ',query)
+                query=re.sub(r'[^\w\s-]',' ',query);query=re.sub(r'\s+',' ',query).strip() or 'top news'
+                topics=[x.strip() for x in re.split(r'(?i)\s+and\s+|,',query) if x.strip()][:2]
+                results=[W.news(q,n,day) for q in topics]
+                found={'items':[],'day':day.isoformat() if day else None}
+                for index in range(n):
+                    for result in results:
+                        if index<len(result['items']) and len(found['items'])<n:found['items'].append(result['items'][index])
+                missing=[topics[i] for i,result in enumerate(results) if not result['items']]
                 if not found['items']:return 'No dated news results returned for that request. I will not substitute old headlines. Try a narrower topic.'
                 lines=['News headlines'+(' for '+found['day'] if day else ' from the past day')+' (India time):']
                 for index,item in enumerate(found['items'],1):lines+=['',str(index)+'. '+item['title'],item['source']+' | '+item['published'][:16].replace('T',' ')+' IST']
+                if missing:lines+=['','No matching dated headlines found for: '+', '.join(missing)]
                 lines+=['','Source: Google News index. These are published headlines, not independently verified article summaries.']
                 return '\n'.join(lines)
             found=W.research(text[:400])
