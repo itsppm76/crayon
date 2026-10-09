@@ -34,7 +34,9 @@ def preview(uid,title,start,end,tz,guests=None,reminder_minutes=None):
     db.q("DELETE FROM google_calendar_drafts WHERE user_id=%s AND status='pending'",(uid,),'none')
     db.q("INSERT INTO google_calendar_drafts(id,user_id,encrypted_content,content_hash,expires_at) VALUES(%s,%s,%s,%s,now()+interval '10 minutes')",(ident,uid,G.encrypt(uid,c),h),'none')
     db.kv_set('calendar_reviewed_'+str(uid),[ident,h[:12]])
-    return {'id':ident,'hash':h[:12],'text':'Calendar preview only, not booked. Expires in 10 minutes.\nAccount: '+account+'\nCalendar: primary\nTitle: '+c['summary']+'\nStart: '+start+'\nEnd: '+end+'\nTimezone: '+tz+'\nGuests: '+(', '.join(c['guests']) or 'none')+'\nNotifications: '+('email invitations will be sent to listed guests' if c['guests'] else 'none')+'\nReminder: '+('Google default' if reminder_minutes is None else str(reminder_minutes)+' minutes before, popup')+'\nPrivate primary-calendar event. No video link. Existing events checked again before Create. Creating is not a venue/service booking.'}
+    human_start=datetime.fromisoformat(start).strftime('%A, %d %B %Y, %I:%M %p %z')
+    human_end=datetime.fromisoformat(end).strftime('%A, %d %B %Y, %I:%M %p %z')
+    return {'id':ident,'hash':h[:12],'text':'Calendar preview only, not booked. Expires in 10 minutes.\nAccount: '+account+'\nCalendar: primary\nTitle: '+c['summary']+'\nWhen: '+human_start+' to '+human_end+'\nExact start: '+start+'\nExact end: '+end+'\nTimezone: '+tz+'\nGuests: '+(', '.join(c['guests']) or 'none')+'\nNotifications: '+('email invitations will be sent to listed guests' if c['guests'] else 'none')+'\nReminder: '+('Google default' if reminder_minutes is None else str(reminder_minutes)+' minutes before, popup')+'\nPrivate primary-calendar event. No video link. Existing events checked again before Create. Creating is not a venue/service booking.'}
 def cancel(uid,ident):
     owner(uid)
     init();db.q("DELETE FROM google_calendar_drafts WHERE id=%s AND user_id=%s AND status='pending'",(ident,uid),'none');return 'Preview cancelled. No calendar event created.'
