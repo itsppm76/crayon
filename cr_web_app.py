@@ -30,6 +30,7 @@ def init():
     __import__('cr_history').init()
     db.q(SCHEMA, fetch='none')
     __import__('cr_web_notifications').init()
+    __import__('cr_web_rooms').init()
 
 
 def encode(value):

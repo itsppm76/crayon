@@ -175,6 +175,10 @@ def delete_all(uid):
     for provider in cr_connections.PROVIDERS:cr_connections.disconnect(uid,provider)
     import cr_work
     cr_work.init()
+    __import__('cr_web_rooms').init()
+    db.q('DELETE FROM web_rooms WHERE owner_id=%s',(uid,),'none')
+    db.q('DELETE FROM web_room_members WHERE user_id=%s',(uid,),'none')
+    db.q('DELETE FROM web_room_messages WHERE author_id=%s',(uid,),'none')
     __import__("cr_workspace_review").init()
     db.q("DELETE FROM workspace_reviews WHERE user_id=%s",(uid,),"none")
     db.q("DELETE FROM work_jobs WHERE user_id=%s", (uid,), "none")

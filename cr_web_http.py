@@ -84,7 +84,7 @@ def handle(h, method, raw=b''):
             reply(h,204,'','text/plain',True,{'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600'})
             return True
         if method=='GET' and p.path=='/web/status':
-            reply(h,200,{'stage':'private foundation','login_configured':A.configured(),'google_login_configured':__import__('cr_web_google_auth').configured(),'email_login_configured':C.env('CRAYON_EMAIL_AUTH_ENABLED')=='on','rooms':False,'external_actions':'exact web review only','uploads':True,'computer':True,'notifications':True,'work_queue':True},cors=True)
+            reply(h,200,{'stage':'private foundation','login_configured':A.configured(),'google_login_configured':__import__('cr_web_google_auth').configured(),'email_login_configured':C.env('CRAYON_EMAIL_AUTH_ENABLED')=='on','rooms':True,'external_actions':'exact web review only','uploads':True,'computer':True,'notifications':True,'work_queue':True},cors=True)
             return True
         if method=='GET' and p.path=='/web/email/config':
             reply(h,200,__import__('cr_web_email_auth').config(),cors=True)
@@ -111,7 +111,21 @@ def handle(h, method, raw=b''):
             reply(h,200,__import__('cr_web_email_auth').exchange(body),cors=True)
             return True
         user=A.session(h.headers.get('Authorization',''))
-        if p.path.startswith('/web/account-merge/'):
+        if p.path.startswith('/web/rooms'):
+            import cr_web_rooms as R
+            uid=user['user_id']
+            if method=='GET' and p.path=='/web/rooms':result={'rooms':R.list_for(uid),'notice':R.AUDIENCE}
+            elif method=='POST' and p.path=='/web/rooms/create' and set(body)=={'name','accept'}:result=R.create(uid,body['name'],body['accept'])
+            elif method=='POST' and p.path=='/web/rooms/inspect' and set(body)=={'invite'}:result=R.inspect(body['invite'])
+            elif method=='POST' and p.path=='/web/rooms/join' and set(body)=={'invite','accept'}:result=R.join(uid,body['invite'],body['accept'])
+            elif method=='POST' and p.path=='/web/rooms/history' and set(body)=={'room'}:result={'messages':R.history(uid,body['room'])}
+            elif method=='POST' and p.path=='/web/rooms/say' and set(body)=={'room','text'}:result=R.say(uid,body['room'],body['text'])
+            elif method=='POST' and p.path=='/web/rooms/leave' and set(body)=={'room'}:result=R.leave(uid,body['room'])
+            elif method=='POST' and p.path=='/web/rooms/delete' and set(body)=={'room','accept'}:result=R.delete(uid,body['room'],body['accept'])
+            else:raise ValueError('Invalid room action.')
+            reply(h,200,result,cors=True)
+        elif p.path.startswith('/web/account-merge/'):
+
             if C.env('CRAYON_ACCOUNT_MERGE_ENABLED')!='on':raise ValueError('Reviewed account consolidation is not enabled yet. Nothing moved.')
             import cr_account_merge as M
             if method!='POST':raise ValueError('Invalid account merge method.')

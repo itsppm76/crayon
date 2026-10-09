@@ -282,6 +282,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             out.send(chat_id,result['repo']+'\n'+result['url']+'\n\n'+'\n\n'.join(str(x['type'])+' '+str(x['id'])+': '+x['title']+'\n'+x['url'] for x in result['items']))
         except Exception:out.send(chat_id,'No GitHub digest confirmed. Check public owner/repo or try after the rate limit clears.')
         return
+    if text.strip().lower() in ('/rooms','shared rooms'):
+        out.send(chat_id,'Telegram shared conversations use your Telegram groups: add @crayon_v1_bot and tag it for public questions. Personal group actions require each member to opt in and review before sharing. Web shared rooms are in Menu > Shared rooms at https://itsppm76.github.io/crayon/ with explicit invite/audience review. No private history is imported and Telegram groups are not silently bridged to web rooms.');return
     import cr_workspace_review
     if cr_workspace_review.handle(uid,chat_id,text,out):return
     import cr_booking
@@ -518,7 +520,8 @@ def set_commands():
             {"command":"gmail","description":"Check your mail"},
             {"command":"calendar","description":"See the next week on your calendar"},
             {"command":"calendar_slot","description":"Preview a private calendar slot before booking"},
-            {"command":"email_checks","description":"Hourly mail checks on/off (owner beta)"},
+            {"command":"email_checks","description":"Private hourly mail checks on/off"},
+            {"command":"rooms","description":"Shared rooms and Telegram group guidance"},
             {"command":"browse","description":"Public website screenshot (per-user limits)"},
             {"command":"computer","description":"Computer status, maths and private files"},
             {"command":"research","description":"Research a topic with sources"},
