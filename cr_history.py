@@ -20,7 +20,6 @@ def run(uid,chat,name,text,message_id,out,handler):
     from cr_safety import looks_like_secret
     if chat!=uid or looks_like_secret(text):return handler(uid,chat,name,text,message_id,out)
     before=db.q('SELECT max(id) AS n FROM messages WHERE user_id=%s',(uid,),'one')['n']
-    import re
     private=True # Command continuations may omit provider words; retain generic receipts only.
     wrapped=ReceiptOut(out,uid,private)
     result=handler(uid,chat,name,text,message_id,wrapped)
@@ -30,6 +29,6 @@ def run(uid,chat,name,text,message_id,out,handler):
         # Private-provider bodies and drafted email text are deliberately not copied into display history.
         data={'user':'[Private account command; exact contents not retained here]' if private else text[:8000],
               'assistant':'[Private account response was shown in Telegram. Not retained in chat history or sent to AI.]' if private else '\n\n'.join(wrapped.lines)[:20000]}
-        db.q('INSERT INTO channel_history(id,user_id,encrypted) VALUES(%s,%s,%s)',
+        db.q('INSERT INTO channel_history(id,user_id,encrypted) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING',
              ('tg_'+str(message_id) if message_id else secrets.token_hex(16),uid,A._cipher().encrypt(json.dumps(data).encode()).decode()),'none')
     return result

@@ -42,7 +42,8 @@
   function renderHistory(m){const b=bubble(m.role,m.text);if(m.media_missing){const n=document.createElement('div');n.className='media-missing';n.textContent='Original Telegram media was not retained by Crayon. Reupload it to view or analyze it.';b.append(n);}const t=document.createElement('div');t.className='message-time';t.textContent=new Date(m.time).toLocaleString();b.append(t);}
   async function loadHistory(older,passive=false){
     if(!token){status('Log in to see your history.');return;}
-    const h=await call('history'+(older&&historyBefore?'?before='+encodeURIComponent(historyBefore):''));
+    const session=token;const h=await call('history'+(older&&historyBefore?'?before='+encodeURIComponent(historyBefore):''));
+    if(token!==session||(passive&&(busy||historyPaged||document.querySelector('dialog[open]'))))return;
     const key=h.messages.map(m=>m.id).join(',');if(passive&&key===lastHistoryKey)return;lastHistoryKey=key;
     const log=$('#log'),previous=older?[...log.childNodes]:[];if(older)log.replaceChildren();else clearView();
     h.messages.forEach(renderHistory);previous.forEach(x=>log.append(x));lastHistoryKey=key;historyBefore=h.before;historyMore=h.has_more;$('#older').classList.toggle('hide',!historyMore);

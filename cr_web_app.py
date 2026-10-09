@@ -1,4 +1,4 @@
-"""Authenticated private web transport. No Telegram sends in request handling.
+"""Authenticated private web transport. Ordinary chats mirror to the same Telegram DM.
 Foundation stage deliberately blocks external effects and room actions.
 """
 import base64
@@ -131,12 +131,16 @@ def _run(uid, ident):
         try:
             items = dispatch(uid,data['name'],data['input'])
             try:
+                import re
+                if looks_like_secret(data['input']) or re.search(r'(?i)\b(gmail|inbox|email|e-mail|calendar|google|workspace|github|sheet|doc|computer|browser|browse|booking|book|delete|wipe|forget|digest|proactive|watch)\b',data['input']) or data['input'].startswith(('/email','/google','/connect','/calendar','/work','/delete','/forget')):
+                    raise StopIteration
                 import cr_telegram
                 channel_out=cr_telegram.Out()
                 channel_out.send(uid,'[From web] '+data['input'])
                 for item in items:
                     if item['kind']=='text':channel_out.send(uid,item['text'])
                     elif item['kind']=='artifact':channel_out.artifact(uid,{'filename':item['name'],'mime':item['mime'],'data':base64.b64decode(item['data'])})
+            except StopIteration:pass
             except Exception:
                 items.append({'kind':'text','text':'Web reply completed, but Telegram sync was not confirmed. No automatic resend. Check your Telegram chat.'})
             status = 'done'

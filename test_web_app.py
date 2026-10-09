@@ -291,3 +291,32 @@ def test_web_reply_mirrors_only_authenticated_uid(config):
     W.SLOTS.acquire()
     W._run(17,'a'*43)
     assert sent==[(17,'[From web] hello'),(17,'reply')]
+
+
+def test_web_private_command_not_mirrored(config):
+    import cr_telegram
+    class Out:
+        def __init__(self):pytest.fail('private command must not mirror')
+    config.setattr(cr_telegram,'Out',Out)
+    config.setattr(W,'decode',lambda v:{'input':'read my inbox','name':'N'})
+    config.setattr(W,'encode',lambda v:json.dumps(v))
+    config.setattr(W,'dispatch',lambda *a:[{'kind':'text','text':'private'}])
+    config.setattr(W.db,'q',lambda sql,p=(),fetch='all':{'encrypted':'data'} if sql.startswith("UPDATE web_requests SET state='running'") else None)
+    W.SLOTS.acquire();W._run(17,'a'*43)
+
+
+def test_mirror_failure_not_retried(config):
+    import cr_telegram
+    sent=[];writes=[]
+    class Out:
+        def send(self,*a):sent.append(a);raise RuntimeError('transport')
+    config.setattr(cr_telegram,'Out',Out)
+    config.setattr(W,'decode',lambda v:{'input':'hello','name':'N'})
+    config.setattr(W,'encode',lambda v:json.dumps(v))
+    config.setattr(W,'dispatch',lambda *a:[{'kind':'text','text':'reply'}])
+    def q(sql,p=(),fetch='all'):
+        writes.append(p)
+        return {'encrypted':'data'} if sql.startswith("UPDATE web_requests SET state='running'") else None
+    config.setattr(W.db,'q',q)
+    W.SLOTS.acquire();W._run(17,'a'*43)
+    assert len(sent)==1 and 'No automatic resend' in str(writes)
