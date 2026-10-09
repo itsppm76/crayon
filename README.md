@@ -26,7 +26,7 @@
 
 ## 💬 WhatsApp
 
-The optional WhatsApp test transport is staged on this deployment: signed webhook, durable inbound dedupe and outbound delivery statuses. Pratham's Meta resources are still pending its new-account cooldown, so two-way WhatsApp is NOT proven. Telegram remains unchanged. Secrets and assigned test resource IDs must be configured privately; see [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
+The optional WhatsApp test transport is staged on this deployment: signed webhook, durable inbound dedupe and outbound delivery statuses. Pratham's Meta resources are still pending its new-account cooldown, so two-way WhatsApp is NOT proven. Telegram remains active. Secrets and assigned test resource IDs must be configured privately; see [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
 
 ## ✅ October 9 beta closeout
 
@@ -353,3 +353,5 @@ The Telegram command menu now includes browse/computer/research/CSV/chart/mail/c
 Latest 15:04 checkpoint: worker Playwright/Chromium and Debian browser libraries installed; direct controlled form inspection verified with zero POST. The real Telegram preview at 14:57 failed because a 14:56 idle-stop left a fresh cached heartbeat. Lifecycle fix clears readiness on accepted start/stop and serializes readiness/activity/enqueue against idle-stop. Full suite: 203 passed. Real owner Telegram preview4402 and screenshot4403 passed15:04 after cold-start. Owner approved the identical controlled demo15:12:54. Fresh preview4406 then one Submit returned receipt4408 and confirmation screenshot4409 at15:14. No provider booking/calendar/message/payment effect. Awake-but-exited worker needs a host restart or explicit supervisor start; API start on an already-awake host does not rerun postStart. Public-news topic/date/relevance/publisher cleanup is deployed, but post-fix group acceptance is still pending.
 
 15:14 controlled-demo closeout: original owner approval inspected; identical TEST ONLY fields reviewed in fresh preview4406, clicked Submit once once, receipt4408 and screenshot4409 show Test form received at the configured destination. No real booking or calendar action. Calendar reconnect link prepared for owner, actual Create still requires a reviewed preview and approval.
+
+Group action beta: @mention requests use each requester's own account. First use discloses the audience and requires that member's opt-in. Requested results/drafts are then visible to the whole group; only the requester can confirm their exact controls. Private history and pending private drafts are not carried into groups. Google connection and background alerts stay in DM. Email generation now writes a complete subject/body from the ask with supplied context, without invented facts; exact wording is preserved only when explicitly requested. Live group action acceptance remains to be checked.

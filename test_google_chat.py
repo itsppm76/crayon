@@ -67,3 +67,31 @@ def test_plural_attention_tasks_private(monkeypatch,store):
     assert any('No active tasks' in x['text'] for x in out.sent)
     assert 'Private excerpt' in out.sent[-1]['text']
     assert store=={}
+
+
+def test_complete_email_generation_prompt_not_thin_copy(monkeypatch):
+    seen={}
+    def parse(text,system,default):
+        seen.update(text=text,system=system)
+        return {'action':'draft','subject':'AI class feedback','body':'Dear Professor,\nFull email.'}
+    monkeypatch.setattr(H.llm,'ask_json',parse)
+    r=H.classify('Email sam@example.com saying thanks for teaching AI')
+    assert r['body'].startswith('Dear Professor')
+    assert 'complete, useful email' in seen['system'] and 'Never invent' in seen['system']
+    assert 'preserve that supplied body' in seen['system']
+
+
+def test_group_cannot_confirm_private_draft(monkeypatch,store):
+    store['google_reviewed_10']=['id','hash']
+    store['google_review_chat_10']=10
+    monkeypatch.setattr(H.G,'send_draft',lambda *a:pytest.fail('cross chat send'))
+    out=T.CaptureOut();H.handle(10,-991,'send it',{},out)
+    assert 'this chat' in out.sent[0]['text']
+
+
+def test_group_cannot_resume_private_compose(monkeypatch,store):
+    import time
+    store['google_compose_10']={'to':'','subject':'Private','body':'Private body','until':time.time()+500,'chat':10}
+    monkeypatch.setattr(H,'classify',lambda *a:pytest.fail('private state routed'))
+    monkeypatch.setattr(H,'show_draft',lambda *a:pytest.fail('private compose leaked'))
+    assert H.handle(10,-991,'sam@example.com',{},T.CaptureOut()) is False

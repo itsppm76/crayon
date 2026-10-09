@@ -278,7 +278,7 @@ def _ask_confirmation(name, args, ctx):
     label = describe(name, args)
     db.q("UPDATE pending_actions SET status='superseded' WHERE user_id=%s AND status='pending'", (ctx["uid"],), "none")
     db.q("INSERT INTO pending_actions(id,user_id,action,args,label,expires_at) VALUES(%s,%s,%s,%s::jsonb,%s, now() + interval '10 minutes')",
-         (pid, ctx["uid"], name, json.dumps(args or {}), label), "none")
+         (pid, ctx["uid"], name, json.dumps({**(args or {}),'_origin_chat':ctx['chat_id']}), label), "none")
     db.audit(ctx["uid"], "confirmation_requested", f"{name} {label}")
     return {"ok": True, "verified": False, "needs_confirmation": True, "label": label,
             "note": "NOT done yet. The user must reply YES to confirm; do not claim it happened."}

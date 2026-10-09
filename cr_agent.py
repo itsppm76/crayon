@@ -69,12 +69,15 @@ def handle_confirmation(uid, chat_id, text):
     p = db.q("SELECT id,action,args,label FROM pending_actions WHERE user_id=%s AND status='pending' AND expires_at > now() ORDER BY created_at DESC LIMIT 1", (uid,), "one")
     if not p:
         return None
+    args = p["args"] if isinstance(p["args"], dict) else json.loads(p["args"] or "{}")
+    if args.get('_origin_chat',uid)!=chat_id:return None
     if no:
         db.q("UPDATE pending_actions SET status='cancelled' WHERE id=%s", (p["id"],), "none")
         db.audit(uid, "confirmation_declined", p["label"])
         return f"Okay, I did not do it: {p['label']}."
     db.q("UPDATE pending_actions SET status='running' WHERE id=%s AND status='pending'", (p["id"],), "none")
     args = p["args"] if isinstance(p["args"], dict) else json.loads(p["args"] or "{}")
+    args.pop('_origin_chat',None)
     res = T.run(p["action"], args, {"uid": uid, "chat_id": chat_id, "meta": {}, "confirmed": True})
     done = bool(res.get("ok") and res.get("verified"))
     db.q("UPDATE pending_actions SET status=%s WHERE id=%s", ("done" if done else "failed", p["id"]), "none")
@@ -96,14 +99,14 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False):
             mem.add_message(uid, "assistant", conf)
             meta["confirmation"] = True
             return conf, meta
-        contents = _history_contents(uid)
+        contents = [llm.user(text)] if chat_id<0 else _history_contents(uid)
     except Exception as e:
         log.warning("memory unavailable: %s", redact(str(e))[:200])
         degraded = True
         contents = [llm.user(text)]
     if not contents or contents[-1]["role"] != "user":
         contents.append(llm.user(text))
-    system = build_system(uid) if not degraded else SYSTEM.format(now=datetime.now().strftime("%c"), tz="", memory="(memory is temporarily unavailable)")
+    system = build_system(uid) if not degraded and chat_id>=0 else SYSTEM.format(now=datetime.now().strftime("%c"), tz="", memory="(Group request: no private history or ambient personal memory. Only retrieve this requester's records when explicitly asked here.)" if chat_id<0 else "(memory is temporarily unavailable)")
     ctx = {"uid": uid, "chat_id": chat_id, "meta": meta, "readonly":readonly}
     if goal_mode and not readonly:
         plan = llm.ask_json("Make 2-4 concrete steps for this goal using only Crayon's available tools. "

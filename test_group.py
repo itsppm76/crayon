@@ -102,3 +102,56 @@ def test_news_relevance_publisher_dedupe(monkeypatch):
     xml=b'<rss><channel><item><title>Audio briefing - Publisher</title><source>Publisher</source><pubDate>Thu, 08 Oct 2026 10:00:00 GMT</pubDate><link>https://news.google.com/a</link></item><item><title>Portugal policy - Publisher</title><source>Publisher</source><pubDate>Thu, 08 Oct 2026 10:00:00 GMT</pubDate><link>https://news.google.com/b</link></item></channel></rss>'
     monkeypatch.setattr(W._c,'get',lambda *a,**kw:httpx.Response(200,content=xml))
     r=W.news('Portugal',5,date(2026,10,8));assert [i['title'] for i in r['items']]==['Portugal policy']
+
+
+def test_group_direct_email_routes_requester_not_chat(monkeypatch):
+    calls=[]
+    import cr_group_actions as GA
+    monkeypatch.setattr(GA,'consent',lambda *a:True)
+    monkeypatch.setattr(T,'_handle_text',lambda uid,chat,name,text,mid,out:calls.append((uid,chat,text)))
+    T.handle_update({'message':{'chat':{'id':-991,'type':'group'},'from':{'id':22},'text':'@crayon_v1_bot email Sam saying hello'}},T.CaptureOut())
+    assert calls==[(22,-991,'email Sam saying hello')]
+
+
+def test_group_forward_anonymous_and_connect_are_explicit(monkeypatch):
+    monkeypatch.setattr(T,'_handle_text',lambda *a:(_ for _ in ()).throw(AssertionError('private route')))
+    for extra,text in [({'forward_origin':{'type':'user'}},'email Sam'),({'sender_chat':{'id':-1}},'email Sam'),({},'connect Google')]:
+        out=T.CaptureOut()
+        T.handle_update({'message':{'chat':{'id':-991,'type':'group'},'from':{'id':22},'text':'@crayon_v1_bot '+text,**extra}},out)
+        assert len(out.sent)==1
+
+
+def test_group_controls_requester_and_chat_bound(monkeypatch):
+    import cr_group_actions as A
+    store={}
+    monkeypatch.setattr(A.db,'kv_set',lambda k,v:store.__setitem__(k,v))
+    monkeypatch.setattr(A.db,'kv_get',lambda k,d=None:store.get(k,d))
+    out=A.GroupOut(T.CaptureOut(),22,-991)
+    out.send(-991,'Reviewed',{'inline_keyboard':[[{'text':'Send','callback_data':'email_send:a:b'}]]})
+    assert A.reviewed(22,-991,'email_send:a:b')
+    assert not A.reviewed(23,-991,'email_send:a:b')
+    assert not A.reviewed(22,-992,'email_send:a:b')
+    assert not A.reviewed(22,-991,'email_send:x:y')
+
+
+def test_group_other_member_callback_no_effect(monkeypatch):
+    import cr_group_actions as A
+    monkeypatch.setattr(T,'api',lambda *a,**k:None)
+    monkeypatch.setattr(A,'reviewed',lambda *a:False)
+    out=T.CaptureOut()
+    T.handle_callback({'id':'cb','data':'email_send:a:b','from':{'id':23},'message':{'chat':{'id':-991}}},out)
+    assert not out.sent
+
+
+def test_group_audience_consent_before_any_data(monkeypatch):
+    import cr_group_actions as A
+    values={}
+    monkeypatch.setattr(A.db,'kv_get',lambda k,d=None:values.get(k,d))
+    monkeypatch.setattr(A.db,'kv_set',lambda k,v:values.__setitem__(k,v))
+    out=T.CaptureOut()
+    assert not A.consent(22,-991,'read my inbox',out)
+    assert 'everyone' in out.sent[0]['text'] and values=={}
+    assert not A.consent(22,-991,'enable my group actions',out)
+    assert A.consent(22,-991,'read my inbox',out)
+    assert not A.consent(23,-991,'read my inbox',out)
+    assert not A.consent(22,-992,'read my inbox',out)

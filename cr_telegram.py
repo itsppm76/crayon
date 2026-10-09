@@ -33,7 +33,7 @@ You can send photos, documents, audio or video up to 20 MB. Ask follow-up questi
 
 Say "connect Google", "my reminders", "my tasks", "memory review" or "help". Menu: /browse, /computer, /research, /files, /email_checks, /calendar_slot. Calendar slots are private previews; Create is always reviewed. Hourly email checks are owner beta and respect quiet hours. Browser/computer require approved tester access. For updates, say "turn on daily check-ins" or "morning digest". Google is in testing mode, so only approved testers can connect and access may need renewing after 7 days.
 
-In a group, tag @crayon_v1_bot. Your personal memory and account actions stay in private chat.
+In a group, tag @crayon_v1_bot. After your own group-audience opt-in, requested account/memory results and reviewed actions can appear there for everyone to see. Only you can confirm your controls. Connection links and background alerts stay private.
 
 Say "privacy options" for data controls. Advanced slash commands still work."""
 
@@ -174,9 +174,21 @@ def handle_update(upd, out=None):
             import cr_group
             log.info("group update chat=%s message=%s tagged=%s service=%s",chat_id,msg.get("message_id"),cr_group.mentioned(msg),bool(msg.get("new_chat_members")))
             if any(x.get("username", "").lower()==cr_group.BOT_USERNAME for x in msg.get("new_chat_members", [])):
-                out.send(chat_id,"Hi, I'm Crayon. Tag @crayon_v1_bot to chat. Personal memory and actions stay in your private chat.")
+                out.send(chat_id,"Hi, I'm Crayon. Tag @crayon_v1_bot to chat. Group actions need your own audience opt-in; results are visible to everyone here.")
                 return
             if not cr_group.mentioned(msg):return
+            import cr_group_actions as GA,re
+            text=re.sub(r'@'+re.escape(cr_group.BOT_USERNAME)+r'\b','',msg.get('text',''),flags=re.I).strip()
+            # Direct group request selects this audience, never another member's identity.
+            if GA.action_request(text):
+                if uid<=0 or msg.get('sender_chat') or any(msg.get(k) for k in ('forward_origin','forward_from','via_bot')):
+                    out.send(chat_id,'Account actions need your direct request, not an anonymous or forwarded message.');return
+                if re.search(r'(?i)\b(connect|link|reconnect|enable)\b.*\b(google|gmail|calendar booking)\b',text) or text.startswith('/connect_google'):
+                    out.send(chat_id,'Connect Google in a private DM first so your account link is not exposed here.');return
+                if not GA.consent(uid,chat_id,text,out):return
+                groupout=GA.GroupOut(out,uid,chat_id)
+                with mem.user_lock(uid):_handle_text(uid,chat_id,name,text,msg.get('message_id'),groupout)
+                return
             progress=ProgressOut(out,chat_id,((12,"On it. Give me a moment."),(25,"Still working on it. I'll send the answer when it's ready."))).start()
             try:
                 out.typing(chat_id)
@@ -225,6 +237,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         db.audit(uid,"telegram_reaction",f"message_id={message_id} emoji={emoji} accepted={reaction_ok}")
     if text.strip().lower().rstrip('.!') in ('hi','hey','hello','cool','thanks','thank you'):
         out.send(chat_id,"You're welcome." if text.strip().lower().rstrip('.!') in ('thanks','thank you') else "Hey! What can I help with?" if text.strip().lower().rstrip('.!') in ('hi','hey','hello') else "Got it.");return
+    if chat_id<0 and __import__('re').search(r'(?i)(?:email checks|daily check-ins|(?:morning|evening) digest|/proactive|/digest)',text):
+        out.send(chat_id,'Set up private monitoring and proactive updates in a DM. Group requests do not move your background alerts here.');return
     import cr_booking
     if cr_booking.handle(uid,chat_id,text,out):return
     import cr_dashboard
@@ -238,7 +252,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     if __import__('re').fullmatch(r"(?:(?:please|plz|pls) )?(?:connect|link|reconnect)(?: to)?(?: my)? (?:google|gmail)(?: account)?(?: please)?[.!?]*",plain) or plain in ('how do i connect google','how to connect google','i want to connect google','connect my google account'):
         plain='connect google'
     text=aliases.get(plain,text)
-    if (not text.startswith('/') or text.startswith('/calendar_slot')) and chat_id==uid:
+    if (not text.startswith('/') or text.startswith('/calendar_slot')) and (chat_id==uid or chat_id<0):
         import cr_google_chat
         if cr_google_chat.handle(uid,chat_id,text,None,out):return
     fields = text.split(None,1)
@@ -280,7 +294,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             out.send(chat_id, reply)
     elif cmd in ("/connect_google", "/disconnect_google", "/google_status", "/gmail", "/gmail_read", "/calendar", "/email_draft", "/email_send", "/email_cancel"):
         import cr_google as G
-        if chat_id != uid or msg_private_invalid(uid):
+        if msg_private_invalid(uid) or (chat_id!=uid and chat_id>=0):
             out.send(chat_id, "Google commands only work in your private chat with Crayon.")
             return
         try:
@@ -297,6 +311,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             elif cmd == "/gmail":
                 out.send(chat_id,G.inbox(uid,arg))
             elif cmd == "/gmail_read":
+                if chat_id!=uid and db.kv_get('google_mail_results_chat_'+str(uid),uid)!=chat_id:
+                    out.send(chat_id,'Check your mail in this chat first.');return
                 out.send(chat_id,G.read_message(uid,arg))
             elif cmd == "/calendar":
                 out.send(chat_id,G.calendar(uid))
@@ -304,6 +320,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
                 import cr_google_chat
                 cr_google_chat.show_draft(uid,chat_id,out,arg)
             elif cmd == "/email_send":
+                if db.kv_get('google_review_chat_'+str(uid),uid)!=chat_id:
+                    out.send(chat_id,'Review your draft in this chat before confirming it.');return
                 bits=arg.split()
                 if len(bits)!=2:raise G.GoogleError("Use the exact /email_send command shown beneath your draft")
                 out.send(chat_id,G.send_draft(uid,*bits))
@@ -389,7 +407,11 @@ def handle_callback(cb, out):
     if not data.startswith(("email_send:","email_cancel:","calendar_create:","calendar_cancel:","form_submit:","form_cancel:","ux:","work:")):return
     uid=cb.get("from",{}).get("id",0)
     chat_id=cb.get("message",{}).get("chat",{}).get("id")
-    if uid<=0 or chat_id!=uid:return
+    if uid<=0:return
+    if chat_id!=uid:
+        import cr_group_actions as GA
+        if not isinstance(chat_id,int) or chat_id>=0 or not GA.reviewed(uid,chat_id,data):return
+        out=GA.GroupOut(out,uid,chat_id)
     if data.startswith(('form_submit:','form_cancel:')):
         import cr_booking as B,base64
         parts=data.split(':')

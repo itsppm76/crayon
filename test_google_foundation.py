@@ -110,14 +110,15 @@ def test_send_timeout_never_retries(monkeypatch):
     assert any("status='uncertain'" in s for s in updates)
 
 
-def test_google_group_read_blocked(monkeypatch):
+def test_google_group_read_requester_account(monkeypatch):
     import cr_telegram as T
     monkeypatch.setattr(T.db,'audit',lambda *a:None)
-    monkeypatch.setattr(G,'request',lambda *a:pytest.fail('group google read'))
+    monkeypatch.setattr(G,'configured',lambda:True)
+    calls=[]
+    monkeypatch.setattr(G,'inbox',lambda uid,*a,**k:calls.append(uid) or 'Requested own inbox')
     out=T.CaptureOut()
     T._handle_text(22,-123,'Test','/gmail',1,out)
-    assert 'private chat' in out.sent[0]['text']
-
+    assert calls==[22] and out.sent[-1]['text']=='Requested own inbox'
 
 def test_draft_single_line_review(monkeypatch):
     monkeypatch.setattr(G,'status',lambda uid:{'email':'owner@example.com'})
