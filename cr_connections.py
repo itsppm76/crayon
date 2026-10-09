@@ -1,4 +1,5 @@
 """Separate per-user Workspace/GitHub OAuth. Never overwrites Gmail/calendar."""
+import base64
 import hashlib
 import re
 import secrets
@@ -17,7 +18,8 @@ def init():
        identity TEXT NOT NULL,encrypted_tokens TEXT NOT NULL,connected_at TIMESTAMPTZ DEFAULT now(),
        PRIMARY KEY(user_id,provider))''',fetch='none')
     db.q('''CREATE TABLE IF NOT EXISTS service_oauth_states(state_hash TEXT PRIMARY KEY,user_id BIGINT,
-       provider TEXT NOT NULL,expires_at TIMESTAMPTZ NOT NULL,used BOOLEAN DEFAULT false)''',fetch='none')
+       provider TEXT NOT NULL,expires_at TIMESTAMPTZ NOT NULL,used BOOLEAN DEFAULT false,encrypted_verifier TEXT)''',fetch='none')
+    db.q('ALTER TABLE service_oauth_states ADD COLUMN IF NOT EXISTS encrypted_verifier TEXT',fetch='none')
 
 
 def configured(provider):
@@ -32,39 +34,46 @@ def begin(uid,provider):
     if int(uid)<=0 or not configured(provider):raise G.GoogleError('This connection is not configured yet.')
     init();state=secrets.token_urlsafe(32);digest=hashlib.sha256(state.encode()).hexdigest()
     db.q("DELETE FROM service_oauth_states WHERE expires_at<now()",fetch='none')
-    db.q("INSERT INTO service_oauth_states(state_hash,user_id,provider,expires_at) VALUES(%s,%s,%s,now()+interval '10 minutes')",(digest,uid,provider),'none')
+    verifier=secrets.token_urlsafe(48)
+    db.q("INSERT INTO service_oauth_states(state_hash,user_id,provider,expires_at,encrypted_verifier) VALUES(%s,%s,%s,now()+interval '10 minutes',%s)",(digest,uid,provider,G.encrypt(uid,{'provider':provider,'verifier':verifier})),'none')
     return C.PUBLIC_URL.rstrip('/')+'/connections/'+provider+'/connect?state='+state
 
 
 def _state(state,provider,consume=False):
     if not re.fullmatch(r'[A-Za-z0-9_-]{30,100}',state or '') or provider not in PROVIDERS:raise G.GoogleError('Invalid connection link.')
     digest=hashlib.sha256(state.encode()).hexdigest()
-    sql=("UPDATE service_oauth_states SET used=true WHERE state_hash=%s AND provider=%s AND used=false AND expires_at>now() RETURNING user_id" if consume else
-         "SELECT user_id FROM service_oauth_states WHERE state_hash=%s AND provider=%s AND used=false AND expires_at>now()")
+    sql=("UPDATE service_oauth_states SET used=true WHERE state_hash=%s AND provider=%s AND used=false AND expires_at>now() RETURNING user_id,encrypted_verifier" if consume else
+         "SELECT user_id,encrypted_verifier FROM service_oauth_states WHERE state_hash=%s AND provider=%s AND used=false AND expires_at>now()")
     row=db.q(sql,(digest,provider),'one')
     if not row:raise G.GoogleError('Link expired or already used. Start again in your private chat.')
-    return row['user_id']
+    return row
 
 
 def authorization_url(state,provider):
     if not configured(provider):raise G.GoogleError('Connection unavailable.')
-    _state(state,provider)
+    row=_state(state,provider)
+    bound=G.decrypt(row['user_id'],row['encrypted_verifier'])
+    if bound.get('provider')!=provider:raise G.GoogleError('State binding failed.')
+    challenge=base64.urlsafe_b64encode(hashlib.sha256(bound['verifier'].encode()).digest()).decode().rstrip('=')
     if provider=='workspace':
         return 'https://accounts.google.com/o/oauth2/v2/auth?'+urlencode({'client_id':C.env('GOOGLE_WORKSPACE_CLIENT_ID'),
           'redirect_uri':callback(provider),'response_type':'code','scope':' '.join(GOOGLE_SCOPES),
-          'access_type':'offline','prompt':'select_account consent','state':state})
+          'access_type':'offline','prompt':'select_account consent','state':state,'code_challenge':challenge,'code_challenge_method':'S256'})
     # Public-repository/identity read only; no broad repo scope or write capability.
     return 'https://github.com/login/oauth/authorize?'+urlencode({'client_id':C.env('GITHUB_OAUTH_CLIENT_ID'),
-        'redirect_uri':callback(provider),'scope':'read:user','state':state})
+        'redirect_uri':callback(provider),'scope':'read:user','state':state,'code_challenge':challenge,'code_challenge_method':'S256'})
 
 
 def complete(state,code,provider):
     if not configured(provider) or not isinstance(code,str) or len(code)>3000:raise G.GoogleError('Invalid callback.')
-    uid=_state(state,provider,True)
+    row=_state(state,provider,True);uid=row['user_id']
+    bound=G.decrypt(uid,row['encrypted_verifier'])
+    if bound.get('provider')!=provider:raise G.GoogleError('State binding failed.')
+    verifier=bound['verifier']
     with httpx.Client(timeout=20,follow_redirects=False) as c:
         if provider=='workspace':
             r=c.post('https://oauth2.googleapis.com/token',data={'client_id':C.env('GOOGLE_WORKSPACE_CLIENT_ID'),
-              'client_secret':C.env('GOOGLE_WORKSPACE_CLIENT_SECRET'),'code':code,'grant_type':'authorization_code','redirect_uri':callback(provider)})
+              'client_secret':C.env('GOOGLE_WORKSPACE_CLIENT_SECRET'),'code':code,'grant_type':'authorization_code','redirect_uri':callback(provider),'code_verifier':verifier})
             if r.status_code!=200:raise G.GoogleError('Google consent failed.')
             token=r.json()
             if not set(GOOGLE_SCOPES[2:]).issubset(set(token.get('scope','').split())) or not token.get('refresh_token'):
@@ -75,7 +84,7 @@ def complete(state,code,provider):
         else:
             r=c.post('https://github.com/login/oauth/access_token',headers={'Accept':'application/json'},
               data={'client_id':C.env('GITHUB_OAUTH_CLIENT_ID'),'client_secret':C.env('GITHUB_OAUTH_CLIENT_SECRET'),
-              'code':code,'redirect_uri':callback(provider)})
+              'code':code,'redirect_uri':callback(provider),'code_verifier':verifier})
             if r.status_code!=200 or not r.json().get('access_token'):raise G.GoogleError('GitHub consent failed.')
             token=r.json()
             if set(token.get('scope','').split(','))-{'read:user',''}:raise G.GoogleError('Unexpected broad GitHub permissions. Not stored.')

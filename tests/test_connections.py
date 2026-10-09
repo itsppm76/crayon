@@ -11,18 +11,20 @@ class Connections(unittest.TestCase):
     def test_unknown_provider_closed(self):
         self.assertFalse(X.configured('evil'))
     def test_identity_and_state_scoped(self):
-        with patch.object(X.db,'q',return_value={'user_id':77}) as q:
+        with patch.object(X.db,'q',return_value={'user_id':77,'encrypted_verifier':'test'}) as q,patch.object(G,'decrypt',return_value={'provider':'workspace','verifier':'a'*64}):
             u=X.authorization_url('a'*40,'workspace');params=parse_qs(urlsplit(u).query)
             self.assertEqual(params['prompt'],['select_account consent'])
             self.assertNotIn('gmail',params['scope'][0]);self.assertNotIn('calendar',params['scope'][0])
             self.assertIn('provider=%s',q.call_args.args[0]);self.assertEqual(q.call_args.args[1][1],'workspace')
     def test_github_narrow(self):
-        with patch.object(X.db,'q',return_value={'user_id':77}):
+        with patch.object(X.db,'q',return_value={'user_id':77,'encrypted_verifier':'test'}),patch.object(G,'decrypt',return_value={'provider':'github','verifier':'a'*64}):
             params=parse_qs(urlsplit(X.authorization_url('a'*40,'github')).query)
             self.assertEqual(params['scope'],['read:user'])
+            self.assertEqual(params['code_challenge_method'],['S256'])
+            self.assertEqual(len(params['code_challenge'][0]),43)
     def test_consumed_atomically(self):
         with patch.object(X.db,'q',return_value={'user_id':77}) as q:
-            self.assertEqual(X._state('a'*40,'github',True),77)
+            self.assertEqual(X._state('a'*40,'github',True)['user_id'],77)
             self.assertIn('UPDATE',q.call_args.args[0]);self.assertIn('used=false',q.call_args.args[0])
     def test_expired_closed(self):
         with patch.object(X.db,'q',return_value=None):
