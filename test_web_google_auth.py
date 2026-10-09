@@ -86,3 +86,11 @@ def test_link_callback_requires_original_active_session(env):
     env.setattr(G.httpx,'post',lambda *a,**k:Response())
     env.setattr(G,'validate',lambda *a:{'subject':'google-sub','email':'a@example.com','google_name':'N'})
     with pytest.raises(A.AuthError,match='session ended'):G.callback('a'*43,'code','b'*43)
+
+
+def test_google_callback_accepts_inert_provider_fields(env):
+    import cr_web_http as H
+    from test_web_app import Handler
+    called=[];env.setattr(G,'callback',lambda *a:called.append(a))
+    h=Handler('/web/google/auth/callback?code=code&state='+('a'*43)+'&scope=openid+email+profile&authuser=0&prompt=select_account',{'Cookie':'crayon_google_oidc='+('b'*43)})
+    H.handle(h,'GET');assert h.code==200 and called==[('a'*43,'code','b'*43)]

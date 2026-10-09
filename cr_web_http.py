@@ -56,7 +56,7 @@ def handle(h, method, raw=b''):
                 url,cookie=GA.start(q['state'][0])
                 reply(h,302,'','text/plain',extra={'Location':url,'Set-Cookie':'crayon_google_oidc='+cookie+'; Path=/web/google/auth; Max-Age=300; Secure; HttpOnly; SameSite=Lax'})
             else:
-                if set(q)!={'code','state'} or any(len(v)!=1 for v in q.values()):raise A.AuthError('Google login cancelled or invalid.')
+                if not {'code','state'}.issubset(q) or set(q)-{'code','state','scope','authuser','prompt','hd'} or any(len(v)!=1 for v in q.values()):raise A.AuthError('Google login cancelled or invalid.')
                 cookies=SimpleCookie(h.headers.get('Cookie',''));GA.callback(q['state'][0],q['code'][0],cookies['crayon_google_oidc'].value if 'crayon_google_oidc' in cookies else '')
                 nonce=secrets.token_urlsafe(24)
                 page='<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crayon Google login</title><p>Google identity checked. Return to the original Crayon tab to finish signing in or review the account link.</p><script nonce="'+nonce+'">if(window.opener){window.opener.postMessage({type:"crayon-login"},'+json.dumps(A.origin())+');window.close();}</script>'
