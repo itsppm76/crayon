@@ -212,3 +212,20 @@ def test_send_mime_all_reviewed_recipients(monkeypatch):
     monkeypatch.setattr(G.httpx,'Client',Client)
     assert 'Sent' in G.send_draft(11,'id',digest[:12])
     assert seen[0]['To']=='a@example.com, b@example.com' and seen[0]['Cc']=='c@example.com' and seen[0]['Bcc']=='d@example.com'
+
+
+def test_each_sender_name_no_global(monkeypatch):
+    import cr_memory as mem
+    monkeypatch.setattr(mem,'get_user',lambda uid:{'name':{11:'Pratham',22:'Sam'}[uid]})
+    monkeypatch.setattr(G.db,'q',lambda *a,**k:None)
+    assert G.sender_name(11)=='Pratham' and G.sender_name(22)=='Sam'
+
+
+def test_placeholder_replaced_per_member(monkeypatch):
+    monkeypatch.setattr(G.db,'q',lambda *a,**k:None)
+    monkeypatch.setattr(G,'status',lambda uid:{'email':str(uid)+'@example.com'})
+    monkeypatch.setattr(G,'sender_name',lambda uid:{11:'Pratham',22:'Sam'}[uid])
+    monkeypatch.setattr(G,'encrypt',lambda uid,c:'cipher')
+    for uid,name in ((11,'Pratham'),(22,'Sam')):
+        d=G.make_draft(uid,{'to':['a@example.com'],'subject':'Hi','body':'Hello\nBest regards,\n[Your Name]'},structured=True)
+        assert '[Your Name]' not in d['text'] and '\n'+name in d['text']

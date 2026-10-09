@@ -130,3 +130,25 @@ def test_pending_role_clarification_preserves_body(monkeypatch,store):
     H.handle(10,10,'To: sam@example.com CC: c@example.com BCC: d@example.com',{},T.CaptureOut())
     assert seen[0]['cc']==['c@example.com'] and seen[0]['bcc']==['d@example.com']
     assert seen[0]['body']=='Dear Sam,\nFull draft'
+
+
+def test_edit_latest_content_repreview_preserve_recipients(monkeypatch,store):
+    store['google_review_chat_10']=10;store['google_reviewed_10']=['id','hash']
+    monkeypatch.setattr(H.G,'current_content',lambda uid:('id','hash',{'to':['a@example.com'],'cc':['b@example.com'],'bcc':[],'subject':'Old','body':'Original'}))
+    monkeypatch.setattr(H.llm,'ask_json',lambda *a,**k:{'subject':'New','body':'Edited'})
+    seen=[];monkeypatch.setattr(H,'show_draft',lambda *a:seen.append(a[3]))
+    assert H.handle(10,10,'change subject to New',{},T.CaptureOut())
+    assert seen==[{'to':['a@example.com'],'cc':['b@example.com'],'bcc':[],'subject':'New','body':'Edited'}]
+
+
+def test_edit_cross_chat_never_private_content(monkeypatch,store):
+    store['google_review_chat_10']=10
+    monkeypatch.setattr(H.G,'current_content',lambda *a:pytest.fail('private content leaked'))
+    assert H.handle(10,-100,'rewrite it shorter',{},T.CaptureOut()) is False
+
+
+def test_forwarded_edit_cannot_retrieve_draft(monkeypatch,store):
+    store['google_review_chat_10']=10
+    monkeypatch.setattr(H.G,'current_content',lambda *a:pytest.fail('forward edit accessed draft'))
+    out=T.CaptureOut();assert H.handle(10,10,'rewrite it',{'forward_origin':{'type':'user'}},out)
+    assert 'direct' in out.sent[0]['text']

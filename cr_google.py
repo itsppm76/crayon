@@ -234,6 +234,28 @@ def calendar(uid):
     return "Primary calendar, next 7 days:\n\n"+"\n\n".join(lines) if lines else "No events returned for the next 7 days on your primary calendar."
 
 
+def sender_name(uid):
+    import cr_memory as mem
+    try:
+        profile=mem.get_user(uid) or {}
+        name=str(profile.get('name') or '').strip()
+        explicit=db.q("SELECT value FROM facts WHERE user_id=%s AND key IN ('name','full_name','preferred_name') ORDER BY CASE key WHEN 'preferred_name' THEN 0 WHEN 'full_name' THEN 1 ELSE 2 END LIMIT 1",(uid,),'one')
+        if explicit and explicit.get('value'):name=str(explicit['value']).strip()
+        if len(name)>100 or any(c in name for c in '\r\n<>') or not name:return ''
+        from cr_safety import looks_like_secret
+        return '' if looks_like_secret(name) else name
+    except Exception:return ''
+
+
+def current_content(uid):
+    ident,digest=current_draft(uid)
+    row=db.q("SELECT encrypted_content,content_hash FROM google_email_drafts WHERE id=%s AND user_id=%s AND status='pending' AND expires_at>now()",(ident,uid),'one')
+    if not row:raise GoogleError('No pending draft to edit.')
+    content=decrypt(uid,row['encrypted_content'])
+    if hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()!=row['content_hash']:raise GoogleError('Draft changed. Review again.')
+    return ident,digest,content
+
+
 def make_draft(uid, text, structured=False):
     """Direct user command only. Exact reviewed recipient lists; no attachments."""
     db.q("DELETE FROM google_email_drafts WHERE expires_at<now() AND status='pending'",fetch="none")
@@ -260,6 +282,7 @@ def make_draft(uid, text, structured=False):
     if '\r' in subject or '\n' in subject:raise GoogleError('Subject must be one line.')
     from cr_safety import looks_like_secret,clean_text
     if looks_like_secret(json.dumps(text)):raise GoogleError('Draft appears to contain a secret')
+    body=re.sub(r'(?i)\[(?:your|sender(?:\'s)?)\s*(?:full\s*)?name\]|<your name>|\{your name\}',lambda m:sender_name(uid),body)
     content={'from':row['email'],'to':to,'cc':cc,'bcc':bcc,'subject':clean_text(subject),'body':clean_text(body)}
     serialized=json.dumps(content,sort_keys=True)
     digest=hashlib.sha256(serialized.encode()).hexdigest()
@@ -267,7 +290,7 @@ def make_draft(uid, text, structured=False):
     db.q("DELETE FROM google_email_drafts WHERE user_id=%s AND status='pending'",(uid,),"none")
     db.q("INSERT INTO google_email_drafts(id,user_id,encrypted_content,content_hash,expires_at) VALUES(%s,%s,%s,%s,now()+interval '10 minutes')",(ident,uid,encrypt(uid,content),digest),"none")
     display=f"Draft only, not sent. Expires in 10 minutes.\nFrom: {content['from']}\nTo: {', '.join(to)}\nCC: {', '.join(cc) or 'none'}\nBCC: {', '.join(bcc) or 'none'}\nAttachments: none.\nSubject: {content['subject']}\n\n{content['body']}"
-    if structured:return {"text":display+"\n\nTap Send or say 'send it'. Say 'cancel' to discard.","id":ident,"hash":digest[:12]}
+    if structured:return {"text":display+"\n\nReply with edit/change/rewrite instructions to revise. Tap Send or say 'send it'. Say 'cancel' to discard.","id":ident,"hash":digest[:12]}
     return display+f"\n\nSend exactly this: /email_send {ident} {digest[:12]}\nCancel: /email_cancel {ident}"
 
 
