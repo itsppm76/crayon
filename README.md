@@ -4,7 +4,7 @@
 
 <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=2800&pause=900&color=FFC93C&center=true&vCenter=true&width=720&lines=A+Telegram+assistant+that+remembers.;Searches+the+web.+Runs+code.+Keeps+reminders.;Tracks+multi-day+tasks.+Admits+what+it+didn't+do." alt="Animated Crayon introduction" />
 
-**A personal assistant on Telegram with persistent memory, live web search, sandboxed code, reminders, tracked tasks and honest safety rails. Runs entirely on free tiers.**
+**A personal assistant on Telegram and the web with persistent memory, live web search, sandboxed code, reminders, tracked tasks and honest safety rails. Runs entirely on free tiers.**
 
 ![MIT license](https://img.shields.io/badge/license-MIT-FFC93C?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -16,21 +16,45 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-203_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-317_passed-22A06B?style=for-the-badge)
+![Pages](https://img.shields.io/badge/GitHub_Pages-web_live-FF6B6B?style=for-the-badge&logo=githubpages&logoColor=white)
+![Login](https://img.shields.io/badge/Telegram_login-7_days-26A5E4?style=for-the-badge)
+![Parity](https://img.shields.io/badge/full_parity-in_progress-FFC93C?style=for-the-badge)
 
-[**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
+[**Open web app**](https://itsppm76.github.io/crayon/) · [Release checklist](WEB_RELEASE_CHECKLIST.md) · [**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
 </div>
 
 ---
 
-## 💬 WhatsApp
+## 🌐 Web app: current release
 
-The optional WhatsApp test transport is staged on this deployment: signed webhook, durable inbound dedupe and outbound delivery statuses. Pratham's Meta resources are still pending its new-account cooldown, so two-way WhatsApp is NOT proven. Telegram remains active. Secrets and assigned test resource IDs must be configured privately; see [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
+[Open Crayon on the web](https://itsppm76.github.io/crayon/) · [Full release checklist](WEB_RELEASE_CHECKLIST.md) · [Change log](CHANGELOG.md)
 
-## ✅ October 9 beta closeout
+> [!IMPORTANT]
+> Telegram and the web use the same identity, recorded ordinary conversation and memory. Full feature parity is still in progress. "Deployed" is not the same as "passed on the owner's phone".
 
-203 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
+| Status | What changed | Evidence / limit |
+| :--- | :--- | :--- |
+| 🟢 Live | Telegram login, seven-day browser sessions, refresh/new-tab persistence | Real owner login/history mapping passed; same-browser persistence tested with captured network responses. Session survives server deploys. |
+| 🟢 Live | Reconnect through temporary fetch/host failures | Captured failure test passes without a new login; owner's post-fix phone retest pending. |
+| 🟢 Live | Shared ordinary chat, 30-second visible-tab sync, web-to-Telegram mirror | Private Google bodies do not enter shared model memory. No automatic mirror resend. |
+| 🟢 Live | Uploads, analysis, generated files, typing bubble and waiting updates | 20 MB upload limit. Owner image analyzed successfully; browser lost its response before the recovery fix. |
+| 🟢 Live | Same-ID result recovery after lost responses | One POST only in captured failure test. Activity/files holds saved output. Raw upload bytes are not retained. |
+| 🟢 Live | Tasks, memory, reminders, history, activity and Google actions menu | Exact session-bound review for external writes; calendar owner-only; no email attachments. |
+| 🟡 Pending | Owner-device recovery retest and full conversational command coverage | Google currently uses web menu controls; queue controls and richer attachment history need more work. |
+| 🔒 Locked | Web rooms, computer/browser execution and deletion confirmations | Missing audience/allowlist/review wiring, not silent failures. Telegram gates remain unchanged. |
+| ⏸️ Parked | WhatsApp | Owner asked to leave it. Test configuration preserved; no payment method or paid tier added. |
+
+**Verification:** 317 local tests passed. Desktop/mobile captured checks inspected. Real owner login, web chat and image-analysis storage proved; post-fix phone acceptance is still open. No web acceptance test sent a real email or created a calendar event/Sheet mutation.
+
+**Privacy:** log out on shared devices. Closing Chrome does not revoke a stored session. Private browsing, browser-storage deletion, account deletion and expiry can end access. Historical missing media and private-command bodies cannot be recreated.
+
+---
+
+## ✅ Earlier October 9 Telegram milestones (historical)
+
+Earlier milestone: 203 tests passed then. Current suite: 317. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
 
 ### Overnight task power (2.33.1)
 

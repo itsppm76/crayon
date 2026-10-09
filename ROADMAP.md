@@ -1,5 +1,10 @@
 # 🖍️ Crayon roadmap
 
+## Current web release - October 9, 2026, 20:10 IST
+
+See [WEB_RELEASE_CHECKLIST.md](WEB_RELEASE_CHECKLIST.md) for the current done/pending/locked matrix and acceptance evidence. 317 local tests passed. Web login, shared ordinary history, uploads, waiting UI and safe reconnect/result recovery are deployed. Full feature parity and owner-device post-fix acceptance are pending. Older checkpoints below are historical, not current test counts or current web availability. WhatsApp is parked by owner request. No paid setup was made.
+
+
 ## 🟢 Built and deployed
 
 - M1-M6: Telegram hosting, persistent memory, web search/page reading, sandbox calculations, reminders/jobs, tracked tasks, safe confirmations, health and captured self-tests.

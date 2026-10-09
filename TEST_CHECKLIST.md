@@ -1,5 +1,10 @@
 # Crayon test checklist
 
+## Current web release - October 9, 2026, 20:10 IST
+
+See [WEB_RELEASE_CHECKLIST.md](WEB_RELEASE_CHECKLIST.md) for the current done/pending/locked matrix and acceptance evidence. 317 local tests passed. Web login, shared ordinary history, uploads, waiting UI and safe reconnect/result recovery are deployed. Full feature parity and owner-device post-fix acceptance are pending. Older checkpoints below are historical, not current test counts or current web availability. WhatsApp is parked by owner request. No paid setup was made.
+
+
 Covers the deployed bot (`cr_*.py`, Neon Postgres, Gemini, Tavily). Run these against a staging bot or your own chat.
 
 Legend: **Verified live** = checked on the deployed bot through `/selftest` with synthetic users that were cleaned up afterwards (October 8, 2026). **Not live-tested** = reviewed in code only.

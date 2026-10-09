@@ -1,5 +1,10 @@
 # Known limitations
 
+## Current web release - October 9, 2026, 20:10 IST
+
+See [WEB_RELEASE_CHECKLIST.md](WEB_RELEASE_CHECKLIST.md) for the current done/pending/locked matrix and acceptance evidence. 317 local tests passed. Web login, shared ordinary history, uploads, waiting UI and safe reconnect/result recovery are deployed. Full feature parity and owner-device post-fix acceptance are pending. Older checkpoints below are historical, not current test counts or current web availability. WhatsApp is parked by owner request. No paid setup was made.
+
+
 Status is intentionally conservative. This file reflects the deployed bot (`cr_*.py` modules, Neon Postgres, Render free tier).
 
 - **Free hosting:** Render's free instance sleeps when idle and can be slow on a cold start. A keep-warm ping reduces this but does not guarantee uptime.
