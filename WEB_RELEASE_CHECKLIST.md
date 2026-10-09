@@ -5,7 +5,7 @@ Updated October 9, 2026, 21:22 IST. Built, deployed and real-device acceptance a
 ## Done and deployed
 
 - [x] Web frontend is in this repository and hosted on GitHub Pages.
-- [x] Dedicated identity-only Google OIDC sign-in and exact session-bound Telegram/Google linking deployed. No email matching or automatic account merge. External Testing only.
+- [x] Dedicated identity-only Google OIDC sign-in and exact session-bound Telegram/Google linking deployed. No email matching or automatic account merge. Isolated identity-only production project; Gmail/Calendar test project unchanged.
 - [x] Telegram OIDC login maps to the existing Telegram user, memory and recorded history.
 - [x] New sessions last seven days. Refresh and new tabs restore the same browser login. Logout and server expiry revoke access. Browser storage deletion, private browsing and account deletion can also end access.
 - [x] Saved login reconnects after temporary host/network failures instead of giving up at the first failed fetch.
@@ -32,6 +32,9 @@ Updated October 9, 2026, 21:22 IST. Built, deployed and real-device acceptance a
 - No real email/calendar/Sheet mutation was performed for these web acceptance checks.
 
 ## Still pending
+
+- [ ] Google/email-first standalone accounts, later verified Telegram linking and exact review for two populated accounts.
+- [ ] Conventional auth-screen redesign and working verified email sign-in; sender setup remains needed.
 
 - [ ] Real owner exact Google link approval, then Google logout/login returning the same UID/history. Live Google picker reached; full callback/link/login acceptance is not yet proved.
 - [ ] Owner-device post-fix reconnect, upload-result delivery and live two-way chat acceptance.
@@ -66,4 +69,4 @@ Full parity is the target, not a completed claim. Free-host restart, network out
 3. Return to Crayon and review the exact Telegram ID/name and verified Google email. Link only if both are yours.
 4. Log out, use Log in with Google, and check that the same recorded history returns.
 
-This login does not authorize Gmail, Calendar or Workspace access. The current Google app accepts named test users only; publishing for everyone remains separate work.
+This login does not authorize Gmail, Calendar or Workspace access. Google documents a Testing allowlist exception for basic openid/email/profile login. Gmail/Calendar data access remains named-tester beta. Public identity-only project is published. Branding verification remains separate; no sensitive/restricted data verification is required for login.

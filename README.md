@@ -29,7 +29,7 @@
 
 ## 🔑 Google login update (deployed; real linking acceptance pending)
 
-Google sign-in uses the same Crayon account, never a new chat history inferred from email. Sign in with Telegram once, choose **Link Google login** in Menu, authenticate with Google, then review the exact Telegram/Google pair. Future Google sign-ins open that same memory/history. Google subject ID is the stable key; collisions are rejected, not merged. Login requests only `openid email profile` and does not connect Gmail/Calendar/Workspace. Current Google Cloud project is in external Testing, so named Google testers only. Provider tokens from login are not retained. Live Pages reaches the real Google account picker with the dedicated identity-only client; backend configuration and unauthorized-link denial were checked. The project's existing owner personal/college accounts are listed testers. Real owner link/login acceptance remains pending. 326 local tests passed.
+Current linked Google sign-in uses the same Crayon account, never a new chat history inferred from email. Google-first standalone accounts, email login and later reviewed account merge are requested work, not live yet. Sign in with Telegram once, choose **Link Google login** in Menu, authenticate with Google, then review the exact Telegram/Google pair. Future Google sign-ins open that same memory/history. Google subject ID is the stable key; collisions are rejected, not merged. Login requests only `openid email profile` and does not connect Gmail/Calendar/Workspace. Google login now has its own identity-only production project. Gmail/Calendar stays in the original named-tester project. Login branding is not verified, so Google may show the backend domain rather than the Crayon name. Provider tokens from login are not retained. Live Pages reaches the real Google account picker with the dedicated identity-only client; backend configuration and unauthorized-link denial were checked. The project's existing owner personal/college accounts are listed testers. Real owner link/login acceptance remains pending. 326 local tests passed.
 
 ## 🌐 Web app: current release
 
@@ -40,7 +40,7 @@ Google sign-in uses the same Crayon account, never a new chat history inferred f
 
 | Status | What changed | Evidence / limit |
 | :--- | :--- | :--- |
-| 🟢 Live | Google login with explicit Telegram-account linking | Named Google testers only. Real provider picker reached; exact owner linking and later Google sign-in proof pending. No email auto-match or data scopes. |
+| 🟢 Live | Google login with explicit Telegram-account linking | Isolated identity-only project published in production; no sensitive/restricted scopes. Real provider picker reached; exact owner linking and later Google sign-in proof pending. No email auto-match or data scopes. |
 | 🟢 Live | Telegram login, seven-day browser sessions, refresh/new-tab persistence | Real owner login/history mapping passed; same-browser persistence tested with captured network responses. Session survives server deploys. |
 | 🟢 Live | Reconnect through temporary fetch/host failures | Captured failure test passes without a new login; owner's post-fix phone retest pending. |
 | 🟢 Live | Shared ordinary chat, 30-second visible-tab sync, web-to-Telegram mirror | Private Google bodies do not enter shared model memory. No automatic mirror resend. |

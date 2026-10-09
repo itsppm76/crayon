@@ -23,3 +23,11 @@ See [release checklist](WEB_RELEASE_CHECKLIST.md) for remaining parity work and 
 - Unlinked users start with Telegram and link once; Google external Testing restrictions remain.
 - 326 local tests passed. Dedicated login configuration and backend/Pages rollout verified; real Google account picker reached. Callback permits inert Google-returned metadata without trusting it.
 - Cloud Audience confirmed external Testing with existing testers. Real owner exact link and subsequent Google login returning the same UID/history remain pending. No identity linked or provider data-access granted by this rollout.
+
+- Scope correction: Google documents an allowlist exception for basic identity-only login in Testing. Earlier blanket named-tester login wording was too broad; Gmail/Calendar data-access tester limits are separate. See https://developers.google.com/identity/protocols/oauth2/production-readiness/overview .
+
+## Isolated public Google login (October 9, 21:36 IST)
+
+- Owner picked separate identity-only production project. Existing Gmail/Calendar Testing project unchanged.
+- New login project published; only openid/email/profile declared, no sensitive/restricted verification required. Branding is unverified, not a certified-app claim.
+- Existing login behavior is still Telegram-first and explicitly reviewed linking. Google/email-first accounts and later reviewed merge are new requested work, not shipped here.
