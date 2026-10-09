@@ -42,13 +42,13 @@ def status(uid):
     fresh=time.time()-row.get('at',0)<60
     return {'ok':fresh,'verified':fresh,'state':'awake' if fresh else 'offline or asleep','computer':row.get('info',{}) if uid==OWNER else {},'note':'No automatic restart. Free allowance and sleep apply.'}
 
-def execute(uid,operation,args):
+def execute(uid,operation,args,test_wake=False):
     if not permitted(uid):return {'ok':False,'error':'Approved tester-only computer beta'}
     if uid!=OWNER and operation not in ('status','calculate','browse'):return {'ok':False,'error':'Text files are private to the owner. Testers can use public browser and arithmetic only.'}
     validate(operation,args)
     import cr_wake as wake
     if not status(uid)['ok']:
-        try:awake=wake.ensure(lambda:status(uid)['ok'])
+        try:awake=wake.ensure(lambda:status(uid)['ok'],test=True) if test_wake else wake.ensure(lambda:status(uid)['ok'])
         except Exception as e:return {'ok':False,'verified':False,'error':str(e)[:180]}
         if not awake:return {'ok':False,'error':'Computer is asleep or not connected. Automatic wake is not configured; owner must start it in GitHub Codespaces.'}
     if not reserve(uid):return {'ok':False,'error':'Daily computer beta cap reached.5 jobs per tester,20 owner,30 total. No automatic wake.'}
