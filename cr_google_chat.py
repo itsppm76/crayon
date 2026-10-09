@@ -11,6 +11,11 @@ def classify(text, previous=None):
 
 
 def show_draft(uid,chat,out,arg):
+    if not G.sender_name(uid):
+        import time
+        db.kv_set('google_signature_pending_'+str(uid),G.encrypt(uid,{'chat':chat,'until':time.time()+600,'draft':arg}))
+        out.send(chat,'What name should your emails sign with? I kept this draft. Reply with just your real name, or cancel. This is saved only for your account.')
+        return
     d=G.make_draft(uid,arg,structured=True)
     out.send(chat,d['text'],markup={"inline_keyboard":[[{"text":"Send","callback_data":"email_send:"+d['id']+":"+d['hash']},{"text":"Cancel","callback_data":"email_cancel:"+d['id']}]]})
     db.kv_set('google_reviewed_'+str(uid),[d['id'],d['hash']])
@@ -44,6 +49,28 @@ def handle(uid,chat,text,msg,out):
             out.send(chat,d['text'],markup={'inline_keyboard':[[{'text':'Create','callback_data':'calendar_create:'+d['id']+':'+d['hash']},{'text':'Cancel','callback_data':'calendar_cancel:'+d['id']}]]})
         except G.GoogleError as e:out.send(chat,str(e))
         return True
+    stored_name=db.kv_get('google_signature_pending_'+str(uid),None)
+    pending_name=G.decrypt(uid,stored_name) if stored_name else None
+    if pending_name and pending_name.get('chat')==chat:
+        import time
+        if pending_name.get('until',0)<time.time():db.kv_set('google_signature_pending_'+str(uid),None)
+        elif msg and any(msg.get(k) for k in ('forward_origin','forward_from','via_bot')):
+            out.send(chat,'Signature names need your own direct reply.');return True
+        elif text.strip().lower() in ('cancel','cancel draft','cancel email','stop','never mind'):
+            db.kv_set('google_signature_pending_'+str(uid),None)
+            db.kv_set('google_compose_'+str(uid),None)
+            try:ident,_=G.current_draft(uid);G.cancel_draft(uid,ident)
+            except G.GoogleError:pass
+            out.send(chat,'Cancelled. No email sent.');return True
+        elif text.strip().lower() in ('send','send it','yes send it'):
+            out.send(chat,'Give your signature name and review the new draft first. Nothing sent.');return True
+        else:
+            try:
+                G.set_sender_name(uid,text.strip())
+                db.kv_set('google_signature_pending_'+str(uid),None)
+                show_draft(uid,chat,out,pending_name['draft'])
+            except G.GoogleError as e:out.send(chat,str(e))
+            return True
     t=text.strip().lower().rstrip('.!')
     stored=db.kv_get('google_compose_'+str(uid),None)
     state=G.decrypt(uid,stored) if stored else None

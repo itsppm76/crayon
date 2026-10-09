@@ -234,17 +234,24 @@ def calendar(uid):
     return "Primary calendar, next 7 days:\n\n"+"\n\n".join(lines) if lines else "No events returned for the next 7 days on your primary calendar."
 
 
+def valid_signature_name(name):
+    from cr_safety import looks_like_secret
+    return isinstance(name,str) and 1<=len(name.strip())<=100 and not any(c in name for c in '\r\n<>@') and not looks_like_secret(name)
+
+
 def sender_name(uid):
-    import cr_memory as mem
-    try:
-        profile=mem.get_user(uid) or {}
-        name=str(profile.get('name') or '').strip()
-        explicit=db.q("SELECT value FROM facts WHERE user_id=%s AND key IN ('name','full_name','preferred_name') ORDER BY CASE key WHEN 'preferred_name' THEN 0 WHEN 'full_name' THEN 1 ELSE 2 END LIMIT 1",(uid,),'one')
-        if explicit and explicit.get('value'):name=str(explicit['value']).strip()
-        if len(name)>100 or any(c in name for c in '\r\n<>') or not name:return ''
-        from cr_safety import looks_like_secret
-        return '' if looks_like_secret(name) else name
+    # Display handles and model-extracted facts are not email identity.
+    stored=db.kv_get('google_signature_name_'+str(uid),None)
+    if not stored:return ''
+    try:name=decrypt(uid,stored).get('name','')
     except Exception:return ''
+    return name.strip() if valid_signature_name(name) else ''
+
+
+def set_sender_name(uid,name):
+    if not valid_signature_name(name):raise GoogleError('Please give a single name, up to100 characters, without addresses or secrets.')
+    db.kv_set('google_signature_name_'+str(uid),encrypt(uid,{'name':name.strip()}))
+    if sender_name(uid)!=name.strip():raise GoogleError('Name could not be saved. No email sent.')
 
 
 def current_content(uid):
@@ -282,6 +289,7 @@ def make_draft(uid, text, structured=False):
     if '\r' in subject or '\n' in subject:raise GoogleError('Subject must be one line.')
     from cr_safety import looks_like_secret,clean_text
     if looks_like_secret(json.dumps(text)):raise GoogleError('Draft appears to contain a secret')
+    if not sender_name(uid):raise GoogleError('Set your email signature name first. No draft created.')
     body=re.sub(r'(?i)\[(?:your|sender(?:\'s)?)\s*(?:full\s*)?name\]|<your name>|\{your name\}',lambda m:sender_name(uid),body)
     content={'from':row['email'],'to':to,'cc':cc,'bcc':bcc,'subject':clean_text(subject),'body':clean_text(body)}
     serialized=json.dumps(content,sort_keys=True)
@@ -302,6 +310,7 @@ def current_draft(uid):
 
 
 def send_draft(uid, ident, short_hash):
+    if db.kv_get('google_signature_pending_'+str(uid),None):raise GoogleError('Finish your signature name and review the new draft first.')
     import base64
     from email.message import EmailMessage
     # Atomic claim prevents replay and duplicate sends. Never retry an uncertain send.

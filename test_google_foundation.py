@@ -3,6 +3,12 @@ from cryptography.fernet import Fernet
 import cr_google as G
 
 
+@pytest.fixture(autouse=True)
+def known_signature(monkeypatch):
+    monkeypatch.setattr(G.db,'kv_get',lambda k,d=None:None)
+    monkeypatch.setattr(G,'sender_name',lambda uid:'Test Member')
+
+
 def test_encrypted_token_bound_to_user(monkeypatch):
     key=Fernet.generate_key().decode()
     monkeypatch.setenv('GOOGLE_TOKEN_ENCRYPTION_KEY',key)
@@ -213,12 +219,6 @@ def test_send_mime_all_reviewed_recipients(monkeypatch):
     assert 'Sent' in G.send_draft(11,'id',digest[:12])
     assert seen[0]['To']=='a@example.com, b@example.com' and seen[0]['Cc']=='c@example.com' and seen[0]['Bcc']=='d@example.com'
 
-
-def test_each_sender_name_no_global(monkeypatch):
-    import cr_memory as mem
-    monkeypatch.setattr(mem,'get_user',lambda uid:{'name':{11:'Pratham',22:'Sam'}[uid]})
-    monkeypatch.setattr(G.db,'q',lambda *a,**k:None)
-    assert G.sender_name(11)=='Pratham' and G.sender_name(22)=='Sam'
 
 
 def test_placeholder_replaced_per_member(monkeypatch):

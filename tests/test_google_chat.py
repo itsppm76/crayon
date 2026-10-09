@@ -5,6 +5,7 @@ import pytest
 @pytest.fixture
 def store(monkeypatch):
     values={}
+    monkeypatch.setattr(H.G,'sender_name',lambda uid:'Test Member')
     monkeypatch.setattr(H.db,'kv_get',lambda k,d=None:values.get(k,d))
     monkeypatch.setattr(H.db,'kv_set',lambda k,v:values.__setitem__(k,v))
     monkeypatch.setattr(H.G,'encrypt',lambda uid,c:c)

@@ -5,6 +5,7 @@ import pytest
 @pytest.fixture
 def store(monkeypatch):
     values={}
+    monkeypatch.setattr(H.G,'sender_name',lambda uid:'Test Member')
     monkeypatch.setattr(H.db,'kv_get',lambda k,d=None:values.get(k,d))
     monkeypatch.setattr(H.db,'kv_set',lambda k,v:values.__setitem__(k,v))
     monkeypatch.setattr(H.G,'encrypt',lambda uid,c:c)
@@ -162,3 +163,32 @@ def test_edit_replaces_reviewed_id_and_hash(monkeypatch,store):
     out=T.CaptureOut();assert H.handle(22,22,'rewrite this shorter',{},out)
     assert store['google_reviewed_22']==['new-id','new-hash']
     assert out.sent[-1]['markup'] is True
+
+def test_signature_question_preserves_context_and_no_send(monkeypatch,store):
+    monkeypatch.setattr(H.G,'sender_name',lambda uid:'')
+    payload={'to':['sam@example.com'],'cc':['cc@example.com'],'subject':'Hi','body':'Body'}
+    out=T.CaptureOut();H.show_draft(10,10,out,payload)
+    assert store['google_signature_pending_10']['draft']==payload
+    assert 'real name' in out.sent[0]['text']
+    H.handle(10,10,'send it',{},out)
+    assert 'Nothing sent' in out.sent[-1]['text']
+
+def test_signature_reply_requester_chat_bound(monkeypatch,store):
+    import time
+    store['google_signature_pending_10']={'chat':10,'until':time.time()+600,'draft':{'body':'private'}}
+    monkeypatch.setattr(H,'classify',lambda *a:{'action':'none'})
+    monkeypatch.setattr(H.G,'set_sender_name',lambda *a:pytest.fail('wrong chat or forwarded name'))
+    assert not H.handle(10,-5,'Sam',{},T.CaptureOut())
+    out=T.CaptureOut();assert H.handle(10,10,'Sam',{'forward_origin':{'type':'user'}},out)
+    assert 'direct' in out.sent[-1]['text']
+
+def test_signature_answer_reuses_exact_draft(monkeypatch,store):
+    import time
+    payload={'to':['sam@example.com'],'bcc':['hidden@example.com'],'subject':'Hi','body':'Body'}
+    store['google_signature_pending_10']={'chat':10,'until':time.time()+600,'draft':payload}
+    saved=[];shown=[]
+    monkeypatch.setattr(H.G,'set_sender_name',lambda uid,name:saved.append((uid,name)))
+    monkeypatch.setattr(H,'show_draft',lambda uid,chat,out,arg:shown.append(arg))
+    assert H.handle(10,10,'Sam Real',{},T.CaptureOut())
+    assert saved==[(10,'Sam Real')] and shown==[payload]
+    assert store['google_signature_pending_10'] is None
