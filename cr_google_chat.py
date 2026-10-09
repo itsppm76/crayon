@@ -54,7 +54,7 @@ def handle(uid,chat,text,msg,out):
         if msg and any(msg.get(k) for k in ('forward_origin','forward_from','via_bot')):
             out.send(chat,'Draft edits need your direct request, not forwarded content.');return True
         try:
-            if re.search(r'(?i)\b(to|cc|bcc|recipient|address)\b',text):
+            if re.search(r'(?i)\b(cc|bcc|recipient|address)|\bto\s*:\b',text):
                 out.send(chat,'Content edits keep recipients unchanged. For recipient changes, cancel and create a new draft with the exact To/CC/BCC.');return True
             ident,digest,content=G.current_content(uid)
             if db.kv_get('google_reviewed_'+str(uid),None)!=[ident,digest]:raise G.GoogleError('Review the current draft before editing.')
