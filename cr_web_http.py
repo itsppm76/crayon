@@ -77,7 +77,7 @@ def handle(h, method, raw=b''):
             A.logout(h.headers.get('Authorization',''))
             reply(h,200,{'ok':True},cors=True)
         elif method=='GET' and p.path=='/web/me':
-            reply(h,200,{'id':user['user_id'],'name':user['name']},cors=True)
+            reply(h,200,{'id':user['user_id'],'name':user['name'],'expires_at':user['expires_at'].timestamp()},cors=True)
         elif method=='GET' and p.path=='/web/history':
             q=parse_qs(p.query)
             if set(q)-{'before'} or any(len(v)!=1 for v in q.values()):raise ValueError('Invalid history query.')

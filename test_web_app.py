@@ -160,10 +160,12 @@ def test_dispatch_does_not_use_telegram_confirmation(config):
     for s in ('yes','send it','connect Google','read my inbox','forget name','computer calculate 2+2'):
         assert W.dispatch(17,'N',s)[0]['kind']=='text'
 
-def test_frontend_no_tokens_in_persistent_storage():
+def test_frontend_session_tab_storage_only():
     from pathlib import Path
     s=Path('docs/app.js').read_text()
-    assert 'localStorage' not in s and 'sessionStorage' not in s
+    assert 'localStorage' not in s and 'sessionStorage' in s
+    assert "await call('me')" in s and 'saved.expires<=Date.now()' in s
+    assert 'sessionStorage.removeItem' in s
     assert "e.origin!==API||e.source!==popup" in s
     assert '.innerHTML' not in s
     assert 'session_id' not in s

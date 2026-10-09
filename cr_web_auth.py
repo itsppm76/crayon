@@ -179,7 +179,7 @@ def _new_session(row):
 def session(header):
     if not isinstance(header, str) or not header.startswith('Bearer ') or not PATTERN.fullmatch(header[7:]):
         raise AuthError('Log in with Telegram first.')
-    row = db.q('SELECT user_id,name FROM web_sessions WHERE token_hash=%s AND expires_at>now()', (digest(header[7:]),), 'one')
+    row = db.q('SELECT user_id,name,expires_at FROM web_sessions WHERE token_hash=%s AND expires_at>now()', (digest(header[7:]),), 'one')
     if not row:
         raise AuthError('Your web session expired. Log in again.')
     return row

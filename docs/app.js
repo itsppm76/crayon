@@ -2,6 +2,10 @@
   'use strict';
   const API='https://crayon-v1.onrender.com', $=s=>document.querySelector(s);
   let token='', popup=null, verifier='', busy=false, timer=null, loginTimer=null, loginBusy=false, loginDeadline=0;
+  const SESSION_KEY='crayon.web.session';
+  function saveSession(value,expires){try{sessionStorage.setItem(SESSION_KEY,JSON.stringify({token:value,expires}));}catch(e){status('Browser storage is blocked; login will not survive refresh.');}}
+  function dropSession(){try{sessionStorage.removeItem(SESSION_KEY);}catch(e){}}
+  function sessionTimer(expires){clearTimeout(timer);timer=setTimeout(()=>{signedOut();status('Session expired. Log in again.');},Math.max(0,expires-Date.now()));}
   const urls=[];let historyBefore=null,historyMore=false;
   const random=()=>{const b=new Uint8Array(32);crypto.getRandomValues(b);return btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
   const challenge=async s=>btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -11,7 +15,7 @@
   function bubble(role,text){$('#hero').classList.add('hide');const row=document.createElement('div');row.className='msg '+(role==='user'?'user':'ai');if(role!=='user'){const i=document.createElement('img');i.src='./crayon.svg';i.alt='';i.className='av';row.append(i);}const b=document.createElement('div');b.className='bubble';b.textContent=text;row.append(b);$('#log').append(row);$('#scroll').scrollTop=$('#scroll').scrollHeight;return b;}
   function item(x){if(x.kind==='text')bubble('ai',x.text);else if(x.kind==='artifact'){const b=bubble('ai','');const bytes=Uint8Array.from(atob(x.data),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([bytes],{type:x.mime}));urls.push(url);if(['image/png','image/jpeg','image/webp'].includes(x.mime)){const img=document.createElement('img');img.src=url;img.alt=x.name;img.className='artifact-image';b.append(img);}const a=document.createElement('a');a.href=url;a.download=x.name;a.textContent='Download '+x.name;a.className='artifact';b.append(a);}}
   async function call(path,body){const r=await fetch(API+'/web/'+path,{method:body===undefined?'GET':'POST',credentials:'omit',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});const j=await r.json();if(!r.ok){if(r.status===401&&path!=='session')signedOut();throw new Error(j.error||'Request not confirmed.');}return j;}
-  function signedOut(){token='';verifier='';busy=false;clearTimeout(timer);clearTimeout(loginTimer);clearView();$('#identity').textContent='Signed out';controls();}
+  function signedOut(){dropSession();token='';verifier='';busy=false;clearTimeout(timer);clearTimeout(loginTimer);clearView();$('#identity').textContent='Signed out';controls();}
   $('#login').onclick=async()=>{popup=window.open('about:blank','crayon-login','width=520,height=720');if(!popup){status('Allow the login popup, then try again.');return;}clearTimeout(loginTimer);verifier=random();const ch=await challenge(verifier);popup.location=API+'/web/auth/start?challenge='+encodeURIComponent(ch);status('Approve Crayon login in Telegram, then return to this tab.');const current=verifier;loginDeadline=Date.now()+300000;loginTimer=setTimeout(()=>finishLogin(current,loginDeadline),1000);};
   async function finishLogin(v,deadline){
     if(v!==verifier||loginBusy)return;
@@ -24,10 +28,10 @@
         else loginTimer=setTimeout(()=>finishLogin(v,deadline),3000);
         return;
       }
-      verifier='';clearTimeout(loginTimer);token=j.token;
+      verifier='';clearTimeout(loginTimer);token=j.token;saveSession(token,Date.now()+j.expires_in*1000);
       $('#identity').textContent=j.user.name||'Telegram user '+j.user.id;controls();clearView();
       status('Private foundation connected. Background alerts and reminders still arrive in Telegram.');
-      timer=setTimeout(()=>{signedOut();status('Session expired. Log in again.');},j.expires_in*1000);
+      sessionTimer(Date.now()+j.expires_in*1000);
       await loadHistory(false);
     }catch(err){status(err.message);if(v===verifier&&Date.now()<deadline)loginTimer=setTimeout(()=>finishLogin(v,deadline),5000);}
     finally{loginBusy=false;}
@@ -69,5 +73,12 @@
   async function ask(){const text=$('#input').value.trim();if(!token||busy||!text)return;busy=true;controls();bubble('user',text);$('#input').value='';const id=random();try{await call('chat',{message:text,request_id:id});status('Queued. The free host can take a moment to wake.');for(let n=0;n<150;n++){await new Promise(r=>setTimeout(r,2000));if(!token)return;const r=await call('result?id='+encodeURIComponent(id));status(r.state==='running'?'Crayon is working. This request will not be automatically repeated.':'Request '+r.state);if(['done','blocked'].includes(r.state)){r.items.forEach(item);if(r.state==='blocked'&&!r.items.length)bubble('ai','Request stopped or was interrupted. Check your records before trying again.');break;}if(n===149)status('Still pending. Check the activity feed after logging in again; no duplicate request was sent.');}}catch(err){bubble('ai',err.message+' If processing started, check activity before retrying.');}finally{busy=false;controls();}}
   $('#form').onsubmit=e=>{e.preventDefault();ask();};$('#input').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();ask();}};$('#input').oninput=controls;
   document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{if(!token){status('Log in with Telegram to use your Crayon account.');return;}$('#input').value=b.dataset.prompt||b.textContent;controls();$('#input').focus();});
-  controls();call('status').then(j=>status(j.login_configured?'Log in with Telegram to continue.':'UI ready. Telegram login configuration is still being completed; private features remain locked.')).catch(()=>status('Backend waking or unavailable. Private features stay locked until login is checked.'));
+  async function restoreSession(){
+    let saved;try{saved=JSON.parse(sessionStorage.getItem(SESSION_KEY)||'null');}catch(e){dropSession();}
+    if(!saved||typeof saved.token!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(saved.token)||typeof saved.expires!=='number'||saved.expires<=Date.now()){dropSession();return false;}
+    token=saved.token;status('Checking your saved session...');
+    try{const user=await call('me');const expires=Math.min(saved.expires,user.expires_at*1000);if(!Number.isFinite(expires)||expires<=Date.now()){signedOut();return false;}saveSession(token,expires);sessionTimer(expires);$('#identity').textContent=user.name||'Telegram user '+user.id;controls();await loadHistory(false);return true;}
+    catch(e){token='';controls();status(e.message+' Reload to check your saved session again.');return true;}
+  }
+  controls();restoreSession().then(restored=>{if(!restored)call('status').then(j=>status(j.login_configured?'Log in with Telegram to continue.':'UI ready. Telegram login configuration is still being completed; private features remain locked.')).catch(()=>status('Backend waking or unavailable. Private features stay locked until login is checked.'));});
 })();
