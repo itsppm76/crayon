@@ -51,7 +51,7 @@ def tool_defs(tools):
     return out
 
 
-def to_messages(contents, system=""):
+def to_messages(contents, system="", selected_provider=None):
     try:
         from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
     except ImportError as e:
@@ -89,7 +89,7 @@ def to_messages(contents, system=""):
                     blocks.append({"type": kind, "base64": d["data"], "mime_type": mime})
             elif "fileData" in p:
                 d = p["fileData"]
-                if provider() != "gemini":
+                if (selected_provider or provider()) != "gemini":
                     raise ValueError("Gemini uploaded files cannot be sent to another provider")
                 blocks.append({"type": "file", "file_id": d["fileUri"], "mime_type": d["mimeType"]})
             elif "functionResponse" in p:
@@ -104,15 +104,16 @@ def to_messages(contents, system=""):
     return msgs
 
 
-def build_model(model, temperature, max_tokens, json_mode, thinking_budget, tools):
-    p = provider()
+def build_model(model, temperature, max_tokens, json_mode, thinking_budget, tools, selected_provider=None):
+    p = selected_provider or provider()
     try:
         if p == "openrouter":
+            if model!='openrouter/free' and not model.endswith(':free'):raise ValueError('Paid OpenRouter models blocked')
             from langchain_openai import ChatOpenAI
             kw = {"response_format": {"type": "json_object"}} if json_mode else {}
             m = ChatOpenAI(model=model, api_key=C.OPENROUTER_KEY, base_url=OPENROUTER_BASE, temperature=temperature,
                            max_tokens=max_tokens, timeout=60, max_retries=0, model_kwargs=kw,
-                           default_headers={"X-Title": "Crayon"})
+                           default_headers={"X-Title": "Crayon"}, extra_body={"provider":{"max_price":{"prompt":0,"completion":0,"request":0,"image":0},"data_collection":"deny","require_parameters":True}})
         else:
             from langchain_google_genai import ChatGoogleGenerativeAI
             kw = {"response_mime_type": "application/json"} if json_mode else {}
