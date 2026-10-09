@@ -1,4 +1,4 @@
-"""Gemini REST client (free tier). Native function calling, retries, model fallback."""
+"""LLM entry point. LangChain layer (cr_lc) by default with Gemini or OpenRouter; direct Gemini REST path kept as fallback."""
 import json
 import logging
 import time
@@ -28,6 +28,14 @@ def _post(model, body):
 def generate(contents, system="", tools=None, json_mode=False, temperature=0.6, max_tokens=1500,
              models=None, thinking_budget=None):
     """Returns dict: {text, calls:[{name,args}], raw_parts, model}. Raises LLMError."""
+    import cr_lc
+    if cr_lc.enabled() and cr_lc.has_key():
+        try:
+            return _generate_lc(contents, system, tools, json_mode, temperature, max_tokens, models, thinking_budget)
+        except cr_lc.Unavailable as e:
+            log.warning("langchain unavailable, using direct path: %s", redact(str(e))[:150])
+    if cr_lc.provider() == "openrouter":
+        raise LLMError("auth", "no OPENROUTER_API_KEY or langchain missing")
     if not C.GEMINI_KEY:
         raise LLMError("auth", "no GEMINI_API_KEY")
     body = {"contents": contents,
@@ -76,6 +84,40 @@ def generate(contents, system="", tools=None, json_mode=False, temperature=0.6, 
             errs.append(f"{model}:{r.status_code}")
             time.sleep(1.0)
     kind = "quota" if any(e.endswith(":429") for e in errs) else "unavailable"
+    raise LLMError(kind, ", ".join(errs))
+
+
+def _generate_lc(contents, system, tools, json_mode, temperature, max_tokens, models, thinking_budget):
+    import cr_lc
+    msgs = cr_lc.to_messages(contents, system)
+    errs = []
+    for model in cr_lc.model_names(models):
+        for attempt in range(2):
+            try:
+                chat = cr_lc.build_model(model, temperature, max_tokens, json_mode, thinking_budget, tools)
+                ai = chat.invoke(msgs)
+            except cr_lc.Unavailable:
+                raise
+            except Exception as e:
+                kind = cr_lc.classify(e)
+                errs.append(f"{model}:{kind}")
+                if kind == "auth":
+                    raise LLMError("auth", redact(str(e))[:200])
+                if kind == "bad_request":
+                    raise LLMError("bad_request", redact(str(e))[:300])
+                if kind == "quota" and attempt == 0:
+                    time.sleep(4.0)
+                    continue
+                if kind == "notfound":
+                    break
+                time.sleep(1.0)
+                continue
+            text, calls, parts = cr_lc.from_ai(ai)
+            if not text and not calls:
+                errs.append(f"{model}:empty")
+                break
+            return {"text": text, "calls": calls, "parts": parts, "model": model, "raw": {"provider": cr_lc.provider()}}
+    kind = "quota" if any(e.endswith(":quota") for e in errs) else "unavailable"
     raise LLMError(kind, ", ".join(errs))
 
 
