@@ -13,7 +13,7 @@
 <body>
 <header>
   <div class="brand"><img src="./crayon.svg" alt="" width="28" height="28"><span>Crayon</span></div>
-  <button id="menu" class="ghost" aria-expanded="false">Menu</button><span id="identity">Signed out</span><button id="login" class="ghost">Log in with Telegram</button><button id="google-login" class="ghost">Log in with Google</button><button id="logout" class="ghost hide">Log out</button><button id="new" class="ghost" title="Start a new chat">Clear view</button>
+  <button id="menu" class="ghost" aria-expanded="false">Menu</button><span id="identity">Signed out</span><button id="auth-open" class="ghost">Sign in</button><button id="logout" class="ghost hide">Log out</button><button id="new" class="ghost" title="Start a new chat">Clear view</button>
 </header>
 <nav id="panel" class="hide" aria-label="Crayon controls">
 <button data-command="/help">Help</button><button data-command="my tasks">Tasks</button><button data-command="show my memory">Memory</button><button data-command="my reminders">Reminders</button>
@@ -23,9 +23,21 @@
 <main id="scroll"><button id="older" class="ghost hide">Load earlier messages</button>
   <section id="hero">
     <img src="./crayon.svg" alt="Crayon" class="face" width="96" height="96">
-    <h1>What can I help with?</h1>
-    <p class="sub">Your Crayon, now on the web. Log in to share your existing Telegram memory and history.</p>
-    <div class="chips">
+    <div id="auth-card" class="auth-card">
+      <h1>Welcome to Crayon</h1>
+      <p class="sub">Your conversations, memory and work. One account.</p>
+      <button id="google-login" class="auth-provider"><span class="google-mark" aria-hidden="true">G</span>Continue with Google</button>
+      <button id="login" class="auth-provider"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><path d="M21 3 3 10l7 3 3 7 8-17Z" fill="none" stroke="#229ED9" stroke-width="1.8" stroke-linejoin="round"/></svg>Continue with Telegram</button>
+      <div class="auth-divider"><span>or</span></div>
+      <label class="auth-email-label" for="auth-email">Email address</label>
+      <input id="auth-email" class="auth-email" type="email" autocomplete="email" placeholder="you@example.com" disabled>
+      <button id="email-login" class="auth-primary" disabled>Continue with email</button>
+      <p class="auth-help">Email sign-in is being set up. Use Google or Telegram for now.</p>
+      <p class="auth-help" id="auth-link-help">Already use Telegram? Sign in with Telegram once, then link Google in Menu. Google-first accounts are being built.</p>
+      <p class="auth-legal">By continuing, you agree to the <a href="https://crayon-v1.onrender.com/terms" target="_blank" rel="noopener">Terms</a> and <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>
+    </div>
+    <div id="signedin-hero" class="hide"><h1>What can I help with?</h1><p class="sub">Your Crayon, across your connected accounts.</p></div>
+    <div class="chips hide" id="prompt-chips">
       <button class="chip">Explain something simply</button>
       <button class="chip">Help me write a message</button>
       <button class="chip" data-prompt="my tasks">My tasks</button>
@@ -43,6 +55,6 @@
   </form>
   <p class="note">Crayon is an AI and can make mistakes. Chat uses your Telegram identity and memory. Reminders currently arrive in Telegram. Uploads up to 20 MB. Raw uploads are not retained. Google reads and exact-reviewed actions are in Menu. Computer and rooms stay locked. <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
 </footer>
-<script src="./app.js?v=20261009-google-login1"></script>
+<script src="./app.js?v=20261009-auth-card1"></script>
 </body>
 </html>
