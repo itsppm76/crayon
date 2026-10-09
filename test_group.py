@@ -37,7 +37,7 @@ def test_group_news_explicit_public_lookup(monkeypatch):
     monkeypatch.setattr(W,'news',lambda q,n,day:calls.append((q,day)) or {'items':[{'title':'Test news','url':'https://news.google.com/test','source':'Publisher','published':'2026-10-09T10:00:00+05:30'}],'day':None})
     monkeypatch.setattr(G.llm,'generate',lambda *a,**kw:(_ for _ in ()).throw(AssertionError('no unsupported model news')))
     r=G.answer({'text':'@crayon_v1_bot tell me the latest AI news now','from':{'id':7555366869}})
-    assert calls and 'Test news' in r and r.markup['inline_keyboard'][0][0]['url']=='https://news.google.com/test'
+    assert calls and 'Test news' in r and 'https://' not in r and 'Publisher' in r
 
 def test_group_yesterday_resolves_date(monkeypatch):
     import cr_web as W
@@ -74,7 +74,8 @@ def test_public_news_any_tagged_user(monkeypatch):
     assert 'No dated news results' in G.answer({'text':'@crayon_v1_bot latest news','from':{'id':12}})
 
 
-def test_group_news_source_buttons_forwarded(monkeypatch):
-    monkeypatch.setattr(G,'answer',lambda m:G.PublicAnswer('Headline',{'inline_keyboard':[[{'text':'source','url':'https://news.google.com/'}]]}))
-    out=T.CaptureOut();T.handle_update({'message':{'chat':{'id':-991,'type':'supergroup'},'from':{'id':12},'text':'@crayon_v1_bot latest news'}},out)
-    assert out.sent[0]['markup']
+def test_group_news_clean_no_links(monkeypatch):
+    import cr_web as W
+    monkeypatch.setattr(W,'news',lambda *a:{'items':[{'title':'Clear headline','url':'https://news.google.com/test','source':'Publisher','published':'2026-10-09T10:00:00+05:30'}],'day':None})
+    r=G.answer({'text':'@crayon_v1_bot latest news','from':{'id':12}})
+    assert '1. Clear headline' in r and 'Publisher |' in r and 'https://' not in r and not hasattr(r,'markup')
