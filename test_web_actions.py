@@ -50,7 +50,8 @@ def test_private_reads_no_model_or_history(config):
     r=X.read(17,{'kind':'inbox','fields':{'query':'newer_than:1d'}})
     assert r['text']=='private result' and not r['stored_in_history'] and not r['sent_to_ai']
     with pytest.raises(ValueError):X.read(17,{'kind':'inbox','fields':{'query':'','uid':99}})
-    with pytest.raises(X.G.GoogleError):X.read(17,{'kind':'calendar','fields':{}})
+    config.setattr(X.G,'calendar',lambda uid:'calendar_'+str(uid))
+    assert X.read(17,{'kind':'calendar','fields':{}})['text']=='calendar_17'
 
 def test_actions_require_authenticated_exact_origin(config):
     config.setattr(A,'session',lambda *a:(_ for _ in ()).throw(A.AuthError('Login first')))

@@ -16,7 +16,7 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-357_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-360_passed-22A06B?style=for-the-badge)
 ![Pages](https://img.shields.io/badge/GitHub_Pages-web_live-FF6B6B?style=for-the-badge&logo=githubpages&logoColor=white)
 ![Login](https://img.shields.io/badge/Telegram_login-7_days-26A5E4?style=for-the-badge)
 ![Parity](https://img.shields.io/badge/full_parity-in_progress-FFC93C?style=for-the-badge)
@@ -31,15 +31,15 @@
 
 [Final Day 0-to-current feature checklist](LIVE_FEATURE_CHECKLIST.md) · [Web release checklist](WEB_RELEASE_CHECKLIST.md) · [Changelog](CHANGELOG.md)
 
-Runtime `e4331d3` is deployed. Telegram login, independent Google-first login and verified email/password login are configured. An already-linked Google identity opens its existing account; otherwise accounts keep separate chat and memory. Matching email addresses never trigger linking. Login does not connect Gmail, Calendar or Workspace.
+Per-user access release opens bounded computer/browser and private text files to every Telegram user. Calendar and mail-watch use each user's own connected Google account, with exact review and opt-in. No one gets the owner's data. Google Testing still limits data-access consent. Telegram login, independent Google-first login and verified email/password login are configured. An already-linked Google identity opens its existing account; otherwise accounts keep separate chat and memory. Matching email addresses never trigger linking. Login does not connect Gmail, Calendar or Workspace.
 
 **Account consolidation is OFF by owner choice. No account merge happened.** The stopped scoped-test/two-Google changes were never deployed. Existing Telegram history and connections stay intact.
 
 Web chat, history, uploads, generated files, seven-day sessions, visible-tab sync, waiting UI and original-request result recovery are deployed. Telegram-backed accounts share their ordinary chat/memory between Telegram and web. Standalone accounts have no Telegram mirror destination. Private Google results remain outside the chat model and shared memory.
 
-357 committed-runtime tests pass. Live health confirms database/polling; live web status confirms all three login configurations and uploads. Real standalone Google/email and password-reset acceptance are not claimed. Owner-device post-fix reconnect/upload delivery remains pending.
+360 local tests pass. Live health confirms database/polling; live web status confirms all three login configurations and uploads. Real standalone Google/email and password-reset acceptance are not claimed. Owner-device post-fix reconnect/upload delivery remains pending.
 
-Browser-only reminders, scheduled jobs and background alerts are unavailable. Web rooms, computer execution, deletion confirmations and work-queue controls remain locked or unfinished. Gmail is a named-tester beta, calendar is owner-only, and actual calendar Create remains unproven. WhatsApp is parked. No paid setup or payment was made.
+Browser-only reminders, scheduled jobs and background alerts are unavailable. Web rooms, computer execution, deletion confirmations and work-queue controls remain locked or unfinished. Gmail is a named-tester beta, calendar is per-user, and actual calendar Create remains unproven. WhatsApp is parked. No paid setup or payment was made.
 
 The checklist separates deployed features, real acceptance evidence and disabled/setup-dependent paths. Older milestone sections below are historical and do not override it.
 
@@ -47,7 +47,9 @@ The checklist separates deployed features, real acceptance evidence and disabled
 
 ## ✅ Earlier October 9 Telegram milestones (historical)
 
-Earlier milestone: 203 tests passed then. Current committed suite: 357. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
+Owner/tester gate notes below describe previous milestones. Current access is in the final checklist: every Telegram user gets bounded computer/browser/private files; Google features use only that user's connection, subject to Google Testing.
+
+Earlier milestone: 203 tests passed then. Current local suite: 360. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
 
 ### Overnight task power (2.33.1)
 
@@ -65,9 +67,9 @@ Earlier milestone: 203 tests passed then. Current committed suite: 357. Deployed
 | Access tier | Available features | Limits |
 | :--- | :--- | :--- |
 | Everyone using the bot | Chat, personal memory/review/forget/wipe, notes, reminders, tracked tasks, goal plans, web search/page reading, bounded research, sandboxed maths, currency/unit conversion, CSV/charts, review-only message drafts, opt-in digests/nudges and quiet hours | Each person's private data stays separate. Free-host timing and model output are best-effort. |
-| Named Google test users who connect their own account | Gmail reads and encrypted reviewed email Send/Cancel on their own connection; calendar is owner-only | Google OAuth is still in testing mode, not open to arbitrary accounts. Each user needs their own personal connection link. Calendar Create needs optional write-scope reconnect and an approved live test. |
-| Owner + approved computer testers | Computer status, arithmetic, public HTTPS browser screenshots; fixed World Bank research-to-chart demo | 5 execution jobs/tester/day, 20 owner/day, 30 total/day, failures included. Shared free machine must be awake. Tester access code-tested; another person's live test still pending. |
-| Owner only | Text-file create/read on the computer; lifecycle/setup controls; opt-in hourly email-watch beta | Mail watch was enabled October 9 at 13:59 IST. Real two-item Telegram notification passed October 9 at 15:00 IST. Owner files are not shared with testers. |
+| Named Google test users who connect their own account | Gmail reads and encrypted reviewed email Send/Cancel on their own connection; calendar is per-user | Google OAuth is still in testing mode, not open to arbitrary accounts. Each user needs their own personal connection link. Calendar Create needs optional write-scope reconnect and an approved live test. |
+| Every Telegram user (per-user limits) | Computer status, arithmetic, public HTTPS browser screenshots; fixed World Bank research-to-chart demo | 5 execution jobs/tester/day, 20 owner/day, 30 total/day, failures included. Shared free machine must be awake. Tester access code-tested; another person's live test still pending. |
+| Each user, private folder | Text-file create/read on the computer; lifecycle/setup controls; opt-in hourly email-watch beta | Mail watch was enabled October 9 at 13:59 IST. Real two-item Telegram notification passed October 9 at 15:00 IST. Owner files are not shared with testers. |
 
 ### Live checks and UX
 
@@ -311,7 +313,7 @@ Small assistant. Honest status. Room to grow.
 | 🔎 Deep research | Bounded multi-source reads; comparison subject/context searches | Official Notion/Obsidian comparison retested; citations/model synthesis remain fallible |
 | 🧮 Conversions | Dated Frankfurter currency and Decimal unit conversion | Real currency/unit tests passed; not a live FX quote, fees excluded |
 | 📎 File output | CSV and non-negative bar chart PNG from supplied/checked data | Both received in real Telegram; delivered chart pixels checked |
-| 💻 Computer beta | Approved-tester2-core Codespace, outbound bridge, bounded arithmetic/text-file tasks | Live status/calculation passed; no shared-user shell, no paid budget or auto-restart |
+| 💻 Computer beta | Shared2-core Codespace, outbound bridge, bounded arithmetic/text-file tasks | Live status/calculation passed; no shared-user shell, no paid budget or auto-restart |
 | 📸 Browser beta | Fresh public Chromium, public-IP checks, sensitive-portal backstop, two-page limit, screenshot and URL log | Python tutorial, Instagram login wall and signed-out YouTube screenshots received in Telegram and visually inspected |
 
 ### Try it in plain language
@@ -336,7 +338,7 @@ Slash commands remain optional power controls: `/goal`, `/memory_review`, `/proa
 
 The owner's GitHub student allowance includes180core-hours, about90actual hours at2cores, and20GB-month storage. A$0 Codespaces budget with stop-usage was verified before creation. Compute is used while awake; storage while the Codespace exists. The outbound worker session defaults to25minutes. A deployment-controlled session can be bounded up to6hours for an approved build; the bot cannot change it. Auto-wake is enabled after real cold-start and idle-stop acceptance. Manual start is still a recovery option. Stop when finished. Never raise the budget as a workaround.
 
-Browser can visit public HTTPS sites, including Instagram and YouTube. Login/access walls are captured honestly. Known banking, webmail, patient and transaction portals are blocked by hostname/path rules; this backstop is not a perfect category classifier. No imported account cookies, no forms, logins, posting, purchases, downloads or unrestricted scripts. Only approved testers can use browser/arithmetic. Owner files stay owner-only. Details: [COMPUTER_SETUP.md](COMPUTER_SETUP.md).
+Browser can visit public HTTPS sites, including Instagram and YouTube. Login/access walls are captured honestly. Known banking, webmail, patient and transaction portals are blocked by hostname/path rules; this backstop is not a perfect category classifier. No imported account cookies, no forms, logins, posting, purchases, downloads or unrestricted scripts. Only users within quotas can use browser/arithmetic. Owner files stay owner-only. Details: [COMPUTER_SETUP.md](COMPUTER_SETUP.md).
 
 ### Official-source research-to-chart demo
 
@@ -348,7 +350,7 @@ Each user requests their own short link in their own private Crayon chat. Never 
 
 Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is enabled after October 9 lifecycle proof. Additional testers are not enabled until their Telegram IDs are verified.203 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+per-user UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is enabled after October 9 lifecycle proof. Additional testers are not enabled until their Telegram IDs are verified.203 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
 
 ### Mail checks and private calendar previews (2.27.0)
 

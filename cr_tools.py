@@ -371,7 +371,7 @@ def computer_status(ctx):
     import cr_computer as K
     return K.status(ctx['uid'])
 
-@tool("computer_task", "Computer beta: text files owner-only, approved testers browser/arithmetic only: basic arithmetic (calculate), list_files, read_text, write_text to create a NEW text file. Use these exact operation names. No shell, imports, secrets, private accounts, deletes or overwrites. Use only when user explicitly asks to use the computer.",
+@tool("computer_task", "Computer beta with private per-account text files and bounded shared capacity: basic arithmetic (calculate), list_files, read_text, write_text to create a NEW text file. Use these exact operation names. No shell, imports, secrets, private accounts, deletes or overwrites. Use only when user explicitly asks to use the computer.",
       {"operation":{"type":"string","enum":["status","calculate","write_text","read_text","list_files"],"description":"Exact operation name. write_text requires filename and text; read_text requires filename; calculate requires expression."},"args":{"type":"object","properties":{"filename":S,"text":S,"expression":S}}},["operation","args"])
 def computer_task(ctx,operation,args):
     import cr_computer as K

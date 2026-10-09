@@ -1,5 +1,14 @@
 # Change log
 
+## October 9, 2026 - per-user access
+
+- Open bounded Telegram computer/browser and controlled public-form previews to all authenticated users. Preserve free per-user/global caps and exact effect review.
+- Bind jobs to authenticated account IDs. Private file folders isolate each account, preserve legacy owner files, reject old-worker file jobs, symlinks and overwrites;100files/account,10MB shared cap.
+- Calendar read/preview/reconnect/Create and opt-in hourly mail-watch route to each user's own encrypted Google connection, never the owner's account. Exact review and Google Testing constraints remain. Mail-watch delivers only to its opting-in private Telegram account.
+-360 local tests and disposable PostgreSQL queue/private-file isolation proof. Real arbitrary-user Google consent, Calendar Create and Telegram acceptance remain separate gates.
+- No consolidation, paid budget increase or automatic external action.
+
+
 ## October 9, 2026 - final live-state documentation
 
 - Document cumulative Day 0-to-current features in `LIVE_FEATURE_CHECKLIST.md`.

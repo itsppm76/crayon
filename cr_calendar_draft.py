@@ -5,7 +5,7 @@ import cr_google as G
 import cr_db as db
 OWNER=1898030949
 def owner(uid):
-    if uid!=OWNER:raise G.GoogleError('Calendar beta is owner-only.')
+    if type(uid) is not int or uid<=0:raise G.GoogleError('A valid authenticated account is required.')
 URL='https://www.googleapis.com/calendar/v3/calendars/primary/events'
 def init():
     db.q("CREATE TABLE IF NOT EXISTS google_calendar_drafts(id TEXT PRIMARY KEY,user_id BIGINT NOT NULL,encrypted_content TEXT NOT NULL,content_hash TEXT NOT NULL,status TEXT DEFAULT 'pending',expires_at TIMESTAMPTZ NOT NULL)",fetch='none')

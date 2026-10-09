@@ -14,9 +14,10 @@ def test_form_schema_exact_and_public():
         with pytest.raises(ValueError):F.validate(c,values)
 def test_form_fingerprint_changes():
     assert F.fingerprint({'name':'one'})!=F.fingerprint({'name':'two'})
-def test_booking_other_owner_rejected():
-    for fn,args in ((B.preview,('demo',{})),(B.submit,('id','hash')),(B.cancel,('id',))):
-        with pytest.raises(B.BookingError):fn(12,*args)
+def test_booking_all_accounts_and_invalid_identity():
+    B.gate(12)
+    for uid in (0,-1,True,'12'):
+        with pytest.raises(B.BookingError):B.gate(uid)
 def test_preview_does_not_submit(monkeypatch):
     calls=[];queries=[];c=config();values={'name':'Test','email':'test@example.com'}
     monkeypatch.setattr(B,'configs',lambda:{'test':c})
@@ -53,9 +54,9 @@ def test_configuration_change_no_submit(monkeypatch):
     monkeypatch.setattr(B.db,'kv_get',lambda *a:['id',h[:12]]);monkeypatch.setattr(B.G,'decrypt',lambda *a:content);monkeypatch.setattr(B,'configs',lambda:{})
     monkeypatch.setattr(K,'execute',lambda *a:pytest.fail('changed adapter submit'))
     with pytest.raises(B.BookingError,match='configuration changed'):B.submit(K.OWNER,'id',h[:12])
-def test_tester_form_operations_blocked():
-    assert not K.execute(7555366869,'form_submit',{})['ok']
-    assert not K.execute(7555366869,'form_inspect',{})['ok']
+def test_member_form_payload_still_checked():
+    for op in ('form_submit','form_inspect'):
+        with pytest.raises(ValueError):K.execute(12,op,{})
 def test_requires_current_page_hash():
     with pytest.raises(ValueError):K.validate('form_submit',{'config':config(),'values':{'name':'Test','email':'t@example.com'}})
 

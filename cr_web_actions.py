@@ -13,7 +13,7 @@ def init():
 def connections(uid):
     import cr_connections as X
     return {'google':G.status(uid).get('email'),'workspace':(X.status(uid,'workspace') or {}).get('identity'),
-      'calendar_owner':uid==1898030949,'external_auto_send':False,'attachments_email':False}
+      'calendar_owner':bool(G.status(uid)),'external_auto_send':False,'attachments_email':False}
 
 def preview(uid,header,body):
     init()
@@ -72,7 +72,6 @@ def read(uid,body):
     if kind=='inbox' and set(f)=={'query'} and isinstance(f['query'],str):text=G.inbox(uid,f['query'])
     elif kind=='email_read' and set(f)=={'id'} and isinstance(f['id'],str):text=G.read_message(uid,f['id'])
     elif kind=='calendar' and not f:
-        if uid!=1898030949:raise G.GoogleError('Calendar beta is owner-only.')
         text=G.calendar(uid)
     elif kind=='doc' and set(f)=={'id'}:text=json.dumps(__import__('cr_workspace').doc_read(uid,f['id']),ensure_ascii=False)
     elif kind=='sheet' and set(f)=={'id','range'}:text=json.dumps(__import__('cr_workspace').sheet_read(uid,f['id'],f['range']),ensure_ascii=False)
@@ -83,7 +82,6 @@ def connect(uid,body):
     if set(body)!={'provider'}:raise ValueError('Invalid connection request.')
     if body['provider']=='google':url=G.begin(uid)
     elif body['provider']=='calendar_write':
-        if uid!=1898030949:raise G.GoogleError('Calendar beta is owner-only.')
         url=G.begin(uid,calendar_write=True)
     elif body['provider']=='workspace':url=__import__('cr_connections').begin(uid,'workspace')
     else:raise ValueError('Connection not enabled.')

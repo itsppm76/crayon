@@ -6,7 +6,7 @@ import cr_proactive as P
 OWNER=1898030949
 KEY=lambda uid:'mail_watch_'+str(uid)
 def status(uid):
-    if uid!=OWNER:raise G.GoogleError('Mail watch beta is owner-only for now.')
+    if type(uid) is not int or uid<=0:raise G.GoogleError('A valid authenticated account is required.')
     state=db.kv_get(KEY(uid),None)
     if not state:return 'Email checks: off. No scheduled inbox checks.'
     from datetime import datetime,timezone
@@ -14,7 +14,8 @@ def status(uid):
     when=datetime.fromtimestamp(checked,timezone.utc).isoformat() if checked else 'not checked'
     return ('Email checks: '+('paused' if state.get('paused') else 'on')+'\nAccount: '+str(state.get('email','unknown'))+'\nLast check/configuration (UTC): '+when+'\nHourly during awake hours, metadata and bounded snippets only. Host timing is best-effort. No email sent or calendar changed. A timestamp alone does not prove a notification was delivered.')
 def configure(uid,chat,on):
-    if uid!=OWNER:raise G.GoogleError('Mail watch beta is owner-only for now.')
+    if type(uid) is not int or uid<=0:raise G.GoogleError('A valid authenticated account is required.')
+    if on and (uid!=chat or uid>=10**15):raise G.GoogleError('Enable email checks from your own private Telegram chat. Browser-only background delivery is not enabled.')
     if not on:db.kv_set(KEY(uid),None);return 'Email checks off.'
     row=G.status(uid)
     if not row:raise G.GoogleError('Connect Google first.')
@@ -48,19 +49,29 @@ def scan(uid,state):
     lines+=['','Checked up to4 messages. Labels/subjects can misjudge importance. No actions taken.']
     return '\n'.join(lines),state
 def tick(out):
-    state=db.kv_get(KEY(OWNER),None)
-    if not state or state.get('paused') or time.time()-state.get('checked',0)<3600:return
-    s=P.settings(OWNER);n=P.T.now_local(OWNER)
+    # Account IDs derive from stored opt-in keys, never a model or incoming email.
+    rows=db.q("SELECT key FROM kv WHERE key LIKE 'mail_watch_%' AND value IS NOT NULL ORDER BY key LIMIT 500",fetch='all') or []
+    for row in rows:
+        suffix=row['key'][len('mail_watch_'):]
+        if not suffix.isdigit():continue
+        uid=int(suffix)
+        if not 0<uid<10**15:continue
+        tick_user(out,uid)
+
+def tick_user(out,uid):
+    state=db.kv_get(KEY(uid),None)
+    if not state or state.get('chat')!=uid or state.get('paused') or time.time()-state.get('checked',0)<3600:return
+    s=P.settings(uid);n=P.T.now_local(uid)
     if not P.awake(n.hour,int(s['quiet_start']),int(s['quiet_end'])):return
-    with P.mem.user_lock(OWNER):
-        state=db.kv_get(KEY(OWNER),None)
-        if not state:return
+    with P.mem.user_lock(uid):
+        state=db.kv_get(KEY(uid),None)
+        if not state or state.get('chat')!=uid:return
         try:
-            text,state=scan(OWNER,state)
-            if text:out.send(state['chat'],text)
-            state['checked']=int(time.time());db.kv_set(KEY(OWNER),state)
+            text,state=scan(uid,state)
+            if text:out.send(uid,text)
+            state['checked']=int(time.time());db.kv_set(KEY(uid),state)
         except G.GoogleError:
-            state['checked']=int(time.time());db.kv_set(KEY(OWNER),state)
+            state['checked']=int(time.time());db.kv_set(KEY(uid),state)
             if not state.get('warned'):
-                out.send(state['chat'],'Email checks paused by Google access/quota/account error. No actions taken. Reconnect or turn checks off/on after checking the account.')
-                state['warned']=True;state['paused']=True;db.kv_set(KEY(OWNER),state)
+                out.send(uid,'Email checks paused by Google access/quota/account error. No actions taken. Reconnect or turn checks off/on after checking the account.')
+                state['warned']=True;state['paused']=True;db.kv_set(KEY(uid),state)

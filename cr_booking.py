@@ -1,4 +1,4 @@
-"""Owner-only exact review for deployment-configured free public HTML forms."""
+"""Per-account exact review for deployment-configured free public HTML forms."""
 import json,secrets,hashlib,base64
 import cr_db as db
 import cr_google as G
@@ -18,7 +18,7 @@ def configs():
 def init():
     db.q("CREATE TABLE IF NOT EXISTS public_form_drafts(id TEXT PRIMARY KEY,user_id BIGINT NOT NULL,encrypted_content TEXT NOT NULL,content_hash TEXT NOT NULL,status TEXT DEFAULT 'pending',expires_at TIMESTAMPTZ NOT NULL)",fetch='none')
 def gate(uid):
-    if uid!=K.OWNER:raise BookingError('Public form beta is owner-only.')
+    if not K.permitted(uid):raise BookingError('A valid authenticated account is required.')
 def store_preview(uid,config,values,result):
     gate(uid);validate(config,values)
     if not result.get('ok') or not result.get('verified') or not result.get('hash'):raise BookingError('Form inspection not confirmed')

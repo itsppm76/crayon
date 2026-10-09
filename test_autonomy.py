@@ -37,14 +37,20 @@ def test_mail_quiet_and_off(monkeypatch):
     monkeypatch.setattr(W.db,'kv_get',lambda *a:None)
     class Out:
         def send(self,*a):pytest.fail('off sent')
-    W.tick(Out())
+    W.tick_user(Out(),W.OWNER)
     monkeypatch.setattr(W.db,'kv_get',lambda *a:{'checked':0})
     monkeypatch.setattr(W.P,'settings',lambda *a:{'quiet_start':21,'quiet_end':9})
     monkeypatch.setattr(W.P.T,'now_local',lambda *a:type('N',(),{'hour':1})())
     monkeypatch.setattr(W,'scan',lambda *a:pytest.fail('quiet read'))
-    W.tick(Out())
-def test_mail_not_other_user():
-    with pytest.raises(G.GoogleError):W.configure(12,12,True)
+    W.tick_user(Out(),W.OWNER)
+def test_mail_per_account_configure(monkeypatch):
+    stored={}
+    monkeypatch.setattr(W.G,'status',lambda uid:{'email':str(uid)+'@example.com'})
+    monkeypatch.setattr(W.db,'kv_set',lambda k,v:stored.update({k:v}))
+    W.configure(12,12,True);W.configure(13,13,True)
+    assert stored[W.KEY(12)]['email']=='12@example.com' and stored[W.KEY(13)]['email']=='13@example.com'
+    for uid,chat in ((12,13),(10**15,10**15)):
+        with pytest.raises(G.GoogleError):W.configure(uid,chat,True)
 def test_conflict_and_scope_no_write(monkeypatch):
     import json,hashlib
     c=content();digest=hashlib.sha256(json.dumps(c,sort_keys=True).encode()).hexdigest()
@@ -122,24 +128,28 @@ def test_mail_status_readonly(monkeypatch):
     assert 'off' in W.status(W.OWNER)
     monkeypatch.setattr(W.db,'kv_get',lambda *a:{'email':'test@example.com','checked':100,'paused':True})
     assert 'paused' in W.status(W.OWNER) and 'timestamp alone' in W.status(W.OWNER)
-    with pytest.raises(G.GoogleError):W.status(12)
+    assert "paused" in W.status(12)
 
-def test_calendar_all_owner_gates(monkeypatch):
-    for uid in (12,7555366869,-1):
-        for fn,args in ((K.preview,('test',content()['start'],content()['end'],'Asia/Calcutta')),(K.create,('id','hash')),(K.cancel,('id',)),(G.calendar,()),(G.begin,())):
-            if fn==G.begin:
-                with pytest.raises(G.GoogleError):fn(uid,calendar_write=True)
-            else:
-                with pytest.raises(G.GoogleError,match='owner-only'):fn(uid,*args)
-        with pytest.raises(G.GoogleError):G.request(uid,K.URL,{})
+def test_calendar_per_account_preview(monkeypatch):
+    seen=[]
+    monkeypatch.setattr(K.db,'q',lambda sql,args=(),*rest,**kw:seen.append(args))
+    monkeypatch.setattr(K.db,'kv_set',lambda *a:None)
+    monkeypatch.setattr(G,'status',lambda uid:{'email':str(uid)+'@example.com'})
+    monkeypatch.setattr(G,'encrypt',lambda uid,c: 'encrypted_'+str(uid))
+    for uid in (12,13):
+        r=K.preview(uid,'test',content()['start'],content()['end'],'Asia/Calcutta')
+        assert str(uid)+'@example.com' in r['text']
+    assert any(12 in a for a in seen) and any(13 in a for a in seen)
+    for uid in (0,-1,True):
+        with pytest.raises(G.GoogleError):K.owner(uid)
 def test_calendar_guests_and_reminder_validation():
     assert K.validate({**content(),'guests':['guest@example.com'],'reminder_minutes':30})
     for change in ({'guests':['invalid']},{'guests':['g@example.com','g@example.com']},{'guests':[[]]},{'reminder_minutes':-1},{'reminder_minutes':'30'}):
         with pytest.raises(G.GoogleError):K.validate({**content(),'guests':[],'reminder_minutes':None,**change})
-def test_nonowner_oauth_no_calendar(monkeypatch):
+def test_each_account_oauth_calendar_explicit_write(monkeypatch):
     from urllib.parse import urlsplit,parse_qs
     monkeypatch.setattr(G,'configured',lambda:True);monkeypatch.setattr(G.db,'q',lambda *a,**kw:{'user_id':7555366869});monkeypatch.setattr(G.db,'kv_get',lambda *a:True)
-    assert 'calendar' not in parse_qs(urlsplit(G.authorization_url('a'*43)).query)['scope'][0]
+    assert 'calendar.events' in parse_qs(urlsplit(G.authorization_url('a'*43)).query)['scope'][0]
 
 def test_guest_invites_and_reminder_exact_readback(monkeypatch):
     import json,hashlib
@@ -161,3 +171,21 @@ def test_guest_invites_and_reminder_exact_readback(monkeypatch):
     assert len(writes)==1 and writes[0]['params']=={'sendUpdates':'all'}
     assert writes[0]['json']['attendees']==[{'email':'me@example.com'},{'email':'guest@example.com'}]
     assert writes[0]['json']['reminders']=={'useDefault':False,'overrides':[{'method':'popup','minutes':20}]}
+
+
+def test_watch_tick_routes_only_own_optins(monkeypatch):
+    import contextlib
+    rows=[{'key':'mail_watch_12'},{'key':'mail_watch_13'},{'key':'mail_watch_bad'}]
+    states={'mail_watch_12':{'chat':12,'checked':0},'mail_watch_13':{'chat':13,'checked':0}}
+    monkeypatch.setattr(W.db,'q',lambda *a,**kw:rows)
+    monkeypatch.setattr(W.db,'kv_get',lambda key,*a:states.get(key))
+    monkeypatch.setattr(W.db,'kv_set',lambda key,val:states.update({key:val}))
+    monkeypatch.setattr(W.P,'settings',lambda uid:{'quiet_start':21,'quiet_end':9})
+    monkeypatch.setattr(W.P.T,'now_local',lambda uid:type('N',(),{'hour':12})())
+    monkeypatch.setattr(W.P.mem,'user_lock',lambda uid:contextlib.nullcontext())
+    monkeypatch.setattr(W,'scan',lambda uid,state:('private_'+str(uid),state))
+    sent=[]
+    class Out:
+        def send(self,uid,text):sent.append((uid,text))
+    W.tick(Out());assert sent==[(12,'private_12'),(13,'private_13')]
+    states['mail_watch_12']={'chat':13,'checked':0};sent.clear();W.tick(Out());assert not sent

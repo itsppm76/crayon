@@ -2,7 +2,7 @@
 
 ## Current release - October 9, 2026
 
-[Final live checklist](LIVE_FEATURE_CHECKLIST.md) supersedes historical checkpoints below. Runtime `e4331d3`,357 committed tests. Telegram, independent Google and verified email/password login are deployed/configured; real standalone acceptance is pending. Accounts keep separate history/memory unless an unused identity is explicitly linked. Consolidation is OFF by owner choice and no production merge happened.
+[Final live checklist](LIVE_FEATURE_CHECKLIST.md) supersedes historical checkpoints below. Per-user access update,360 local tests; previous runtime `e4331d3`. Computer/browser/private file operations are open to every Telegram account with quotas. Calendar and mail-watch use each user's own Google connection, subject to external Google Testing. Historical owner/tester limits below are superseded. Telegram, independent Google and verified email/password login are deployed/configured; real standalone acceptance is pending. Accounts keep separate history/memory unless an unused identity is explicitly linked. Consolidation is OFF by owner choice and no production merge happened.
 
 Browser-only reminders/scheduled jobs/background delivery are unavailable. Web rooms, computer execution, deletion confirmations, work-queue controls and full command parity remain unfinished. Actual calendar Create and connected Workspace/GitHub acceptance are unproven. WhatsApp is parked. No paid setup occurred. Historical single-recipient notes below predate reviewed To/CC/BCC support; attachments remain unavailable. Historical form-demo and mail-watch pending notes predate their real Telegram checks on October9.
 
@@ -35,7 +35,7 @@ Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 o
 
 World Bank chart chain is one fixed recipe (India/China/USA,2024 nominal GDP per capita), not arbitrary autonomous research. Exact records validated before outputs. Instagram login wall and YouTube signed-out homepage screenshot passed; authenticated browsing, search and playback are not claimed.
 
-2.32.1 internal work: explicit1-3-step jobs only, public-source receipts/briefs/basic arithmetic. Real Telegram queue arithmetic, completion, Show results and TXT export passed October 9. Briefs are fallible AI drafts with fetched-URL checking, not complete assignments.3jobs/user/day,10global/day, no Google/external effects, quiet-hour delivery, interrupted jobs block without retry. Scheduled model jobs read-only enforced. Automatic cold-start, worker readiness, calculation and idle-stop passed October 9; a later stop/readiness race was corrected, with fresh form acceptance pending.
+2.32.1 internal work: explicit1-3-step jobs only, public-source receipts/briefs/basic arithmetic. Real Telegram queue arithmetic, completion, Show results and TXT export passed October 9. Briefs are fallible AI drafts with fetched-URL checking, not complete assignments.3 jobs/user/day,10global/day, no Google/external effects, quiet-hour delivery, interrupted jobs block without retry. Scheduled model jobs read-only enforced. Automatic cold-start, worker readiness, calculation and idle-stop passed October 9; a later stop/readiness race was corrected, with fresh form acceptance pending.
 
 Scheduled model jobs cannot run pending confirmations or mutating tools. Background-work arithmetic uses Decimal at28digits, so repeating decimals are rounded and labelled. The queue runs in its own thread; host uptime is still not guaranteed.
 

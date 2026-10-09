@@ -31,7 +31,7 @@ I'll show the email first. Tap Send or say "send it" after reviewing it. You can
 
 You can send photos, documents, audio or video up to 20 MB. Ask follow-up questions about them.
 
-Say "connect Google", "my reminders", "my tasks", "memory review" or "help". Menu: /browse, /computer, /research, /files, /email_checks, /calendar_slot. Calendar slots are private previews; Create is always reviewed. Hourly email checks are owner beta and respect quiet hours. Browser/computer require approved tester access. For updates, say "turn on daily check-ins" or "morning digest". Google is in testing mode, so only approved testers can connect and access may need renewing after 7 days.
+Say "connect Google", "my reminders", "my tasks", "memory review" or "help". Menu: /browse, /computer, /research, /files, /email_checks, /calendar_slot. Calendar slots are private previews; Create is always reviewed. Hourly email checks use your own Google connection and respect quiet hours. Browser/computer are available with per-user limits and private file folders. For updates, say "turn on daily check-ins" or "morning digest". Google is in testing mode, so only approved testers can connect and access may need renewing after 7 days.
 
 In a group, tag @crayon_v1_bot. After your own group-audience opt-in, requested account/memory results and reviewed actions can appear there for everyone to see. Only you can confirm your controls. Connection links and background alerts stay private.
 
@@ -304,7 +304,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     cmd = cmd.split("@")[0].lower()
     arg = arg.strip()
     if cmd in ('/browse','/computer','/research','/files'):
-        examples={'/browse':'Visit https://www.instagram.com and send a screenshot. Approved testers only; no login/forms.', '/computer':'On my computer calculate 20*(3+2)/4. Approved testers only. Text-file storage is owner-only.', '/research':'Go deep on a comparison of Notion and Obsidian for student notes.', '/files':'Create a CSV and chart using Maths3, Finance5, Strategy2 hours.'}
+        examples={'/browse':'Visit https://www.instagram.com and send a screenshot. Public sites only; no account login.', '/computer':'On my computer calculate 20*(3+2)/4. Files stay in your private account folder.', '/research':'Go deep on a comparison of Notion and Obsidian for student notes.', '/files':'Create a CSV and chart using Maths3, Finance5, Strategy2 hours.'}
         if not arg:out.send(chat_id,examples[cmd]);return
         text={'/browse':'Browser screenshot: ','/computer':'On my computer ','/research':'Research ','/files':'Create CSV/chart: '}[cmd]+arg
         reply,meta=A.respond(uid,chat_id,text,name)
@@ -321,7 +321,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         return
     if cmd == "/start":
         mem.touch_user(uid, name)
-        out.send(chat_id, f"Hi{' ' + name if name else ''}, I'm Crayon. I remember what matters about you now, even after restarts. Just tell me what you need or say help. Use the menu for mail, calendar previews, research, charts, memory and updates. Browser/computer are approved-tester beta. Connect Google in your own private chat.")
+        out.send(chat_id, f"Hi{' ' + name if name else ''}, I'm Crayon. I remember what matters about you now, even after restarts. Just tell me what you need or say help. Use the menu for mail, calendar previews, research, charts, memory and updates. Browser/computer use bounded shared capacity; files are private per account. Connect Google in your own private chat.")
     elif cmd == "/help":
         out.send(chat_id, HELP, markup={"keyboard":[[{"text":"My reminders"},{"text":"My tasks"}],[{"text":"Show my memory"},{"text":"Privacy options"}],[{"text":"Connect Google"},{"text":"Help"}]],"resize_keyboard":True,"one_time_keyboard":True})
     elif cmd == "/goal":
@@ -344,7 +344,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             if cmd != "/disconnect_google" and not G.configured():
                 raise G.GoogleError("Google setup is not active yet")
             if cmd == "/connect_google":
-                out.send(chat_id, "Open this link to connect your own Google account:\n" + G.begin(uid) + "\n\nThis link is only for your Telegram account. Don't forward it. Friends must type 'connect Google' in their own private Crayon chat. Choose your whitelisted Google email, then review Google's permissions. This link works even if you don't see a Connect Google button.\n\nCrayon is in testing mode: only approved tester emails can connect, and access may need renewing after 7 days. Mail/calendar results stay in this private chat and aren't sent to the AI model or permanent memory. Tokens are encrypted. I show each email draft before you approve sending. Say enable calendar booking for an optional calendar-write reconnect, or turn on email checks for hourly metadata-only checks during awake hours.\n\nPrivacy: " + C.PUBLIC_URL + "/privacy\nYou can always type 'connect Google' or /connect_google to get a fresh link.")
+                out.send(chat_id, "Open this link to connect your own Google account:\n" + G.begin(uid) + "\n\nThis link is only for your Telegram account. Don't forward it. Friends must type 'connect Google' in their own private Crayon chat. Choose your whitelisted Google email, then review Google's permissions. This link works even if you don't see a Connect Google button.\n\nCrayon is in testing mode: only approved tester emails can connect, and access may need renewing after 7 days. Mail/calendar results stay in this private chat and aren't sent to the AI model or permanent memory. Tokens are encrypted. I show each email draft before you approve sending. Say enable calendar booking for an optional calendar-write reconnect, or turn on email checks for hourly metadata-only checks of your own account during awake hours.\n\nPrivacy: " + C.PUBLIC_URL + "/privacy\nYou can always type 'connect Google' or /connect_google to get a fresh link.")
             elif cmd == "/disconnect_google":
                 r=G.disconnect(uid)
                 out.send(chat_id, "Stored Google credentials and pending drafts removed. " + ("Google revocation confirmed." if r["revoked"] else "Google revocation was not confirmed; remove Crayon access in your Google account too."))
@@ -510,8 +510,8 @@ def set_commands():
             {"command":"calendar","description":"See the next week on your calendar"},
             {"command":"calendar_slot","description":"Preview a private calendar slot before booking"},
             {"command":"email_checks","description":"Hourly mail checks on/off (owner beta)"},
-            {"command":"browse","description":"Public website screenshot (approved testers)"},
-            {"command":"computer","description":"Computer status and maths (approved testers)"},
+            {"command":"browse","description":"Public website screenshot (per-user limits)"},
+            {"command":"computer","description":"Computer status, maths and private files"},
             {"command":"research","description":"Research a topic with sources"},
             {"command":"files","description":"Create a CSV or chart from your data"},
             {"command":"memory","description":"See what I remember about you"},
