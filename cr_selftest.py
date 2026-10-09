@@ -6,6 +6,10 @@ import cr_telegram as tg
 
 
 def run(body):
+    if body.get('mail_watch_status'):
+        import cr_mail_watch as W
+        state=db.kv_get(W.KEY(W.OWNER),None)
+        return {'ok':True,'configured':bool(state),'paused':bool(state and state.get('paused')),'checked':state.get('checked') if state else None,'since':state.get('since') if state else None,'seen_count':len(state.get('seen',[])) if state else 0,'note':'Read-only state inspection. No mail fetch or notification.'}
     if body.get("boot_diagnostics"):
         return {"ok":True,"boot":db.kv_get("computer_boot_report"),"heartbeat":db.kv_get("computer_heartbeat")}
     if body.get("wake_fixture"):
