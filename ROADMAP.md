@@ -29,7 +29,7 @@
 
 Every feature is reported separately as built, deployed and live-tested. Free quotas and hosting do not create an uptime or scale promise.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.142 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is enabled after real October 9 cold-start/worker/calculation/idle-stop proof. Additional testers are not enabled until their Telegram IDs are verified.198 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
 
 ## Next interaction layer (design only)
 
@@ -42,3 +42,15 @@ Public no-login website interactions, including Calendly and Google appointment 
 - Auto-wake integration/opt-in startup hook built disabled; GitHub lifecycle token and live startup/wake/idle-stop proof pending.
 
 - Deterministic task creation and CSV/recorded-progress chart export captured live passed; plot pixels inspected locally, real Telegram pending.
+
+## October 9 current-state checkpoint (supersedes older historical milestones)
+
+198 local tests pass. Real Telegram queue arithmetic, Show results/TXT export, dashboard recorded completion/CSV/chart, silent-audio no-speech, blue-video and PDF regression passed. Gemini stays primary; free-only OpenRouter forced-failure proof passed, automatic fallback remains OFF. Owner hourly mail watch enabled 13:59 IST, first poll proof pending.
+
+Calendar reads, preview/create/cancel/reconnect are owner-only. Optional guests and popup reminders have exact preview and payload/readback regressions. Live preview/Cancel passed with no event; Google write-scope reconnect and actual reviewed Create remain unproven. Guest notifications only after Create; no Meet.
+
+Public form foundation implemented for a controlled demo. Local fresh Chromium verifies inspect without POST, changed-page rejection without POST, exact reviewed submission with one POST and receipt. Live worker demo and dynamic Google appointment/Calendly slot adapter remain open. Never claim provider booking from generic fixture evidence.
+
+Groups support bounded public lookup for anyone who tags the bot. News is dated Google News index headlines plus publishers, not independently verified article summaries. Private account reads, memory, jobs and writes remain excluded. Real owner group news acceptance passed October 9 at 14:32, then owner requested text-only UX without links.
+
+No paid activity initiated. Google public verification/possible restricted-scope assessment and outside-tester acceptance remain external gates. WhatsApp on this Telegram instance was stopped; optional shared code is maintained in the same repository.
