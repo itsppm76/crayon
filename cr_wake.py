@@ -12,6 +12,7 @@ def call(op):
     with httpx.Client(timeout=20,follow_redirects=False) as client:
         r=client.post(API+'/'+op,headers={'Authorization':'Bearer '+os.environ['CRAYON_GITHUB_LIFECYCLE_TOKEN'],'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2026-03-10'})
     if r.status_code not in (200,202,204):raise ValueError('Computer lifecycle request blocked (HTTP '+str(r.status_code)+'). No quota or budget changes made.')
+    db.audit(0,'computer_lifecycle',op+' accepted HTTP '+str(r.status_code))
     return True
 def touch():db.kv_set('computer_last_activity',time.time())
 def ensure(ready):
