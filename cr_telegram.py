@@ -254,7 +254,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     if cmd=='/email_checks':
         import cr_mail_watch as W,cr_google as G
         try:
-            if arg not in ('on','off'):out.send(chat_id,'Use /email_checks on or off. Owner beta, hourly metadata only, quiet hours respected.');return
+            if arg=='status':out.send(chat_id,W.status(uid));return
+            if arg not in ('on','off'):out.send(chat_id,'Use /email_checks on, off or status. Owner beta, hourly metadata only, quiet hours respected.');return
             out.send(chat_id,W.configure(uid,chat_id,arg=='on'))
         except G.GoogleError as e:out.send(chat_id,str(e))
         return
