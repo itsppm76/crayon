@@ -5,7 +5,7 @@
 `connect workspace`, `connect github`, `status workspace`, `status github`,
 `disconnect workspace`, `disconnect github` work in the member's private Telegram
 chat. Link is a 10-minute single-use bearer credential: do not forward it.
-Workspace uses a separate OAuth app and connection row, so Gmail/calendar keep
+Workspace uses a separate Google Cloud project/consent app and connection row, so Gmail/calendar keep
 their existing college account. Account choice is explicit at Google consent.
 Callbacks store encrypted token envelopes bound to user ID and provider. HTTP
 access logs are disabled and failures return generic messages, not token content.
@@ -13,7 +13,7 @@ No model receives OAuth tokens. Delete-my-data removes both connection slots.
 
 Workspace scopes: Docs and Sheets read/write plus verified email. These are
 sensitive scopes. App test users, redirect URI and provider verification must be
-configured before consent. No all-Drive restricted scope is requested. A separate
+configured before consent. No all-Drive restricted scope is requested. A separate Google Cloud project/consent
 app is intentional: Google revocation must not disconnect the college app.
 GitHub OAuth currently requests only read:user. It does not grant private-repo
 access or write permissions. Selected private repos need a GitHub App with
@@ -27,7 +27,7 @@ polling or rate-limit retries. No automatic forwarding to groups.
 
 ## Provider steps still needed
 
-- Workspace OAuth app, Docs/Sheets APIs enabled, testing users and callback
+- Workspace separate Google Cloud project/consent app, Docs/Sheets APIs enabled, testing users and callback
   `CRAYON_PUBLIC_URL/connections/workspace/callback` registered. Client ID/secret
   enter server environment only, never chat or repository.
 - GitHub OAuth app callback `CRAYON_PUBLIC_URL/connections/github/callback`.
@@ -97,3 +97,5 @@ Sources:
 - https://docs.github.com/en/rest/pulls/pulls
 - https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps
 - https://docs.discord.com/developers/quick-start/getting-started.md
+
+- https://developers.google.com/identity/protocols/oauth2/cross-client-identity
