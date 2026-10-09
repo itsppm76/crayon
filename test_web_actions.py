@@ -82,3 +82,24 @@ def test_telegram_draft_lookup_excludes_web(config):
     config.setattr(X.db,'q',lambda sql,p=(),fetch='all':calls.append(sql) or [])
     with pytest.raises(X.G.GoogleError):X.G.current_draft(17)
     assert "origin='telegram'" in calls[0]
+
+def test_forget_preview_exact_fact_only(config):
+    import cr_memory as M
+    config.setattr(M,'facts',lambda *a:[{'key':'favorite_color','value':'blue'}])
+    r=X.preview(17,'Bearer '+'a'*43,{'kind':'forget','fields':{'key':'favorite_color'}})
+    assert 'favorite_color: blue' in r['text'] and 'not all-data deletion' in r['text']
+    with pytest.raises(ValueError):X.preview(17,'Bearer '+'a'*43,{'kind':'forget','fields':{'key':'Other Key'}})
+
+def test_forget_compare_before_delete(config):
+    import hashlib,cr_memory as M,contextlib
+    data={'kind':'forget','payload':{'key':'color','value':'blue'},'text':'Exact blue fact'}
+    digest=hashlib.sha256(json.dumps(data,sort_keys=True).encode()).hexdigest()
+    row={'encrypted':A._cipher().encrypt(json.dumps(data).encode()).decode(),'content_hash':digest}
+    calls=[]
+    def q(sql,p=(),*a,**kw):
+        calls.append((sql,p))
+        if sql.startswith('UPDATE web_action_reviews') and "'claimed'" in sql:return row
+        if sql.startswith('DELETE FROM facts'):return {'key':'color'}
+    config.setattr(X.db,'q',q);config.setattr(M,'user_lock',lambda uid:contextlib.nullcontext())
+    assert 'other records were not deleted' in X.confirm(17,'Bearer '+'a'*43,{'review_id':'r','hash':digest,'decision':'confirm'})['text']
+    assert next(p for sql,p in calls if sql.startswith('DELETE FROM facts'))==(17,'color','blue')

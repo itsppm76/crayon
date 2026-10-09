@@ -104,3 +104,6 @@ Telegram `/rooms` explains the group route: add the bot to a Telegram group and 
 
 ## Private optional updates on both surfaces
 Web Menu > Check-ins / digests reviews the private in-app destination, check-ins, morning/evening digests and quiet hours. Saving explicitly switches that account's optional updates to in-app Notifications. Telegram `/proactive on|off`, `/digest morning|evening|both|off`, `/quiet_hours START END` explicitly selects private Telegram delivery. No duplicate cross-channel delivery, inferred/group destinations, OS push or guarantee of exact free-host timing. Defaults stay off; each account must opt in. Standalone Google/email accounts get their own in-app inbox.
+
+## Exact saved-fact removal
+Web Menu > Forget saved fact reviews one exact key/value and removes it only after account/session-bound one-use confirmation. Changed values require a new review. Telegram `/forget KEY` continues to remove a named saved fact. This does not erase chat history, notes, provider copies or all account data. Full web account-data deletion remains unshipped; no all-data promise is made while computer file/identity cleanup is unresolved.

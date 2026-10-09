@@ -19,7 +19,14 @@ def preview(uid,header,body):
     init()
     if set(body)!={'kind','fields'} or not isinstance(body['fields'],dict):raise ValueError('Invalid action preview.')
     kind,f=body['kind'],body['fields'];payload={}
-    if kind=='email':
+    if kind=='forget':
+        import cr_memory as M,re
+        if set(f)!={'key'} or not isinstance(f['key'],str) or not re.fullmatch('[a-z0-9_]{1,100}',f['key']):raise ValueError('Select one exact saved fact key.')
+        rows=[x for x in M.facts(uid,100) if x['key']==f['key']]
+        if len(rows)!=1:raise ValueError('That saved fact is unavailable. Refresh memory.')
+        payload={'key':f['key'],'value':rows[0]['value']}
+        text='Forget this exact saved fact?\n'+f['key']+': '+rows[0]['value']+'\nThis removes only this saved fact. Chat history, notes and copies elsewhere remain. It is not all-data deletion.'
+    elif kind=='email':
         if set(f)!={'to','cc','bcc','subject','body'}:raise ValueError('Exact email fields required.')
         d=G.make_draft(uid,f,structured=True,channel='web')
         # Current draft remains encrypted in provider module. This session ticket gates web sends separately.
@@ -58,6 +65,12 @@ def confirm(uid,header,body):
             text='Cancelled. No external action made.'
         elif kind=='email':text=G.send_draft(uid,p['id'],p['hash'],channel='web')
         elif kind=='calendar':text=__import__('cr_calendar_draft').create(uid,p['id'],p['hash'],channel='web')
+        elif kind=='forget':
+            import cr_memory as M
+            with M.user_lock(uid):
+                removed=db.q('DELETE FROM facts WHERE user_id=%s AND key=%s AND value=%s RETURNING key',(uid,p['key'],p['value']),'one')
+                if not removed:raise ValueError('Saved fact changed or was removed. Refresh and review again.')
+                text='Saved fact removed. Chat history and other records were not deleted.'
         elif kind=='sheet':text=json.dumps(__import__('cr_workspace').sheet_apply(uid,p['payload'],p['hash']),ensure_ascii=False)
         else:raise ValueError('Action unavailable.')
         db.q('DELETE FROM web_action_reviews WHERE id=%s AND user_id=%s',(body['review_id'],uid),'none')
