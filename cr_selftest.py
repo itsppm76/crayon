@@ -11,7 +11,7 @@ def run(body):
         from unittest.mock import patch
         def fail(*a,**k):raise L.LLMError('quota','Forced synthetic primary failure')
         with patch.object(L,'_generate_primary',fail),patch.object(C,'OPENROUTER_AUTO_FALLBACK',True):
-            try:r=L.generate([L.user('Reply with only FALLBACK_READY. Synthetic integration test; no personal information.')],temperature=0,max_tokens=30)
+            try:r=L.generate([L.user('Reply with only FALLBACK_READY. Synthetic integration test; no personal information.')],temperature=0,max_tokens=300)
             except Exception as e:return {'ok':False,'kind':type(e).__name__,'reason':__import__('cr_safety').redact(str(e))[:250],'key_present':bool(C.OPENROUTER_KEY),'forced_primary_failure':True}
         return {'ok':r.get('text')=='FALLBACK_READY','provider':r.get('raw',{}).get('provider'),'model':r.get('model'),'reply':r.get('text'),'forced_primary_failure':True,'note':'Live free-route request; no user, Google or media data.'}
     if body.get('mail_watch_status'):
