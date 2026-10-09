@@ -107,7 +107,7 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(raw or b"{}")
         except Exception:
             body = {}
-        if self.path=="/whatsapp/webhook":
+        if self.path.split("?",1)[0]=="/whatsapp/webhook":
             import cr_whatsapp as W
             code=W.handle_webhook(raw,self.headers.get("X-Hub-Signature-256"))
             return self._send(code,"ok" if code==200 else "forbidden")
@@ -175,6 +175,8 @@ def main():
         cr_google.init()
         import cr_computer
         cr_computer.init()
+        import cr_whatsapp
+        cr_whatsapp.init()
     except Exception as e:
         log.error("database init failed (running without persistence): %s", redact(str(e))[:200])
     if not C.TELEGRAM_TOKEN:
@@ -183,6 +185,8 @@ def main():
     tg.set_commands()
     import cr_sched
     cr_sched.start()
+    import cr_whatsapp
+    cr_whatsapp.start()
     tg.poll_forever()
 
 

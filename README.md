@@ -26,7 +26,7 @@
 
 ## 💬 WhatsApp
 
-The shared repository includes optional WhatsApp Cloud API code. This Telegram deployment does not run WhatsApp; the separate instance is maintained by its owner. Set the `WHATSAPP_*` variables from `.env.example` and point Meta's webhook at `/whatsapp/webhook`. Full steps and limits: [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
+The optional WhatsApp test transport is staged on this deployment: signed webhook, durable inbound dedupe and outbound delivery statuses. Pratham's Meta resources are still pending its new-account cooldown, so two-way WhatsApp is NOT proven. Telegram remains unchanged. Secrets and assigned test resource IDs must be configured privately; see [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
 
 ## ✅ October 9 beta closeout
 

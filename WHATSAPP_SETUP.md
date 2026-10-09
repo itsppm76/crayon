@@ -1,50 +1,33 @@
-# Crayon on WhatsApp
+# Crayon WhatsApp test transport
 
-Same Crayon (same brain, tools, database and safety rules), a second channel. Telegram keeps working.
-The webhook is served by the existing `main.py` at `/whatsapp/webhook`. No extra process, no Flask.
+WhatsApp and Telegram use the same handler, not the same personal identity. A WhatsApp number is its own user ID. Memory, Google access, drafts and reminders never merge with a Telegram user. Only configured allowlisted numbers get replies; group messages are ignored. No Telegram group behavior or private-data rule changes.
 
-A WhatsApp person is a separate Crayon user (their number is their id). Memory, notes, reminders and Google
-connections are not shared with a Telegram account. Only numbers in `CRAYON_OWNER_WA_ID` / `WHATSAPP_ALLOWED_IDS`
-get replies; everyone else is ignored silently.
+## Current setup state
 
-## What is already done on Meta's side
-- App "Crayon Assistant" (App ID 1108783611591512), test number +1 (555) 651-8301, Phone Number ID 1319365061266564
-- Your number +91 87775 66396 is verified as a recipient (max 5 recipients on the test number)
+Pratham's Facebook account and developer registration are complete. His portfolio name is `Crayon AI Agent`, app draft `Crayon`, contact `teamalmostinstinct@gmail.com`. Meta rejected portfolio creation because the Facebook account is too new and explicitly said try again in an hour. No portfolio, app, WABA, test number or webhook subscription is confirmed yet. The older Uttiya app/number is a different setup, not this owner's current resources.
 
-## Setup (about 5 minutes)
-1. Set these environment variables where Crayon runs (Render > Environment, or your local `.env`). Secrets are in your Instinct vault:
-   - `WHATSAPP_ACCESS_TOKEN` = vault entry "Meta WhatsApp temp access token"
-   - `WHATSAPP_APP_SECRET` = vault entry "Meta app secret (Crayon Assistant)"
-   - `WHATSAPP_VERIFY_TOKEN` = any string you pick, for example `crayon-verify-2d7f91`
-   - `WHATSAPP_PHONE_NUMBER_ID=1319365061266564`
-   - `WHATSAPP_GRAPH_VERSION=v25.0`
-   - `CRAYON_OWNER_WA_ID=918777566396`
-2. Deploy or restart Crayon. Check `GET /health` returns ok.
-3. Meta dashboard > Crayon Assistant > WhatsApp > Configuration > Webhook (https://developers.facebook.com/apps/1108783611591512/whatsapp-business/wa-settings/):
-   - Callback URL = `<your public URL>/whatsapp/webhook`. On Render that is `https://crayon-v1.onrender.com/whatsapp/webhook` (your `CRAYON_PUBLIC_URL`).
-   - Verify token = the same string as `WHATSAPP_VERIFY_TOKEN`. Click Verify and save.
-   - Subscribe to the **messages** field.
-4. From your WhatsApp, message +1 (555) 651-8301. Crayon replies.
+Calendar stays on the owner's existing Google connection. The dedicated email is for Meta setup only. No calendar migration is part of this work.
 
-Running locally instead: `pip install -r requirements.txt`, fill `.env`, `python main.py`, then expose port 10000 with
-`cloudflared tunnel --url http://127.0.0.1:10000` and use that URL in step 3. Local runs need `TELEGRAM_BOT_TOKEN`,
-`GEMINI_API_KEY` and `DATABASE_URL` as usual. Don't run the same bot token from two machines at once.
+## Plug in the reviewed Meta test resources
 
-## Refresh the access token (about every 24 hours)
-The temporary token expires after roughly a day. When replies stop and the logs say "token expired or invalid":
-developers.facebook.com > app > WhatsApp > API setup > Generate access token, update `WHATSAPP_ACCESS_TOKEN`, restart.
-For a token that does not expire: Business Settings > System users > add one, assign the app and the WhatsApp account,
-generate a token with `whatsapp_business_messaging` and `whatsapp_business_management`.
+1. Create the reviewed portfolio/app with the WhatsApp use case after Meta's cooldown. Keep the app in development/test mode. Use only the Meta-provided TEST WABA and TEST phone number. Do not attach a real number, card, payment method or paid tier.
+2. Configure server environment values privately: `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_GRAPH_VERSION` and `CRAYON_OWNER_WA_ID` (or explicit `WHATSAPP_ALLOWED_IDS`). `.env.example` has blank resource/recipient IDs so another person's assets cannot be selected accidentally. No secrets in repo, chat, screenshots or logs.
+3. Deploy and verify health. Existing database initialization creates additive `whatsapp_inbox` and `whatsapp_outbox` tables. If storage is unavailable, signed messages get 503 for provider retry, not a false success.
+4. Meta webhook callback is the deployment base URL plus `/whatsapp/webhook`. GET verification checks the exact verify token; POST checks `X-Hub-Signature-256` against exact raw bytes. Subscribe the WABA/app to `messages`, which includes inbound messages AND delivery status events. Confirm the current WABA subscription rather than assuming a saved callback is enough.
+5. Add the owner's reviewed number as a test recipient. Any personal SMS OTP comes from the owner. Send only reviewed test content. API accepted wamid is not delivery proof: correlate `sent`, `delivered`, `read` or `failed` status by wamid and recipient.
+6. Done means a real inbound owner message and a bot reply visibly received, with its matching delivery status. An HTTP 200 or unit test alone is not two-way proof.
 
-## How it maps
-- Text messages go through the same handler as Telegram private chats (commands like /tasks, /work, reminders, memory, research).
-- Telegram buttons become WhatsApp reply buttons (up to 3) or a list (4 to 10). Email Send/Cancel and calendar Create/Cancel work the same way.
-- Charts and files are sent as WhatsApp images or documents (2 MB cap, same as Telegram).
-- Reminders and digests for a WhatsApp user are delivered on WhatsApp.
+## Transport and retry behavior
 
-## Limits
-- Free-form messages only work within 24 hours of your last message to the number. A reminder due later than that fails to send and is not retried. Message Crayon once a day, or add approved message templates (not built).
-- Text, button taps and list picks only. Photos, voice and documents get "Text only on WhatsApp for now".
-- No reactions, no message deletion (a pasted secret cannot be deleted for you; rotate it), no groups.
-- The test number is for development. Check Meta's current pricing before using your own number.
-- Reply keyboards (the Telegram menu buttons) are not shown on WhatsApp.
+- Only the configured phone-number ID and allowlisted sender are accepted. Group payloads never become private chats.
+- Inbound wamids are uniquely persisted before ACK. Duplicate webhooks, including after restart, do not queue a second handler.
+- Queued work resumes after restart. Processing leases are not blindly replayed: a crashed or failed handler can have partially sent a reply or made an approved action. It becomes `uncertain`, for inspection rather than automatic duplication. This intentionally trades automatic recovery for avoiding duplicate effects.
+- Text and interactive replies use the existing private handler. Plain-text formatting matches Telegram; no reactions or user-message deletion are claimed. Incoming media gets a text-only notice. Existing explicit chart/file output remains supported.
+- Outbound sends require an allowlisted recipient, durable storage and an inbound message within 24 hours. No template or paid conversation-opening path is implemented. Outside-window reminders fail honestly, not silently or via paid fallback.
+- Send success requires an actual provider wamid. Store only recipient/status/timestamp/numeric error code in the outbox, never provider error prose. A status can race the API response; only locally accepted sends appear in delivery readback. Status updates cannot regress delivered/read to sent or failed.
+- Completed/uncertain inbox bodies and profile names are erased. Transport metadata expires after seven days. `/delete_my_data` also clears the person's transport rows. The shared memory handler keeps its existing data policy.
+- Phone-number users remain separate from the owner Telegram ID. Owner-only calendar/computer beta access is not widened by adding WhatsApp.
+
+## Tests and remaining proof
+
+Automated tests cover signature bytes, handshake, malformed JSON, wrong number/group rejection, allowlist, retry dedupe, storage failure, queued/uncertain recovery, send failure, status filtering/correlation, formatting/redaction and the no-template/no-window guard. Live Meta provisioning and two-way delivery remain pending until the dashboard and actual transport confirm them.

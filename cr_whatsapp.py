@@ -14,19 +14,43 @@ import hashlib
 import hmac
 import logging
 import threading
-from collections import OrderedDict
+import time
+import json
 from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 
 import cr_config as C
+import cr_db as db
 from cr_safety import clean_text, redact
 
 log = logging.getLogger("crayon.wa")
 _http = httpx.Client(timeout=httpx.Timeout(30.0, connect=10.0))
 _pool = ThreadPoolExecutor(max_workers=4)
-_seen = OrderedDict()
-_lock = threading.Lock()
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS whatsapp_inbox(
+ message_id TEXT PRIMARY KEY, sender TEXT NOT NULL, kind TEXT NOT NULL,
+ value TEXT NOT NULL DEFAULT '', profile_name TEXT NOT NULL DEFAULT '',
+ state TEXT NOT NULL DEFAULT 'queued', attempts INT NOT NULL DEFAULT 0,
+ lease_until TIMESTAMPTZ, created_at TIMESTAMPTZ DEFAULT now(), completed_at TIMESTAMPTZ);
+CREATE TABLE IF NOT EXISTS whatsapp_outbox(
+ message_id TEXT PRIMARY KEY, recipient TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'accepted',
+ status_ts BIGINT NOT NULL DEFAULT 0, error_code TEXT NOT NULL DEFAULT '',
+ accepted BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMPTZ DEFAULT now(), updated_at TIMESTAMPTZ DEFAULT now());
+"""
+
+
+def init():
+    if db.available():
+        for stmt in SCHEMA.split(';'):
+            if stmt.strip(): db.q(stmt, fetch='none')
+
+
+def delivery(mid):
+    """Internal readback. accepted is not delivered; never includes message content."""
+    return db.q('SELECT message_id,recipient,state,status_ts,error_code FROM whatsapp_outbox WHERE message_id=%s AND accepted=true', (mid,), 'one')
+
+
 TEXT_LIMIT = 3500  # WhatsApp allows 4096
 
 
@@ -58,6 +82,11 @@ def _headers():
 
 
 def _post(body):
+    if body.get('to') not in allowed_ids() or not db.available(): return None
+    if body.get('type') not in ('text','interactive','image','document'): return None
+    # Only reply in the current service window. No template or paid re-opening path.
+    window = db.q("SELECT 1 FROM whatsapp_inbox WHERE sender=%s AND created_at>now()-interval '24 hours' LIMIT 1", (body['to'],), 'one')
+    if not window: return None
     try:
         r = _http.post(_api_url("messages"), headers=_headers(), json=body)
     except httpx.HTTPError:
@@ -69,13 +98,18 @@ def _post(body):
                     " (token expired or invalid: generate a new WHATSAPP_ACCESS_TOKEN)" if r.status_code == 401 else "")
         return None
     try:
-        return r.json()["messages"][0]["id"]
+        mid = r.json()["messages"][0]["id"]
+        if not isinstance(mid, str) or not mid: return None
+        if db.available():
+            db.q("INSERT INTO whatsapp_outbox(message_id,recipient,accepted) VALUES(%s,%s,true) ON CONFLICT(message_id) DO UPDATE SET accepted=true WHERE whatsapp_outbox.recipient=EXCLUDED.recipient",
+                 (mid, body['to']), 'none')
+        return mid
     except Exception:
-        return "sent"
+        return None
 
 
 def verify_signature(app_secret, raw_body, header):
-    if not app_secret or not header or not header.startswith("sha256="):
+    if not isinstance(header, str) or not app_secret or not header or not header.startswith("sha256="):
         return False
     expected = hmac.new(app_secret.encode(), raw_body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, header[7:])
@@ -96,10 +130,15 @@ def extract_messages(payload):
     for entry in payload.get("entry", []):
         for change in entry.get("changes", []):
             value = change.get("value", {})
-            names = {c.get("wa_id"): c.get("profile", {}).get("name", "") for c in value.get("contacts", [])}
+            if not isinstance(value, dict) or value.get('group_id'):
+                continue
+            names = {c.get('wa_id'): c.get('profile', {}).get('name', '') for c in value.get('contacts', [])}
+            phone = value.get('metadata', {}).get('phone_number_id')
+            if phone != C.env('WHATSAPP_PHONE_NUMBER_ID'):
+                continue
             for m in value.get("messages", []):
                 mid, sender, typ = m.get("id"), m.get("from"), m.get("type")
-                if not mid or not sender:
+                if not isinstance(mid, str) or not isinstance(sender, str) or not sender.isdigit() or m.get('group_id'):
                     continue
                 name = names.get(sender, "")
                 if typ == "text":
@@ -128,25 +167,34 @@ class WhatsAppOut:
 
     def send(self, chat_id, text, markup=None):
         to = str(chat_id)
+        if to not in allowed_ids(): raise ValueError('WhatsApp recipient is not allowed')
         text = clean_text(text) or "(empty)"
+        ids = []
         for i in range(0, len(text), TEXT_LIMIT):
-            _post({"messaging_product": "whatsapp", "to": to, "type": "text",
+            mid = _post({"messaging_product": "whatsapp", "to": to, "type": "text",
                    "text": {"body": text[i:i + TEXT_LIMIT], "preview_url": False}})
+            if not mid: raise RuntimeError('WhatsApp send not accepted')
+            ids.append(mid)
         buttons = _buttons_from_markup(markup)
         if not buttons:
-            return
+            return ids
         if len(buttons) <= 3:
-            _post({"messaging_product": "whatsapp", "to": to, "type": "interactive",
+            mid = _post({"messaging_product": "whatsapp", "to": to, "type": "interactive",
                    "interactive": {"type": "button", "body": {"text": "Choose an option:"},
                                    "action": {"buttons": [{"type": "reply", "reply": {"id": cd, "title": t[:20]}}
                                                           for cd, t in buttons]}}})
         else:
-            _post({"messaging_product": "whatsapp", "to": to, "type": "interactive",
+            mid = _post({"messaging_product": "whatsapp", "to": to, "type": "interactive",
                    "interactive": {"type": "list", "body": {"text": "Choose an option:"},
                                    "action": {"button": "Options", "sections": [{"title": "Options", "rows": [
                                        {"id": cd, "title": t[:24]} for cd, t in buttons]}]}}})
 
+        if not mid: raise RuntimeError('WhatsApp review controls not accepted')
+        ids.append(mid)
+        return ids
+
     def artifact(self, chat_id, item):
+        if str(chat_id) not in allowed_ids(): raise ValueError('WhatsApp recipient is not allowed')
         if len(item["data"]) > 2000000:
             raise ValueError("attachment too large")
         mime = item["mime"]
@@ -177,16 +225,6 @@ class WhatsAppOut:
         return False  # WhatsApp cannot delete a user's message
 
 
-def _seen_before(mid):
-    with _lock:
-        if mid in _seen:
-            return True
-        _seen[mid] = True
-        while len(_seen) > 1000:
-            _seen.popitem(last=False)
-        return False
-
-
 def process(kind, value, uid, name, out=None):
     import cr_telegram as T
     out = out or WhatsAppOut()
@@ -199,27 +237,94 @@ def process(kind, value, uid, name, out=None):
                                      "from": {"id": uid, "first_name": name}, "text": value}}, out)
 
 
-def handle_webhook(raw_body, signature):
-    """Called from main.py POST. Returns an HTTP status code."""
-    if not enabled():
-        return 404
-    if not verify_signature(C.env("WHATSAPP_APP_SECRET"), raw_body, signature):
-        return 403
-    import json
+def extract_statuses(payload):
+    if payload.get('object') != 'whatsapp_business_account': return
+    for entry in payload.get('entry', []):
+        for change in entry.get('changes', []):
+            v = change.get('value', {})
+            if v.get('metadata', {}).get('phone_number_id') != C.env('WHATSAPP_PHONE_NUMBER_ID'): continue
+            for status in v.get('statuses', []):
+                mid, recipient, state = status.get('id'), status.get('recipient_id'), status.get('status')
+                if not isinstance(mid, str) or recipient not in allowed_ids() or state not in ('sent','delivered','read','failed'): continue
+                try: ts = int(status.get('timestamp', 0))
+                except (ValueError, TypeError): continue
+                errors = status.get('errors') or []
+                code = str(errors[0].get('code', '')) if errors and isinstance(errors[0], dict) else ''
+                yield mid, recipient, state, ts, code if code.isdigit() else ''
+
+
+def record_status(mid, recipient, state, ts, code):
+    # Status may race the HTTP response. Store metadata first; delivery only exposes accepted sends.
+    # Never persist provider error prose (may echo private data) or webhook body.
+    if not db.available(): return
+    db.q("""INSERT INTO whatsapp_outbox(message_id,recipient,state,status_ts,error_code)
+      VALUES(%s,%s,%s,%s,%s) ON CONFLICT(message_id) DO UPDATE
+      SET state=EXCLUDED.state,status_ts=EXCLUDED.status_ts,error_code=EXCLUDED.error_code,updated_at=now()
+      WHERE whatsapp_outbox.recipient=EXCLUDED.recipient AND whatsapp_outbox.status_ts<=EXCLUDED.status_ts
+      AND (whatsapp_outbox.state IN ('accepted','sent') OR
+           (whatsapp_outbox.state='delivered' AND EXCLUDED.state='read'))""",
+      (mid, recipient, state, ts, code), 'none')
+
+
+def enqueue(mid, sender, kind, value, name):
+    if not db.available():
+        raise RuntimeError('WhatsApp persistence unavailable')
+    # One durable row per wamid survives process restarts and repeated delivery.
+    row = db.q("""INSERT INTO whatsapp_inbox(message_id,sender,kind,value,profile_name)
+      VALUES(%s,%s,%s,%s,%s) ON CONFLICT(message_id) DO NOTHING RETURNING message_id""",
+      (mid, sender, kind, redact(value)[:20000], redact(name)[:200]), 'one')
+    if row: _pool.submit(_drain_one, mid)
+
+
+def _drain_one(mid):
+    row = db.q("""UPDATE whatsapp_inbox SET state='processing',attempts=attempts+1,
+      lease_until=now()+interval '10 minutes' WHERE message_id=%s
+      AND state='queued'
+      AND attempts<3 RETURNING *""", (mid,), 'one')
+    if not row: return
     try:
-        payload = json.loads(raw_body or b"{}")
+        # Recheck allowlist on replay, never resurrect revoked routing.
+        if row['sender'] in allowed_ids():
+            process(row['kind'], row['value'], int(row['sender']), row['profile_name'])
+        db.q("UPDATE whatsapp_inbox SET state='done',completed_at=now(),value='',profile_name='' WHERE message_id=%s", (mid,), 'none')
     except Exception:
-        return 200
-    allow = allowed_ids()
-    for mid, sender, kind, value, name in extract_messages(payload):
-        if sender not in allow or _seen_before(mid):
-            continue  # not an allowed sender: ignored silently
-        _pool.submit(_safe_process, kind, value, int(sender), name)
-    return 200
+        # A partial send/action is uncertain; never auto-repeat it.
+        db.q("UPDATE whatsapp_inbox SET state='uncertain',value='',profile_name='' WHERE message_id=%s", (mid,), 'none')
+        log.warning('whatsapp handler failed; marked uncertain, no automatic replay')
 
 
-def _safe_process(kind, value, uid, name):
+def drain_pending():
+    if not db.available(): return
+    db.q("UPDATE whatsapp_inbox SET state='uncertain',value='',profile_name='' WHERE state='processing' AND lease_until<now()", fetch='none')
+    rows = db.q("""SELECT message_id FROM whatsapp_inbox WHERE attempts<3 AND
+      state='queued' ORDER BY created_at LIMIT 25""")
+    for row in rows:
+        if enabled(): _pool.submit(_drain_one, row['message_id'])
+    db.q("DELETE FROM whatsapp_inbox WHERE created_at<now()-interval '7 days'", fetch='none')
+    db.q("DELETE FROM whatsapp_outbox WHERE created_at<now()-interval '7 days'", fetch='none')
+
+
+def start():
+    def loop():
+        while True:
+            try: drain_pending()
+            except Exception: log.warning('whatsapp inbox recovery unavailable')
+            time.sleep(60)
+    threading.Thread(target=loop, daemon=True).start()
+
+
+def handle_webhook(raw_body, signature):
+    """ACK after durable enqueue/status storage, never after only in-memory submission."""
+    if not enabled(): return 404
+    if not verify_signature(C.env('WHATSAPP_APP_SECRET'), raw_body, signature): return 403
     try:
-        process(kind, value, uid, name)
-    except Exception as e:
-        log.warning("whatsapp handler error: %s", redact(f"{type(e).__name__}: {e}")[:200])
+        payload = json.loads(raw_body or b'{}')
+        if not isinstance(payload, dict): return 400
+        for args in extract_statuses(payload): record_status(*args)
+        for mid, sender, kind, value, name in extract_messages(payload):
+            if sender in allowed_ids(): enqueue(mid, sender, kind, value, name)
+    except (ValueError, TypeError, AttributeError): return 400
+    except Exception:
+        log.warning('whatsapp webhook persistence unavailable')
+        return 503  # provider can retry; do not falsely ACK lost work
+    return 200
