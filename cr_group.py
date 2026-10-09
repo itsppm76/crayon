@@ -5,6 +5,10 @@ from cr_safety import looks_like_secret
 
 BOT_USERNAME='crayon_v1_bot'
 
+class PublicAnswer(str):
+    def __new__(cls,text,markup):
+        obj=str.__new__(cls,text);obj.markup=markup;return obj
+
 def mentioned(msg):
     text=msg.get('text','')
     return bool(re.fullmatch(r'/[a-z_]+(?:@'+re.escape(BOT_USERNAME)+r')?(?:\s.*)?',text,re.I) or re.search(r'(?<![\w@])@'+re.escape(BOT_USERNAME)+r'\b',text,re.I))
@@ -30,9 +34,9 @@ def answer(msg):
                 found=W.news(query,3,day)
                 if not found['items']:return 'No dated news results returned for that request. I will not substitute old headlines. Try a narrower topic.'
                 lines=['News headlines'+(' for '+found['day'] if day else ' from the past day')+' (India time):']
-                for item in found['items']:lines+=['',item['title'],item['source']+' | '+item['published'][:16].replace('T',' ')+' IST',item['url']]
+                for index,item in enumerate(found['items'],1):lines+=['',str(index)+'. '+item['title'],item['source']+' | '+item['published'][:16].replace('T',' ')+' IST']
                 lines+=['','Source: Google News index. These are published headlines, not independently verified article summaries.']
-                return '\n'.join(lines)
+                return PublicAnswer('\n'.join(lines),{'inline_keyboard':[[{'text':str(i)+'. '+item['source'][:40],'url':item['url']}] for i,item in enumerate(found['items'],1)]})
             found=W.research(text[:400])
             if not found['pages']:return 'The public search returned no readable sources. I could not verify this request; no private accounts were accessed.'
             evidence='\n\n'.join(p['url']+'\n'+p['text'][:2500] for p in found['pages'][:3])
