@@ -23,8 +23,12 @@ def reserve(uid):
             return True
     finally:conn.close()
 def validate(operation,args):
-    if operation not in ('status','calculate','write_text','read_text','list_files','browse'):raise ValueError('Unsupported computer operation')
+    if operation not in ('status','calculate','write_text','read_text','list_files','browse','form_inspect','form_submit'):raise ValueError('Unsupported computer operation')
     if not isinstance(args,dict):raise ValueError('Invalid arguments')
+    if operation in ('form_inspect','form_submit'):
+        from computer_forms import validate as form_validate
+        form_validate(args.get('config'),args.get('values') if operation=='form_submit' else None)
+        if operation=='form_submit' and not __import__('re').fullmatch(r'[a-f0-9]{64}',args.get('expected_hash','')):raise ValueError('Reviewed page hash required')
     if operation=='browse':
         from computer_browser import validate_plan
         validate_plan(args)
@@ -55,7 +59,7 @@ def execute(uid,operation,args,test_wake=False):
     wake.touch()
     job=uuid.uuid4().hex
     db.q('INSERT INTO computer_jobs(id,operation,args) VALUES(%s,%s,%s::jsonb)',(job,operation,json.dumps(args)),'none')
-    for _ in range(85 if operation=='browse' else 25):
+    for _ in range(85 if operation in ('browse','form_inspect','form_submit') else 25):
         row=db.q('SELECT status,result FROM computer_jobs WHERE id=%s',(job,),'one')
         if row and row['status']=='done':wake.touch();return row['result']
         time.sleep(1)
