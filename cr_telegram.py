@@ -310,6 +310,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
                 out.send(chat_id, "Connected Google account: " + r["email"] if r else "No Google account connected.")
             elif cmd == "/gmail":
                 out.send(chat_id,G.inbox(uid,arg))
+                db.kv_set('google_mail_results_chat_'+str(uid),chat_id)
             elif cmd == "/gmail_read":
                 if chat_id!=uid and db.kv_get('google_mail_results_chat_'+str(uid),uid)!=chat_id:
                     out.send(chat_id,'Check your mail in this chat first.');return

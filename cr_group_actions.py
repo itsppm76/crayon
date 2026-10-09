@@ -6,7 +6,9 @@ import cr_db as db
 
 
 def action_request(text):
-    if text.strip().lower()=='enable my group actions':return True
+    if text.strip().lower().rstrip('.!') in ('enable my group actions','send it','send','yes send it','send this email','send the email','cancel','cancel draft','cancel email','yes','no'):return True
+    if re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',text.strip()):return True
+    if re.fullmatch(r'(?i)(?:read|open|show)(?: (?:email|message))? (?:number )?(first|second|third|fourth|fifth|[1-5])',text.strip()):return True
     return bool(re.search(r'(?i)\b(email|e-mail|gmail|inbox|mail|calendar|remind|reminders?|tasks?|memory|remember|forget|delete|privacy|computer|browse|research|files?|chart|csv|digest|notes?|save|work|project)\b', text) or text.startswith('/'))
 
 

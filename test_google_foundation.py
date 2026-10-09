@@ -112,6 +112,7 @@ def test_send_timeout_never_retries(monkeypatch):
 
 def test_google_group_read_requester_account(monkeypatch):
     import cr_telegram as T
+    monkeypatch.setattr(T.db,'kv_set',lambda *a:None)
     monkeypatch.setattr(T.db,'audit',lambda *a:None)
     monkeypatch.setattr(G,'configured',lambda:True)
     calls=[]

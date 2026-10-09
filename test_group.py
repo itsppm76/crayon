@@ -166,3 +166,9 @@ def test_group_proactive_cannot_move_private_alerts(monkeypatch):
     monkeypatch.setattr(T.db,'audit',lambda *a:None)
     out=T.CaptureOut();T._handle_text(22,-991,'Test','turn on daily check-ins',None,out)
     assert 'private monitoring' in out.sent[0]['text']
+
+
+def test_group_followups_keep_full_review_flow():
+    import cr_group_actions as A
+    for text in ('send it','cancel draft','sam@example.com','read first','yes'):
+        assert A.action_request(text)
