@@ -14,12 +14,12 @@ def test_calendar_preview_no_network(monkeypatch):
     monkeypatch.setattr(G,'status',lambda *a:{'email':'me@example.com'})
     monkeypatch.setattr(G,'encrypt',lambda u,c:'encrypted')
     monkeypatch.setattr(G,'request',lambda *a:pytest.fail('write while preview'))
-    d=K.preview(10,'Study',content()['start'],content()['end'],content()['timezone'])
-    assert 'not booked' in d['text'] and 'No attendees' in d['text']
+    d=K.preview(K.OWNER,'Study',content()['start'],content()['end'],content()['timezone'])
+    assert 'not booked' in d['text'] and 'Guests: none' in d['text']
 def test_calendar_stale_user_rejected(monkeypatch):
     monkeypatch.setattr(K.db,'q',lambda *a,**kw:None)
     monkeypatch.setattr(K.db,'kv_get',lambda *a:None)
-    with pytest.raises(G.GoogleError,match='Review'):K.create(11,'id','hash')
+    with pytest.raises(G.GoogleError,match='Review'):K.create(K.OWNER,'id','hash')
 def test_mail_metadata_only_dedup(monkeypatch):
     monkeypatch.setattr(G,'status',lambda *a:{'email':'me@example.com'})
     calls=[]
@@ -54,19 +54,19 @@ def test_conflict_and_scope_no_write(monkeypatch):
     monkeypatch.setattr(G,'status',lambda *a:{'email':c['account']})
     monkeypatch.setattr(G,'request',lambda *a:{'items':[{'summary':'Busy'}]})
     monkeypatch.setattr(G,'_access',lambda *a:pytest.fail('write conflict'))
-    with pytest.raises(G.GoogleError,match='conflicts'):K.create(10,'id',digest[:12])
+    with pytest.raises(G.GoogleError,match='conflicts'):K.create(K.OWNER,'id',digest[:12])
 def test_calendar_preview_route(monkeypatch):
     import cr_google_chat as H,cr_telegram as T
-    monkeypatch.setattr(K,'preview',lambda *a:{'id':'id','hash':'hash','text':'Preview only'})
+    monkeypatch.setattr(K,'preview',lambda *a,**kw:{'id':'id','hash':'hash','text':'Preview only'})
     class Out:
         def __init__(self):self.sent=[]
         def send(self,chat,text,markup=None):self.sent.append({'text':text,'markup':markup})
-    out=Out();H.handle(10,10,'/calendar_slot Study | 2099-01-01T10:00:00+05:30 | 2099-01-01T11:00:00+05:30 | Asia/Calcutta',{},out)
+    out=Out();H.handle(K.OWNER,K.OWNER,'/calendar_slot Study | 2099-01-01T10:00:00+05:30 | 2099-01-01T11:00:00+05:30 | Asia/Calcutta',{},out)
     assert out.sent[0]['markup']['inline_keyboard'][0][0]['text']=='Create'
 def test_write_scope_only_explicit_oauth(monkeypatch):
     from urllib.parse import urlsplit,parse_qs
     monkeypatch.setattr(G,'configured',lambda:True)
-    monkeypatch.setattr(G.db,'q',lambda *a,**kw:{'user_id':10})
+    monkeypatch.setattr(G.db,'q',lambda *a,**kw:{'user_id':K.OWNER})
     monkeypatch.setattr(G.db,'kv_get',lambda *a:False)
     url=G.authorization_url('a'*43)
     scope=parse_qs(urlsplit(url).query)['scope'][0]
@@ -104,7 +104,7 @@ def test_calendar_create_readback_exact(monkeypatch):
             assert 'attendees' not in Client.body and 'conferenceData' not in Client.body
             return Resp(Client.body)
     monkeypatch.setattr(G.httpx,'Client',Client)
-    assert 'read back' in K.create(10,'a1b2c3',digest[:12]);assert Client.posts==1
+    assert 'read back' in K.create(K.OWNER,'a1b2c3',digest[:12]);assert Client.posts==1
     assert any(x.startswith('DELETE FROM google_calendar_drafts WHERE id') for x in queries)
 
 def test_mail_clean_entities(monkeypatch):
@@ -123,3 +123,20 @@ def test_mail_status_readonly(monkeypatch):
     monkeypatch.setattr(W.db,'kv_get',lambda *a:{'email':'test@example.com','checked':100,'paused':True})
     assert 'paused' in W.status(W.OWNER) and 'timestamp alone' in W.status(W.OWNER)
     with pytest.raises(G.GoogleError):W.status(12)
+
+def test_calendar_all_owner_gates(monkeypatch):
+    for uid in (12,7555366869,-1):
+        for fn,args in ((K.preview,('test',content()['start'],content()['end'],'Asia/Calcutta')),(K.create,('id','hash')),(K.cancel,('id',)),(G.calendar,()),(G.begin,())):
+            if fn==G.begin:
+                with pytest.raises(G.GoogleError):fn(uid,calendar_write=True)
+            else:
+                with pytest.raises(G.GoogleError,match='owner-only'):fn(uid,*args)
+        with pytest.raises(G.GoogleError):G.request(uid,K.URL,{})
+def test_calendar_guests_and_reminder_validation():
+    assert K.validate({**content(),'guests':['guest@example.com'],'reminder_minutes':30})
+    for change in ({'guests':['invalid']},{'guests':['g@example.com','g@example.com']},{'guests':[[]]},{'reminder_minutes':-1},{'reminder_minutes':'30'}):
+        with pytest.raises(G.GoogleError):K.validate({**content(),'guests':[],'reminder_minutes':None,**change})
+def test_nonowner_oauth_no_calendar(monkeypatch):
+    from urllib.parse import urlsplit,parse_qs
+    monkeypatch.setattr(G,'configured',lambda:True);monkeypatch.setattr(G.db,'q',lambda *a,**kw:{'user_id':7555366869});monkeypatch.setattr(G.db,'kv_get',lambda *a:True)
+    assert 'calendar' not in parse_qs(urlsplit(G.authorization_url('a'*43)).query)['scope'][0]
