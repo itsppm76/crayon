@@ -21,6 +21,8 @@ def show_draft(uid,chat,out,arg):
 
 
 def handle(uid,chat,text,msg,out):
+    if uid!=1898030949 and re.search(r'(?i)\b(calendar|calendar_slot)\b',text):
+        out.send(chat,'Calendar beta is owner-only.');return True
     if text.strip().lower()=='enable calendar booking':
         if msg and any(msg.get(k) for k in ('forward_origin','forward_from','via_bot')):
             out.send(chat,'Calendar permission needs a direct owner request.');return True
@@ -38,8 +40,10 @@ def handle(uid,chat,text,msg,out):
         import cr_calendar_draft as K
         try:
             fields=[x.strip() for x in text[len('/calendar_slot '):].split(' | ')]
-            if len(fields)!=4:raise G.GoogleError('Use /calendar_slot Title | ISO start with offset | ISO end with offset | IANA timezone. Private solo events only.')
-            d=K.preview(uid,*fields)
+            if len(fields) not in (4,6):raise G.GoogleError('Use /calendar_slot Title | ISO start with offset | ISO end with offset | IANA timezone. Owner only. Optional: append | guest1@example.com,guest2@example.com (or none) | popup reminder minutes (or default). Exact invitations reviewed.')
+            guests=[e.strip() for e in fields[4].split(',') if e.strip()] if len(fields)==6 and fields[4].lower()!='none' else []
+            minutes=int(fields[5]) if len(fields)==6 and fields[5].lower()!='default' else None
+            d=K.preview(uid,*fields[:4],guests=guests,reminder_minutes=minutes)
             out.send(chat,d['text'],markup={'inline_keyboard':[[{'text':'Create','callback_data':'calendar_create:'+d['id']+':'+d['hash']},{'text':'Cancel','callback_data':'calendar_cancel:'+d['id']}]]})
         except G.GoogleError as e:out.send(chat,str(e))
         return True
