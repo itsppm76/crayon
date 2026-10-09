@@ -152,3 +152,13 @@ def test_forwarded_edit_cannot_retrieve_draft(monkeypatch,store):
     monkeypatch.setattr(H.G,'current_content',lambda *a:pytest.fail('forward edit accessed draft'))
     out=T.CaptureOut();assert H.handle(10,10,'rewrite it',{'forward_origin':{'type':'user'}},out)
     assert 'direct' in out.sent[0]['text']
+
+
+def test_edit_replaces_reviewed_id_and_hash(monkeypatch,store):
+    store['google_review_chat_22']=22;store['google_reviewed_22']=['old-id','old-hash']
+    monkeypatch.setattr(H.G,'current_content',lambda uid:('old-id','old-hash',{'to':['a@example.com'],'cc':[],'bcc':[],'subject':'Old','body':'Original'}))
+    monkeypatch.setattr(H.llm,'ask_json',lambda *a,**k:{'subject':'New','body':'Edited\nRegards,\nSam'})
+    monkeypatch.setattr(H.G,'make_draft',lambda uid,arg,structured=False:{'text':'Updated review','id':'new-id','hash':'new-hash'})
+    out=T.CaptureOut();assert H.handle(22,22,'rewrite this shorter',{},out)
+    assert store['google_reviewed_22']==['new-id','new-hash']
+    assert out.sent[-1]['markup'] is True
