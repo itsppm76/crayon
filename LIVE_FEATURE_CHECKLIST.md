@@ -54,7 +54,7 @@ This is a cumulative Day 0-to-current inventory, not a promise that every featur
 - [x] Per-user opt-in hourly mail watch, bounded sender/subject/snippets and quiet hours. Real Telegram two-item notification passed October9 at15:00IST. Not a complete inbox audit.
 - [x] Web exact session-bound one-use reviews for email/calendar/RAW Sheet writes; menu controls, not full conversational parity.
 - [ ] Actual calendar Create/invitation still needs write-scope reconnect and owner-approved live acceptance. Do not infer it from preview/Cancel.
-- [ ] Separate Workspace Docs text reads, Sheets bounded reads/RAW updates and public GitHub commit/PR digests exist in deployed code. Connected-provider setup and real end-to-end acceptance are not established here; do not call these fully live integrations. No Docs editing or private-repository write access.
+- [ ] Workspace Docs text reads and Sheets bounded reads/RAW updates have Telegram/web entry points; Google consent is still required in the separate Testing project. Telegram Sheet changes now have exact one-use private review as on web. Public GitHub commit/PR digests need no connection; public itsppm76/crayon digest verified live. Private repo access/Docs editing are not enabled. Real Workspace consent/write acceptance remains pending.
 - [ ] Public Google data-access verification remains an external gate. Identity-only login is distinct from named-tester Gmail/Calendar access.
 
 ## Computer/browser beta (all Telegram users)
@@ -79,7 +79,7 @@ This is a cumulative Day 0-to-current inventory, not a promise that every featur
 
 ## Verification ledger
 
--364 tests pass for the committed runtime; frontend JavaScript syntax passes. Stopped local acceptance-test changes are excluded.
+-367 tests pass for the committed runtime; frontend JavaScript syntax passes. Stopped local acceptance-test changes are excluded.
 - Live `/health`: database reachable, polling mode, version2.35.0. Live web status: Telegram, Google and email login configured; uploads enabled; rooms/computer disabled.
 - Consolidation start rejected401 with "Account consolidation is not enabled yet." Last production environment read found no enable flag.
 - Real Telegram login/history, web chat persistence and image-analysis storage were checked. Captured desktop/mobile recovery and generated full review layouts were inspected.

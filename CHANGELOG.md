@@ -1,5 +1,13 @@
 # Change log
 
+## October 10, 2026 - Workspace review and public GitHub entry points
+
+- Telegram update-sheet command shows account/file/range/before/RAW values and exact expiring one-use confirmation, rejects account switch and wrong-user/chat reviews. Web uses existing session-bound Sheet review.
+- Web public GitHub digests and identity-only connection entry point; private repository access remains disabled. Live public itsppm76/crayon digest returned verified metadata/commit URLs.
+- Docs text/Sheets read paths retain separate own-account Google Workspace consent, Testing limits and no model-memory path. No real Workspace write performed.
+-367tests; full provider consent remains separate from deployed code.
+
+
 ## October 10, 2026 - web computer, queue and private notifications
 
 - Enable authenticated web computer/browser and /work internal-queue controls with existing per-account quotas and private file folders.

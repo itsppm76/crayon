@@ -282,6 +282,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             out.send(chat_id,result['repo']+'\n'+result['url']+'\n\n'+'\n\n'.join(str(x['type'])+' '+str(x['id'])+': '+x['title']+'\n'+x['url'] for x in result['items']))
         except Exception:out.send(chat_id,'No GitHub digest confirmed. Check public owner/repo or try after the rate limit clears.')
         return
+    import cr_workspace_review
+    if cr_workspace_review.handle(uid,chat_id,text,out):return
     import cr_booking
     if cr_booking.handle(uid,chat_id,text,out):return
     import cr_dashboard
@@ -448,7 +450,7 @@ def handle_callback(cb, out):
     except Exception:
         pass
     data=cb.get("data","")
-    if not data.startswith(("email_send:","email_cancel:","calendar_create:","calendar_cancel:","form_submit:","form_cancel:","ux:","work:")):return
+    if not data.startswith(("email_send:","email_cancel:","calendar_create:","calendar_cancel:","form_submit:","form_cancel:","sheet:","ux:","work:")):return
     uid=cb.get("from",{}).get("id",0)
     chat_id=cb.get("message",{}).get("chat",{}).get("id")
     if uid<=0:return
@@ -456,6 +458,13 @@ def handle_callback(cb, out):
         import cr_group_actions as GA
         if not isinstance(chat_id,int) or chat_id>=0 or not GA.reviewed(uid,chat_id,data):return
         out=GA.GroupOut(out,uid,chat_id)
+    if data.startswith('sheet:'):
+        parts=data.split(':')
+        if len(parts)!=4:return
+        try:
+            with mem.user_lock(uid):out.send(chat_id,__import__('cr_workspace_review').confirm(uid,chat_id,parts[2],parts[3],parts[1]))
+        except ValueError as e:out.send(chat_id,str(e))
+        return
     if data.startswith(('form_submit:','form_cancel:')):
         import cr_booking as B,base64
         parts=data.split(':')

@@ -29,7 +29,7 @@ See [the final cumulative checklist](LIVE_FEATURE_CHECKLIST.md) for the full fea
 
 ## Evidence, not promises
 
-- 364 local Python tests passed.
+- 367 local Python tests passed.
 - Captured browser tests: same-browser refresh/new tab; transient saved-session fetch failure and automatic reconnect; one failed upload acknowledgement plus one failed result GET recovered with exactly one POST; delayed typing update and logout cleanup.
 - Desktop and 390px mobile screenshots inspected, with no horizontal overflow in captured checks.
 - Real owner Telegram login and existing-history mapping passed. Real owner web chat persisted. The owner's 5.39 MB image reached the server at 20:04:24 and analysis completed at 20:04:50; browser result delivery failed before recovery was shipped.

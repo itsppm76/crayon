@@ -13,7 +13,7 @@ def init():
 def connections(uid):
     import cr_connections as X
     return {'google':G.status(uid).get('email'),'workspace':(X.status(uid,'workspace') or {}).get('identity'),
-      'calendar_owner':bool(G.status(uid)),'external_auto_send':False,'attachments_email':False}
+      'github':(X.status(uid,'github') or {}).get('identity'),'calendar_owner':bool(G.status(uid)),'external_auto_send':False,'attachments_email':False}
 
 def preview(uid,header,body):
     init()
@@ -73,6 +73,7 @@ def read(uid,body):
     elif kind=='email_read' and set(f)=={'id'} and isinstance(f['id'],str):text=G.read_message(uid,f['id'])
     elif kind=='calendar' and not f:
         text=G.calendar(uid)
+    elif kind=='github' and set(f)=={'repo'}:text=json.dumps(__import__('cr_github').digest(uid,f['repo']),ensure_ascii=False)
     elif kind=='doc' and set(f)=={'id'}:text=json.dumps(__import__('cr_workspace').doc_read(uid,f['id']),ensure_ascii=False)
     elif kind=='sheet' and set(f)=={'id','range'}:text=json.dumps(__import__('cr_workspace').sheet_read(uid,f['id'],f['range']),ensure_ascii=False)
     else:raise ValueError('Read not enabled or invalid fields.')
@@ -83,6 +84,7 @@ def connect(uid,body):
     if body['provider']=='google':url=G.begin(uid)
     elif body['provider']=='calendar_write':
         url=G.begin(uid,calendar_write=True)
+    elif body['provider']=='github':url=__import__('cr_connections').begin(uid,'github')
     elif body['provider']=='workspace':url=__import__('cr_connections').begin(uid,'workspace')
     else:raise ValueError('Connection not enabled.')
     return {'url':url,'text':'Review provider account and permissions. Return here and check Connections. Do not forward your account-bound link.'}
