@@ -17,4 +17,7 @@ MODE = env("CRAYON_MODE", "polling")  # polling | webhook
 PUBLIC_URL = env("CRAYON_PUBLIC_URL", "https://crayon-v1.onrender.com")
 HISTORY_TURNS = int(env("CRAYON_HISTORY_TURNS", "14"))
 DAILY_MESSAGE_CAP = int(env("CRAYON_DAILY_CAP", "80"))
+# WhatsApp channel (all optional; read via env() in cr_whatsapp.py): WHATSAPP_ACCESS_TOKEN,
+# WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN, WHATSAPP_GRAPH_VERSION,
+# CRAYON_OWNER_WA_ID (or WHATSAPP_ALLOWED_IDS, comma list)
 VERSION = "2.33.1"

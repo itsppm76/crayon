@@ -48,6 +48,12 @@ class Handler(BaseHTTPRequestHandler):
         return bool(C.ADMIN_TOKEN) and tok == C.ADMIN_TOKEN
 
     def do_GET(self):
+        if self.path.split("?",1)[0]=="/whatsapp/webhook":
+            from urllib.parse import parse_qs,urlsplit
+            import cr_whatsapp as W
+            q={k:v[0] for k,v in parse_qs(urlsplit(self.path).query).items()}
+            challenge=W.verify_challenge(q) if W.enabled() else None
+            return self._send(200,challenge) if challenge is not None else self._send(403,"forbidden")
         if self.path.split('?',1)[0]=='/google/connect':
             from urllib.parse import parse_qs,urlsplit
             import cr_google as G
@@ -99,6 +105,10 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(raw or b"{}")
         except Exception:
             body = {}
+        if self.path=="/whatsapp/webhook":
+            import cr_whatsapp as W
+            code=W.handle_webhook(raw,self.headers.get("X-Hub-Signature-256"))
+            return self._send(code,"ok" if code==200 else "forbidden")
         if self.path in ('/computer/next','/computer/result'):
             import hmac,cr_computer as K
             token=C.env('CRAYON_BRIDGE_TOKEN')

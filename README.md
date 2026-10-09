@@ -24,6 +24,10 @@
 
 ---
 
+## 💬 WhatsApp
+
+Crayon also runs on the WhatsApp Cloud API, as a second channel on the same brain. Set the `WHATSAPP_*` variables from `.env.example` and point Meta's webhook at `/whatsapp/webhook`. Full steps and limits: [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md).
+
 ## ✅ Tonight's release: v2.33.1
 
 142 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.

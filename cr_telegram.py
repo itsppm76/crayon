@@ -53,6 +53,9 @@ def api(method, **params):
 class Out:
     """Real sender. Tests use CaptureOut with the same interface."""
     def send(self, chat_id, text, markup=None):
+        import cr_whatsapp as W
+        if W.owns(chat_id):
+            return W.WhatsAppOut().send(chat_id, text, markup)
         text = clean_text(text) or "(empty)"
         chunks = [text[i:i + 3900] for i in range(0, len(text), 3900)]
         for i, ch in enumerate(chunks):
@@ -62,6 +65,8 @@ class Out:
             api("sendMessage", **params)
 
     def artifact(self,chat_id,item):
+        import cr_whatsapp as W
+        if W.owns(chat_id):return W.WhatsAppOut().artifact(chat_id,item)
         if len(item['data'])>2000000:raise ValueError('attachment too large')
         method,field='sendDocument','document'
         if item['mime']=='image/png':
