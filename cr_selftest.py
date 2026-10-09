@@ -10,7 +10,7 @@ def run(body):
         users=db.q("SELECT user_id,name,last_seen FROM users WHERE user_id>0 ORDER BY last_seen DESC LIMIT 5")
         events=db.q("SELECT user_id,ts,event,detail FROM audit WHERE event IN ('telegram_reaction','media_processed') ORDER BY ts DESC LIMIT 15")
         import threading
-        return {"ok":True,"users":users,"events":events,"work_thread_alive":any(t.name=="internal-work-queue" and t.is_alive() for t in threading.enumerate())}
+        return {"ok":True,"users":users,"events":events,"work_thread_alive":any(t.name=="internal-work-queue" and t.is_alive() for t in threading.enumerate()),"computer_heartbeat_age_seconds":max(0,round(__import__("time").time()-(db.kv_get("computer_heartbeat") or {}).get("at",0),1))}
     uid = int(body.get("uid", -4242))
     if uid >= 0:
         return {"ok": False, "error": "selftest only accepts negative synthetic users"}
