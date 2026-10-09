@@ -99,7 +99,7 @@ def control(uid,ident,op):
 def step_run(step):
     from cr_safety import redact
     op,value=step['op'],step['input']
-    if op=='calculate':return {'text':value+' = '+str(calculate(value))+'\nDecimal arithmetic,28-digit precision; repeating decimals rounded.','sources':[]}
+    if op=='calculate':return {'text':value+' = '+str(calculate(value))+'\nDecimal arithmetic, 28-digit precision; repeating decimals rounded.','sources':[]}
     import cr_web as W
     if op=='page':
         result=W.fetch(value,5000)
