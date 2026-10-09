@@ -85,6 +85,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200,page(self.path),"text/html")
         if self.path == "/":
             return self._send(200, '<!doctype html><html><head><meta name="google-site-verification" content="dhan82Y3H9t0tn4VuTh-Bs53DELgy7XEukGcvh0LuSg"><title>Crayon</title></head><body><h1>Crayon Telegram assistant</h1><p>Memory, reminders, search and media reading on free hosting.</p><p>Google integration is in testing mode, only for named test users. Each user connects their own account.</p><p><a href="https://t.me/crayon_v1_bot">Open Crayon</a> | <a href="/privacy">Privacy</a> | <a href="/terms">Terms</a></p>',"text/html")
+        if self.path=='/form-fixture':
+            return self._send(200,'<!doctype html><title>Crayon controlled form test</title><h1>Controlled test only</h1><p>Free controlled test. No booking or external action.</p><form action="/form-fixture/result" method="post"><label>Test identity<input name="name" type="text" required></label><label>Test note<textarea name="note" required></textarea></label><button type="submit">Submit controlled test</button></form>','text/html')
         if self.path == "/admin-test":
             return self._send(200, """<!doctype html><title>Crayon admin test</title><h1>Captured self-test</h1>
 <p>Negative synthetic users only. No Telegram sends.</p>
@@ -121,6 +123,12 @@ class Handler(BaseHTTPRequestHandler):
                 else:K.complete(body['id'],body['result']);result={'ok':True}
                 return self._send(200,json.dumps(result),'application/json')
             except Exception:return self._send(400,'invalid request')
+        if self.path=='/form-fixture/result':
+            from urllib.parse import parse_qs
+            import html
+            values=parse_qs(raw.decode(),keep_blank_values=True)
+            if set(values)!={'name','note'} or values['name']!=['TEST ONLY'] or len(values['note'])!=1 or not values['note'][0] or len(values['note'][0])>300:return self._send(400,'Invalid test data')
+            return self._send(200,'<!doctype html><title>Crayon test receipt</title><h1>Test form received</h1><p>No booking or external action was made.</p><p>'+html.escape(values['note'][0])+'</p>','text/html')
         if self.path == "/admin-test":
             from urllib.parse import parse_qs
             import html, hmac
