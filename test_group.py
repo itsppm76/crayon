@@ -65,7 +65,7 @@ def test_news_date_filter(monkeypatch):
     import httpx
     xml=b'<rss><channel><item><title>old</title><pubDate>Wed, 07 Oct 2026 10:00:00 GMT</pubDate><link>https://news.google.com/old</link></item><item><title>fresh</title><source>Publisher</source><pubDate>Thu, 08 Oct 2026 10:00:00 GMT</pubDate><link>https://news.google.com/fresh</link></item><item><title>unsafe</title><pubDate>Thu, 08 Oct 2026 11:00:00 GMT</pubDate><link>http://localhost/private</link></item></channel></rss>'
     monkeypatch.setattr(W._c,'get',lambda *a,**kw:httpx.Response(200,content=xml))
-    r=W.news('India',3,date(2026,10,8));assert [i['title'] for i in r['items']]==['fresh']
+    r=W.news('fresh',3,date(2026,10,8));assert [i['title'] for i in r['items']]==['fresh']
 
 
 def test_public_news_any_tagged_user(monkeypatch):
@@ -79,3 +79,26 @@ def test_group_news_clean_no_links(monkeypatch):
     monkeypatch.setattr(W,'news',lambda *a:{'items':[{'title':'Clear headline','url':'https://news.google.com/test','source':'Publisher','published':'2026-10-09T10:00:00+05:30'}],'day':None})
     r=G.answer({'text':'@crayon_v1_bot latest news','from':{'id':12}})
     assert '1. Clear headline' in r and 'Publisher |' in r and 'https://' not in r and not hasattr(r,'markup')
+
+
+def test_group_explicit_date_count_topic(monkeypatch):
+    import cr_web as W
+    from datetime import date
+    calls=[];monkeypatch.setattr(W,'news',lambda q,n,d:calls.append((q,n,d)) or {'items':[]})
+    G.answer({'text':'@crayon_v1_bot give top 5 news for Portugal from 8th Oct 2026','from':{'id':12}})
+    assert calls==[('Portugal',5,date(2026,10,8))]
+
+
+def test_group_portugal_clean_topic(monkeypatch):
+    import cr_web as W
+    calls=[];monkeypatch.setattr(W,'news',lambda q,n,d:calls.append(q) or {'items':[]})
+    G.answer({'text':'@crayon_v1_bot okay give top 5 news for Portugal','from':{'id':12}})
+    G.answer({'text':'@crayon_v1_bot can you give top 5 news from Portugal and Venezuela','from':{'id':12}})
+    assert calls==['Portugal','Portugal','Venezuela']
+
+def test_news_relevance_publisher_dedupe(monkeypatch):
+    import cr_web as W,httpx
+    from datetime import date
+    xml=b'<rss><channel><item><title>Audio briefing - Publisher</title><source>Publisher</source><pubDate>Thu, 08 Oct 2026 10:00:00 GMT</pubDate><link>https://news.google.com/a</link></item><item><title>Portugal policy - Publisher</title><source>Publisher</source><pubDate>Thu, 08 Oct 2026 10:00:00 GMT</pubDate><link>https://news.google.com/b</link></item></channel></rss>'
+    monkeypatch.setattr(W._c,'get',lambda *a,**kw:httpx.Response(200,content=xml))
+    r=W.news('Portugal',5,date(2026,10,8));assert [i['title'] for i in r['items']]==['Portugal policy']
