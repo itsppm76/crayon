@@ -18,6 +18,9 @@ def arithmetic(text):
     return calc(nodes.body)
 def run(op,args):
     import re
+    if op in ('form_inspect','form_submit'):
+        from computer_forms import run
+        return run(args['config'],args.get('values') if op=='form_submit' else None,args.get('expected_hash'))
     if op=='browse':
         from computer_browser import browse
         return browse(args)
