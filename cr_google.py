@@ -235,27 +235,37 @@ def calendar(uid):
 
 
 def make_draft(uid, text, structured=False):
-    """Direct user command only. No model callers, no inferred addresses, no CC/BCC."""
+    """Direct user command only. Exact reviewed recipient lists; no attachments."""
     db.q("DELETE FROM google_email_drafts WHERE expires_at<now() AND status='pending'",fetch="none")
     row=status(uid)
     if not row:raise GoogleError("Connect your own Google account first")
-    fields=text.split("\n",2) if "\n" in text else text.split(" | ",2)
-    if len(fields)!=3:raise GoogleError("Use /email_draft recipient | subject | body (or put each field on a new line).")
-    to,subject,body=fields
-    to=to.strip()
-    if not re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+",to):
-        raise GoogleError("Provide one exact recipient email, no display name or additional recipients")
-    if not subject.strip() or len(subject)>200 or not body.strip() or len(body)>10000:raise GoogleError("Subject/body is empty or too long")
+    if isinstance(text,dict):
+        to=text.get('to',[]);cc=text.get('cc',[]);bcc=text.get('bcc',[])
+        subject=text.get('subject','');body=text.get('body','')
+    else:
+        fields=text.split(' | ',2) if ' | ' in text else text.split('\n',2)
+        if len(fields)!=3:raise GoogleError('Use recipient | subject | body.')
+        to,subject,body=fields;cc=[];bcc=[]
+    def recipients(value):
+        if isinstance(value,str):value=[x.strip() for x in value.split(',') if x.strip()]
+        if not isinstance(value,list) or len(value)>10:raise GoogleError('At most10 recipients per field.')
+        for address in value:
+            if not isinstance(address,str) or not re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+",address):
+                raise GoogleError('Provide exact recipient email addresses, without display names.')
+        return list(dict.fromkeys(value))
+    to=recipients(to);cc=recipients(cc);bcc=recipients(bcc)
+    if not to or len(to)+len(cc)+len(bcc)>15:raise GoogleError('Use at least one To recipient and at most15 total recipients.')
+    if len(set(x.lower() for x in to+cc+bcc))!=len(to+cc+bcc):raise GoogleError('A recipient is in more than one field. Review To/CC/BCC.')
+    if not isinstance(subject,str) or not isinstance(body,str) or not subject.strip() or len(subject)>200 or not body.strip() or len(body)>10000:raise GoogleError('Subject/body is empty or too long')
     from cr_safety import looks_like_secret,clean_text
-    if looks_like_secret(text):raise GoogleError("Draft appears to contain a secret")
-    # Show the exact cleaned content that will be sent, not a markdown-altered view.
-    content={"from":row["email"],"to":to,"subject":clean_text(subject),"body":clean_text(body)}
+    if looks_like_secret(json.dumps(text)):raise GoogleError('Draft appears to contain a secret')
+    content={'from':row['email'],'to':to,'cc':cc,'bcc':bcc,'subject':clean_text(subject),'body':clean_text(body)}
     serialized=json.dumps(content,sort_keys=True)
     digest=hashlib.sha256(serialized.encode()).hexdigest()
     ident=secrets.token_hex(5)
     db.q("DELETE FROM google_email_drafts WHERE user_id=%s AND status='pending'",(uid,),"none")
     db.q("INSERT INTO google_email_drafts(id,user_id,encrypted_content,content_hash,expires_at) VALUES(%s,%s,%s,%s,now()+interval '10 minutes')",(ident,uid,encrypt(uid,content),digest),"none")
-    display=f"Draft only, not sent. Expires in 10 minutes.\nFrom: {content['from']}\nTo: {to}\nCC/BCC: none. Attachments: none.\nSubject: {content['subject']}\n\n{content['body']}"
+    display=f"Draft only, not sent. Expires in 10 minutes.\nFrom: {content['from']}\nTo: {', '.join(to)}\nCC: {', '.join(cc) or 'none'}\nBCC: {', '.join(bcc) or 'none'}\nAttachments: none.\nSubject: {content['subject']}\n\n{content['body']}"
     if structured:return {"text":display+"\n\nTap Send or say 'send it'. Say 'cancel' to discard.","id":ident,"hash":digest[:12]}
     return display+f"\n\nSend exactly this: /email_send {ident} {digest[:12]}\nCancel: /email_cancel {ident}"
 
@@ -278,7 +288,9 @@ def send_draft(uid, ident, short_hash):
         if hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()!=row["content_hash"]:
             raise GoogleError("Draft content changed; create a new draft")
         if status(uid).get("email")!=content["from"]:raise GoogleError("Connected account changed; create a new draft")
-        m=EmailMessage();m["From"]=content["from"];m["To"]=content["to"];m["Subject"]=content["subject"];m.set_content(content["body"])
+        m=EmailMessage();m["From"]=content["from"];m["To"]=", ".join(content["to"]) if isinstance(content["to"],list) else content["to"];m["Subject"]=content["subject"];m.set_content(content["body"])
+        if content.get('cc'):m['Cc']=', '.join(content['cc'])
+        if content.get('bcc'):m['Bcc']=', '.join(content['bcc'])
         token=_access(uid)
         with httpx.Client(timeout=20) as client:
             r=client.post("https://gmail.googleapis.com/gmail/v1/users/me/messages/send",headers={"Authorization":"Bearer "+token},json={"raw":base64.urlsafe_b64encode(m.as_bytes()).decode()})

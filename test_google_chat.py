@@ -95,3 +95,20 @@ def test_group_cannot_resume_private_compose(monkeypatch,store):
     monkeypatch.setattr(H,'classify',lambda *a:pytest.fail('private state routed'))
     monkeypatch.setattr(H,'show_draft',lambda *a:pytest.fail('private compose leaked'))
     assert H.handle(10,-991,'sam@example.com',{},T.CaptureOut()) is False
+
+def test_multi_recipients_structured_multiline(monkeypatch,store):
+    monkeypatch.setattr(H,'classify',lambda t:{'action':'draft','to':['a@example.com','b@example.com'],'cc':['c@example.com'],'bcc':['d@example.com'],'subject':'Meeting','body':'Dear team,\n\nMeet Friday.\nThanks'})
+    seen=[];monkeypatch.setattr(H,'show_draft',lambda *a:seen.append(a[3]))
+    H.handle(10,10,'Email a@example.com,b@example.com cc c@example.com bcc d@example.com about Friday',{},T.CaptureOut())
+    assert seen[0]['to']==['a@example.com','b@example.com'] and seen[0]['cc']==['c@example.com']
+    assert '\n\n' in seen[0]['body'] and seen[0]['bcc']==['d@example.com']
+
+
+def test_pending_recipient_keeps_multiline_body(monkeypatch,store):
+    import time
+    store['google_compose_10']={'subject':'Meeting','body':'Dear Sam,\nFull draft','until':time.time()+500,'chat':10,'cc':['c@example.com']}
+    seen=[];monkeypatch.setattr(H,'show_draft',lambda *a:seen.append(a[3]))
+    monkeypatch.setattr(H,'classify',lambda *a:pytest.fail('fresh parse lost context'))
+    assert H.handle(10,10,'sam@example.com',{},T.CaptureOut())
+    assert seen[0]['body']=='Dear Sam,\nFull draft' and seen[0]['cc']==['c@example.com']
+    assert seen[0]['to']==['sam@example.com']

@@ -61,7 +61,7 @@ def test_draft_is_review_only(monkeypatch):
 def test_draft_rejects_header_injection(monkeypatch):
     monkeypatch.setattr(G,'status',lambda uid:{'email':'owner@example.com'})
     monkeypatch.setattr(G.db,'q',lambda *a,**kw:None)
-    with pytest.raises(G.GoogleError):G.make_draft(11,'sam@example.com,bad@example.com\nSubject\nBody')
+    with pytest.raises(G.GoogleError):G.make_draft(11,'Sam <sam@example.com>\nSubject\nBody')
 
 
 def test_send_cross_user_rejected(monkeypatch):
@@ -163,3 +163,52 @@ def test_short_connection_no_open_redirect(monkeypatch):
     monkeypatch.setattr(G.db,'q',lambda *a,**k:None)
     with pytest.raises(G.GoogleError):G.authorization_url(state)
     with pytest.raises(G.GoogleError):G.authorization_url('https://evil.example')
+
+
+def test_multiline_and_cc_bcc_preview(monkeypatch):
+    monkeypatch.setattr(G.db,'q',lambda *a,**k:None)
+    monkeypatch.setattr(G,'status',lambda uid:{'email':'owner@example.com'})
+    saved=[];monkeypatch.setattr(G,'encrypt',lambda uid,c:saved.append(c) or 'cipher')
+    d=G.make_draft(11,{'to':['sam@example.com','b@example.com'],'cc':['c@example.com'],'bcc':['d@example.com'],'subject':'Test','body':'Dear Sam,\n\nHello.\nThanks'},structured=True)
+    assert 'CC: c@example.com' in d['text'] and 'BCC: d@example.com' in d['text']
+    assert saved[0]['body']=='Dear Sam,\n\nHello.\nThanks'
+    assert saved[0]['to']==['sam@example.com','b@example.com']
+
+
+def test_pipe_draft_multiline_not_corrupt_recipient(monkeypatch):
+    monkeypatch.setattr(G.db,'q',lambda *a,**k:None)
+    monkeypatch.setattr(G,'status',lambda uid:{'email':'owner@example.com'})
+    monkeypatch.setattr(G,'encrypt',lambda uid,c:'cipher')
+    d=G.make_draft(11,'sam@example.com | Subject | Dear Sam,\n\nFull body.',structured=True)
+    assert 'To: sam@example.com' in d['text'] and 'Full body.' in d['text']
+
+
+def test_recipient_header_injection_and_duplicate_roles(monkeypatch):
+    monkeypatch.setattr(G.db,'q',lambda *a,**k:None)
+    monkeypatch.setattr(G,'status',lambda uid:{'email':'owner@example.com'})
+    for value in [{'to':['a@example.com\nBcc:evil@example.com'],'subject':'x','body':'y'}, {'to':['a@example.com'],'cc':['a@example.com'],'subject':'x','body':'y'}]:
+        with pytest.raises(G.GoogleError):G.make_draft(11,value)
+
+
+def test_send_mime_all_reviewed_recipients(monkeypatch):
+    import base64,hashlib,json
+    from email import message_from_bytes
+    content={'from':'owner@example.com','to':['a@example.com','b@example.com'],'cc':['c@example.com'],'bcc':['d@example.com'],'subject':'Test','body':'Hello\nWorld'}
+    digest=hashlib.sha256(json.dumps(content,sort_keys=True).encode()).hexdigest()
+    monkeypatch.setattr(G.db,'q',lambda sql,*a,**k:{'encrypted_content':'cipher','content_hash':digest} if 'RETURNING encrypted_content' in sql else None)
+    monkeypatch.setattr(G.db,'audit',lambda *a:None)
+    monkeypatch.setattr(G,'decrypt',lambda *a:content)
+    monkeypatch.setattr(G,'status',lambda uid:{'email':'owner@example.com'})
+    monkeypatch.setattr(G,'_access',lambda uid:'synthetic')
+    seen=[]
+    class Reply:
+        status_code=200
+        def json(self):return {'id':'message-test'}
+    class Client:
+        def __init__(self,*a,**k):pass
+        def __enter__(self):return self
+        def __exit__(self,*a):pass
+        def post(self,*a,**k):seen.append(message_from_bytes(base64.urlsafe_b64decode(k['json']['raw'])));return Reply()
+    monkeypatch.setattr(G.httpx,'Client',Client)
+    assert 'Sent' in G.send_draft(11,'id',digest[:12])
+    assert seen[0]['To']=='a@example.com, b@example.com' and seen[0]['Cc']=='c@example.com' and seen[0]['Bcc']=='d@example.com'
