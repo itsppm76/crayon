@@ -16,7 +16,7 @@
 
 ![Codespaces](https://img.shields.io/badge/Codespaces-tester_beta-FFC93C?style=for-the-badge&logo=github)
 ![Browser](https://img.shields.io/badge/Chromium-public_web_beta-2B2D31?style=for-the-badge&logo=googlechrome)
-![Tests](https://img.shields.io/badge/local_tests-198_passed-22A06B?style=for-the-badge)
+![Tests](https://img.shields.io/badge/local_tests-203_passed-22A06B?style=for-the-badge)
 
 [**Try the bot**](https://t.me/crayon_v1_bot) · [Features](#-what-crayon-can-do) · [Architecture](#-architecture) · [Safety](#-safety-rails) · [Endpoints](#-endpoints) · [Setup](#-setup) · [Limits](#-honest-limits)
 
@@ -30,7 +30,7 @@ The shared repository includes optional WhatsApp Cloud API code. This Telegram d
 
 ## ✅ October 9 beta closeout
 
-198 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
+203 local tests pass. Deployed bot: [@crayon_v1_bot](https://t.me/crayon_v1_bot). Feature availability is separate from proof: code-tested features are not marked as live user tests.
 
 ### Overnight task power (2.33.1)
 
@@ -331,7 +331,7 @@ Each user requests their own short link in their own private Crayon chat. Never 
 
 Privacy: https://crayon-v1.onrender.com/privacy. Terms: https://crayon-v1.onrender.com/terms. Public Google verification and any restricted-scope assessment remain pending. Nothing paid has been initiated.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is enabled after October 9 lifecycle proof. Additional testers are not enabled until their Telegram IDs are verified.198 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is enabled after October 9 lifecycle proof. Additional testers are not enabled until their Telegram IDs are verified.203 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
 
 ### Mail checks and private calendar previews (2.27.0)
 
@@ -345,7 +345,9 @@ The Telegram command menu now includes browse/computer/research/CSV/chart/mail/c
 
 - Real Telegram work queue, dashboard, recorded completion, CSV and chart export passed. Silent WAV correctly reported no speech; blue video and PDF embedded code passed after LangChain changes.
 - Tagged groups: anyone may request public search/news. No private memory, Google-account data, reminders, computer jobs or write actions enter group lookup. News replies list dated index headlines and publishers, not independently verified article summaries. Real owner group news query returned dated headlines October 9 at 14:32; owner replied Fixed.
-- Gemini stays primary. Optional OpenRouter fallback uses only `openrouter/free` with zero-price limits, no data collection, and supported-parameter requirement. Live forced-primary-failure fixture returned FALLBACK_READY. Automatic fallback is still OFF at this checkpoint. Gemini file URIs and non-image inline media are never forwarded to it.
+- Gemini stays primary. Optional OpenRouter fallback uses only `openrouter/free` with zero-price limits, no data collection, and supported-parameter requirement. Live forced-primary-failure fixture returned FALLBACK_READY. Automatic fallback enabled and deployed 14:41 IST; stored setting read back on. Gemini file URIs and non-image inline media are never forwarded to it.
 - Calendar is owner-only for reads, reconnect, preview, Create and Cancel. `/calendar_slot Title | ISO start | ISO end | timezone | guests-or-none | popup-minutes-or-default` previews account, primary calendar, exact times, guests and notification policy. Guest invites fire only after the reviewed Create tap; account self is included. No live Create or invitation claimed. Reconnect via `enable calendar booking` before Create.
 - Public form demo: `/public_form demo | {"name":"TEST ONLY","note":"controlled demo"}`. Ten-minute encrypted owner-only draft, page/field/destination fingerprint, exact payload, one-use approval, no uncertain retry. Only controlled demo is configured. No Google/Calendly dynamic-slot compatibility claim.
-- Pending: first hourly mail poll proof, live worker controlled form test, Google write-scope reconnect and reviewed event test, docs final pixels, external Google public approval. Never pay for a security assessment without owner confirmation.
+- Pending: live worker controlled form preview/submit test, Google write-scope reconnect and reviewed event test, docs final pixels, external Google public approval. Never pay for a security assessment without owner confirmation.
+
+Latest 15:02 checkpoint: worker Playwright/Chromium and Debian browser libraries installed; direct controlled form inspection verified with zero POST. The real Telegram preview at 14:57 failed because a 14:56 idle-stop left a fresh cached heartbeat. Lifecycle fix clears readiness on accepted start/stop and serializes readiness/activity/enqueue against idle-stop. Full suite: 203 passed. Live preview/Submit remain unproven. Awake-but-exited worker needs a host restart or explicit supervisor start; API start on an already-awake host does not rerun postStart. Public-news topic/date/relevance/publisher cleanup is deployed, but post-fix group acceptance is still pending.
