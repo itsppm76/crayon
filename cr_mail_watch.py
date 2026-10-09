@@ -5,6 +5,14 @@ import cr_google as G
 import cr_proactive as P
 OWNER=1898030949
 KEY=lambda uid:'mail_watch_'+str(uid)
+def status(uid):
+    if uid!=OWNER:raise G.GoogleError('Mail watch beta is owner-only for now.')
+    state=db.kv_get(KEY(uid),None)
+    if not state:return 'Email checks: off. No scheduled inbox checks.'
+    from datetime import datetime,timezone
+    checked=state.get('checked',0)
+    when=datetime.fromtimestamp(checked,timezone.utc).isoformat() if checked else 'not checked'
+    return ('Email checks: '+('paused' if state.get('paused') else 'on')+'\nAccount: '+str(state.get('email','unknown'))+'\nLast check/configuration (UTC): '+when+'\nHourly during awake hours, metadata and bounded snippets only. Host timing is best-effort. No email sent or calendar changed. A timestamp alone does not prove a notification was delivered.')
 def configure(uid,chat,on):
     if uid!=OWNER:raise G.GoogleError('Mail watch beta is owner-only for now.')
     if not on:db.kv_set(KEY(uid),None);return 'Email checks off.'
