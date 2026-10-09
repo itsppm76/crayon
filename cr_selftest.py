@@ -6,6 +6,17 @@ import cr_telegram as tg
 
 
 def run(body):
+    if body.get("wake_fixture"):
+        import cr_computer, cr_wake, os, time
+        from unittest.mock import patch
+        started=time.monotonic()
+        with patch.dict(os.environ,{"CRAYON_AUTO_WAKE":"on"}):
+            if body["wake_fixture"]=="calculate":
+                result=cr_computer.execute(cr_computer.OWNER,"calculate",{"expression":"20*(3+2)/4"})
+            elif body["wake_fixture"]=="idle_stop":
+                cr_wake.idle_stop();result={"last_activity":db.kv_get("computer_last_activity",0)}
+            else:return {"ok":False,"error":"Unsupported wake fixture"}
+        return {"ok":True,"wake_fixture":result,"elapsed_seconds":round(time.monotonic()-started,1)}
     if body.get("diagnostics"):
         users=db.q("SELECT user_id,name,last_seen FROM users WHERE user_id>0 ORDER BY last_seen DESC LIMIT 5")
         events=db.q("SELECT user_id,ts,event,detail FROM audit WHERE event IN ('telegram_reaction','media_processed') ORDER BY ts DESC LIMIT 15")
