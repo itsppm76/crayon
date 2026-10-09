@@ -160,3 +160,9 @@ def test_group_audience_consent_before_any_data(monkeypatch):
 def test_group_optin_phrase_routes_to_consent():
     import cr_group_actions as A
     assert A.action_request('enable my group actions')
+
+
+def test_group_proactive_cannot_move_private_alerts(monkeypatch):
+    monkeypatch.setattr(T.db,'audit',lambda *a:None)
+    out=T.CaptureOut();T._handle_text(22,-991,'Test','turn on daily check-ins',None,out)
+    assert 'private monitoring' in out.sent[0]['text']

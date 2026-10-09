@@ -22,7 +22,7 @@ class GroupOut:
             for row in markup.get('inline_keyboard',[]):
                 for b in row:
                     data=b.get('callback_data')
-                    if data:db.kv_set(_key(self.uid,self.chat,data),{'until':time.time()+600})
+                    if data:db.kv_set(_key(self.uid,self.chat,data),{'until':time.time()+600,'uid':self.uid})
         return self.out.send(chat,text,markup)
     def __getattr__(self,name): return getattr(self.out,name)
 

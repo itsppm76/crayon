@@ -176,6 +176,7 @@ def delete_all(uid):
     cr_whatsapp.init()
     db.q("DELETE FROM whatsapp_inbox WHERE sender=%s", (str(uid),), "none")
     db.q("DELETE FROM whatsapp_outbox WHERE recipient=%s", (str(uid),), "none")
+    db.q("DELETE FROM kv WHERE key LIKE %s OR (key LIKE 'group_review_%%' AND value->>'uid'=%s)", ('group_audience_v1_'+str(uid)+'_%',str(uid)), 'none')
     db.q("DELETE FROM users WHERE user_id=%s", (uid,), "none")  # first: blocks late background writes
     for t in ("facts", "messages", "notes", "reminders"):
         db.q(f"DELETE FROM {t} WHERE user_id=%s", (uid,), "none")
