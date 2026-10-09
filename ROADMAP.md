@@ -29,7 +29,7 @@
 
 Every feature is reported separately as built, deployed and live-tested. Free quotas and hosting do not create an uptime or scale promise.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is enabled after real October 9 cold-start/worker/calculation/idle-stop proof. Additional testers are not enabled until their Telegram IDs are verified.198 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is enabled after real October 9 cold-start/worker/calculation/idle-stop proof. Additional testers are not enabled until their Telegram IDs are verified.203 local tests, tester behavior code-tested, no impersonation or live test from another person's chat.
 
 ## Next interaction layer (design only)
 
@@ -45,7 +45,7 @@ Public no-login website interactions, including Calendly and Google appointment 
 
 ## October 9 current-state checkpoint (supersedes older historical milestones)
 
-198 local tests pass. Real Telegram queue arithmetic, Show results/TXT export, dashboard recorded completion/CSV/chart, silent-audio no-speech, blue-video and PDF regression passed. Gemini stays primary; free-only OpenRouter forced-failure proof passed, automatic fallback remains OFF. Owner hourly mail watch enabled 13:59 IST, first poll proof pending.
+203 local tests pass. Real Telegram queue arithmetic, Show results/TXT export, dashboard recorded completion/CSV/chart, silent-audio no-speech, blue-video and PDF regression passed. Gemini stays primary; free-only OpenRouter forced-failure proof passed, automatic fallback enabled and deployed 14:41 IST. Owner hourly mail watch delivered a real two-item Telegram notification at 15:00 IST; checked advanced from 13:59:59 to 15:00:11, seen_count 0 to 2, not paused.
 
 Calendar reads, preview/create/cancel/reconnect are owner-only. Optional guests and popup reminders have exact preview and payload/readback regressions. Live preview/Cancel passed with no event; Google write-scope reconnect and actual reviewed Create remain unproven. Guest notifications only after Create; no Meet.
 
@@ -54,3 +54,5 @@ Public form foundation implemented for a controlled demo. Local fresh Chromium v
 Groups support bounded public lookup for anyone who tags the bot. News is dated Google News index headlines plus publishers, not independently verified article summaries. Private account reads, memory, jobs and writes remain excluded. Real owner group news acceptance passed October 9 at 14:32, then owner requested text-only UX without links.
 
 No paid activity initiated. Google public verification/possible restricted-scope assessment and outside-tester acceptance remain external gates. WhatsApp on this Telegram instance was stopped; optional shared code is maintained in the same repository.
+
+Latest 15:02 checkpoint: worker Playwright/Chromium and Debian browser libraries installed; direct controlled form inspection verified with zero POST. The real Telegram preview at 14:57 failed because a 14:56 idle-stop left a fresh cached heartbeat. Lifecycle fix clears readiness on accepted start/stop and serializes readiness/activity/enqueue against idle-stop. Full suite: 203 passed. Live preview/Submit remain unproven. Awake-but-exited worker needs a host restart or explicit supervisor start; API start on an already-awake host does not rerun postStart. Public-news topic/date/relevance/publisher cleanup is deployed, but post-fix group acceptance is still pending.
