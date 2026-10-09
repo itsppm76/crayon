@@ -10,6 +10,12 @@ TELEGRAM_TOKEN = env("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = env("GEMINI_API_KEY")
 GEMINI_MODEL = env("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_FALLBACKS = [m.strip() for m in env("GEMINI_FALLBACK_MODELS", "gemini-3.1-flash-lite,gemini-3-flash-preview").split(",") if m.strip()]
+# LLM layer: LangChain on top, Gemini default. LLM_PROVIDER=gemini|openrouter, LLM_FRAMEWORK=langchain|direct
+LLM_PROVIDER = env("LLM_PROVIDER", "gemini").strip().lower()
+LLM_FRAMEWORK = env("LLM_FRAMEWORK", "langchain").strip().lower()
+OPENROUTER_KEY = env("OPENROUTER_API_KEY")
+OPENROUTER_MODEL = env("OPENROUTER_MODEL", "google/gemini-2.5-flash")
+OPENROUTER_FALLBACKS = [m.strip() for m in env("OPENROUTER_FALLBACK_MODELS", "").split(",") if m.strip()]
 DATABASE_URL = env("DATABASE_URL")
 ADMIN_TOKEN = env("CRAYON_ADMIN_TOKEN")  # guards /selftest, /tick
 DEFAULT_TZ = env("CRAYON_TZ", "Asia/Kolkata")
