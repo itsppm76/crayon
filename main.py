@@ -54,6 +54,22 @@ class Handler(BaseHTTPRequestHandler):
             q={k:v[0] for k,v in parse_qs(urlsplit(self.path).query).items()}
             challenge=W.verify_challenge(q) if W.enabled() else None
             return self._send(200,challenge) if challenge is not None else self._send(403,"forbidden")
+        route=self.path.split('?',1)[0]
+        if route.startswith('/connections/'):
+            from urllib.parse import parse_qs,urlsplit
+            import cr_connections as X
+            parts=route.strip('/').split('/')
+            if len(parts)!=3 or parts[1] not in X.PROVIDERS:return self._send(404,'not found')
+            q=parse_qs(urlsplit(self.path).query)
+            try:
+                if parts[2]=='connect':
+                    url=X.authorization_url(q.get('state',[''])[0],parts[1])
+                    self.send_response(302);self.send_header('Location',url);self.send_header('Cache-Control','no-store');self.send_header('Referrer-Policy','no-referrer');self.end_headers();return
+                if parts[2]=='callback' and not q.get('error'):
+                    X.complete(q.get('state',[''])[0],q.get('code',[''])[0],parts[1])
+                    return self._send(200,'Connected. Return to your private Crayon chat and check connection status.')
+                return self._send(400,'Consent cancelled or invalid route. Start again in your private chat.')
+            except Exception:return self._send(400,'Connection not confirmed. Start again in your private chat.')
         if self.path.split('?',1)[0]=='/google/connect':
             from urllib.parse import parse_qs,urlsplit
             import cr_google as G
@@ -177,6 +193,8 @@ def main():
         cr_computer.init()
         import cr_whatsapp
         cr_whatsapp.init()
+        import cr_connections
+        cr_connections.init()
     except Exception as e:
         log.error("database init failed (running without persistence): %s", redact(str(e))[:200])
     if not C.TELEGRAM_TOKEN:

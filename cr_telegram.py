@@ -239,6 +239,28 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         out.send(chat_id,"You're welcome." if text.strip().lower().rstrip('.!') in ('thanks','thank you') else "Hey! What can I help with?" if text.strip().lower().rstrip('.!') in ('hi','hey','hello') else "Got it.");return
     if chat_id<0 and __import__('re').search(r'(?i)(?:email checks|daily check-ins|(?:morning|evening) digest|/proactive|/digest)',text):
         out.send(chat_id,'Set up private monitoring and proactive updates in a DM. Group requests do not move your background alerts here.');return
+    import cr_connections as X
+    import re
+    conn=re.fullmatch(r'(?i)(connect|disconnect|status) (workspace|github)',text.strip())
+    if conn:
+        if chat_id!=uid:out.send(chat_id,'Connection links/status stay in your private DM.');return
+        try:
+            op,provider=conn.group(1).lower(),conn.group(2).lower()
+            if op=='connect':out.send(chat_id,'Connect your own '+provider+' account. Workspace is separate from Gmail/calendar. Review provider permissions and choose the intended account:\n'+X.begin(uid,provider))
+            elif op=='status':
+                row=X.status(uid,provider);out.send(chat_id,provider+': '+row['identity'] if row else 'Not connected: '+provider)
+            else:out.send(chat_id,'Local '+provider+' credentials removed. '+('Provider revocation confirmed.' if X.disconnect(uid,provider) else 'Remove access in the provider account too.'))
+        except Exception:out.send(chat_id,'Connection unavailable or expired; no account change confirmed.')
+        return
+    gh=re.fullmatch(r'(?i)github digest ([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)',text.strip())
+    if gh:
+        if chat_id!=uid:out.send(chat_id,'GitHub digests currently stay in your DM.');return
+        try:
+            import cr_github
+            result=cr_github.digest(uid,gh.group(1))
+            out.send(chat_id,result['repo']+'\n'+result['url']+'\n\n'+'\n\n'.join(str(x['type'])+' '+str(x['id'])+': '+x['title']+'\n'+x['url'] for x in result['items']))
+        except Exception:out.send(chat_id,'No GitHub digest confirmed. Check public owner/repo or try after the rate limit clears.')
+        return
     import cr_booking
     if cr_booking.handle(uid,chat_id,text,out):return
     import cr_dashboard

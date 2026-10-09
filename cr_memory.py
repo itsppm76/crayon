@@ -169,6 +169,9 @@ def delete_all(uid):
     import cr_google
     cr_google.init()
     cr_google.disconnect(uid)
+    import cr_connections
+    cr_connections.init()
+    for provider in cr_connections.PROVIDERS:cr_connections.disconnect(uid,provider)
     import cr_work
     cr_work.init()
     db.q("DELETE FROM work_jobs WHERE user_id=%s", (uid,), "none")
