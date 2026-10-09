@@ -205,7 +205,12 @@ def news(query,n=4,day=None):
             if source.lower() in ('linkedin','facebook','instagram','x','twitter','youtube'):continue
             link=item.findtext('link','');u=urlparse(link)
             if u.scheme!='https' or u.hostname!='news.google.com':continue
-            items.append({'title':_strip(item.findtext('title',''))[:220],'url':link,'source':_strip(item.findtext('source',''))[:80],'published':published.isoformat()})
+            title=_strip(item.findtext('title',''))
+            if source and title.endswith(' - '+source):title=title[:-(len(source)+3)]
+            tokens=re.findall(r'[a-z0-9]+',query.lower());tokens=[t for t in tokens if t not in ('top','news','and','or','in','the')]
+            if tokens and not any(re.search(r'\b'+re.escape(t)+r'\b',title.lower()) for t in tokens):continue
+            if re.search(r'(?i)audio briefing|daily news roundup|livestream|how to watch',title):continue
+            items.append({'title':title[:220],'url':link,'source':source[:80],'published':published.isoformat()})
             if len(items)>=n:break
         except (ValueError,TypeError):continue
     return {'items':items,'query':query[:250],'day':day.isoformat() if day else None,'note':'Google News index headlines only. Article contents not independently verified.'}
