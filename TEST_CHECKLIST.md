@@ -121,7 +121,7 @@ October 8 23:15 IST live follow-up:
 - Browser initial bridge failures produced fake model '(screenshot attached)' text with no attachment. Deterministic screenshot routing now requires verified result AND PNG bytes; fail-closed errors instead.
 - Remaining: real group welcome-on-add, real computer file create/read (initial operation error fail-closed; schema enum fixed, retest pending), README rendered final phase table inspection. Public Google verification still pending, no paid assessment initiated.
 
-Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. No automatic wake. Additional testers are not enabled until their Telegram IDs are verified.142 local tests in the current suite; tester behavior code-tested, no impersonation or live test from another person's chat.
+Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 owner/day,30 total/day, atomically reserved before jobs including failures. Automatic wake is enabled after real October 9 cold-start/worker/calculation/idle-stop proof. Additional testers are not enabled until their Telegram IDs are verified.198 local tests in the current suite; tester behavior code-tested, no impersonation or live test from another person's chat.
 
 ## Public-web and official chart chain (Oct9,01:20IST)
 -2.25.0 public-web:98 local tests, deployed; fresh$0 Codespaces consumed/billable and$0 stop budget checked before restarting existing machine.
@@ -135,3 +135,15 @@ Tester beta: owner+approved-tester UID gate;5 execution jobs per tester/day,20 o
 -17-command menu rendered/read back in Telegram, actual popup pixels inspected.
 - Owner text-file create/read followed by independent read-only request returned exact test contents. Test prompts agent-authored under general testing request, not user approvals.
 - Computer restarted for owner active testing, heartbeat awake verified, owner eikcai.com screenshot493.4KB delivered. Auto-wake token creation blocked by GitHub error, no token yet.
+
+## October 9 current-state checkpoint (supersedes older historical milestones)
+
+198 local tests pass. Real Telegram queue arithmetic, Show results/TXT export, dashboard recorded completion/CSV/chart, silent-audio no-speech, blue-video and PDF regression passed. Gemini stays primary; free-only OpenRouter forced-failure proof passed, automatic fallback remains OFF. Owner hourly mail watch enabled 13:59 IST, first poll proof pending.
+
+Calendar reads, preview/create/cancel/reconnect are owner-only. Optional guests and popup reminders have exact preview and payload/readback regressions. Live preview/Cancel passed with no event; Google write-scope reconnect and actual reviewed Create remain unproven. Guest notifications only after Create; no Meet.
+
+Public form foundation implemented for a controlled demo. Local fresh Chromium verifies inspect without POST, changed-page rejection without POST, exact reviewed submission with one POST and receipt. Live worker demo and dynamic Google appointment/Calendly slot adapter remain open. Never claim provider booking from generic fixture evidence.
+
+Groups support bounded public lookup for anyone who tags the bot. News is dated Google News index headlines plus publishers, not independently verified article summaries. Private account reads, memory, jobs and writes remain excluded. Real owner group news acceptance passed October 9 at 14:32, then owner requested text-only UX without links.
+
+No paid activity initiated. Google public verification/possible restricted-scope assessment and outside-tester acceptance remain external gates. WhatsApp on this Telegram instance was stopped; optional shared code is maintained in the same repository.
