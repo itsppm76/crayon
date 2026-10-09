@@ -77,7 +77,7 @@ def test_build_model_constructs_both(monkeypatch):
     monkeypatch.setattr(C, "LLM_PROVIDER", "gemini")
     assert cr_lc.build_model("gemini-2.5-flash", 0.2, 100, True, 0, None) is not None
     monkeypatch.setattr(C, "LLM_PROVIDER", "openrouter")
-    assert cr_lc.build_model("google/gemini-2.5-flash", 0.2, 100, True, None, [{"functionDeclarations": [{"name": "a", "description": "d"}]}]) is not None
+    assert cr_lc.build_model("openrouter/free", 0.2, 100, True, None, [{"functionDeclarations": [{"name": "a", "description": "d"}]}]) is not None
 
 @pytest.mark.parametrize('mime,kind', [('audio/ogg','audio'),('video/mp4','video'),('application/pdf','file')])
 def test_non_image_inline_media_is_preserved(mime,kind):
