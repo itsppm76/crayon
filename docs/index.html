@@ -7,6 +7,8 @@
 <meta name="description" content="Crayon is a friendly AI assistant. Open the page and ask anything.">
 <meta property="og:title" content="Crayon">
 <meta property="og:description" content="A friendly AI assistant. Ask me anything.">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#fffdf8">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="./style.css?v=20261010-agent11">
 </head>
@@ -17,7 +19,7 @@
 </header>
 <nav id="panel" class="hide" aria-label="Crayon controls">
 <button data-command="/play quiz">Quick quiz</button><button data-command="/play guess">Guess a number</button><button data-command="/help">Help</button><button data-command="my tasks">Tasks</button><button data-command="show my memory">Memory</button><button data-command="my reminders">Reminders</button>
-<button data-command="/work list">Work queue</button><button data-command="/computer status">Computer</button><button id="rooms">Shared rooms</button><button id="forget-fact">Forget saved fact</button><button id="proactive">Check-ins / digests</button><button id="notifications">Notifications</button><button id="history">Full history</button><button id="activity">Web activity / files</button><button id="google-link">Link Google login</button><button id="email-link">Link email login</button><button id="telegram-merge" hidden disabled>Link Telegram / merge accounts</button><button id="plugins">Plugins / MCP</button><button id="connections">Connections / actions</button>
+<button data-command="/work list">Work queue</button><button data-command="/computer status">Computer</button><button id="rooms">Shared rooms</button><button id="forget-fact">Forget saved fact</button><button id="proactive">Check-ins / digests</button><button id="notifications">Notifications</button><button id="exportbtn" title="Download visible chat">Export chat</button><button id="history">Full history</button><button id="activity">Web activity / files</button><button id="google-link">Link Google login</button><button id="email-link">Link email login</button><button id="telegram-merge" hidden disabled>Link Telegram / merge accounts</button><button id="plugins">Plugins / MCP</button><button id="connections">Connections / actions</button>
 <p>History has recorded text. Older Telegram files were not retained. New uploads are read without saving raw bytes.</p>
 </nav>
 <aside id="sidebar" class="hide" aria-label="Recent activity"><h2>Recent chats</h2><button id="sidebar-close" class="ghost">Close</button><button id="new-conversation" class="ghost">New chat</button><button id="shared-conversation" class="ghost">Shared history chat</button><button id="sidebar-history" class="ghost">All recorded history</button><p class="sidebar-note">Named chats have separate turn history. Saved facts remain shared across your account. Telegram sync, if linked, still shares replies.</p><div id="sidebar-list"></div></aside><main id="scroll"><button id="older" class="ghost hide">Load earlier messages</button>
@@ -48,13 +50,14 @@
 </main>
 <footer><div id="attachment-stage" class="hide" aria-label="Staged attachment"></div>
   <form id="form" autocomplete="off">
-    <button id="mic" type="button" class="ghost" aria-label="Record voice">Mic</button><button id="attach" type="button" class="ghost" aria-label="Upload image or file">+</button><input id="file" type="file" class="hide"><textarea id="input" rows="1" maxlength="8000" disabled placeholder="Ask Crayon, or give it a task..." aria-label="Ask Crayon, or give it a task..."></textarea>
+    <button id="mic" type="button" class="ghost" aria-label="Record voice">Mic</button><button id="attach" type="button" class="ghost" aria-label="Upload image or file">+</button><input id="file" type="file" class="hide"><select id="research-focus" aria-label="Research focus"><option value="">Agent</option><option value="web">Web research</option><option value="deep">Deep research</option><option value="academic">Academic</option><option value="social">Social</option><option value="video">Video</option></select><textarea id="input" rows="1" maxlength="8000" disabled placeholder="Ask Crayon, or give it a task..." aria-label="Ask Crayon, or give it a task..."></textarea>
     <button id="send" type="submit" aria-label="Send">
       <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </form>
   <p class="note">Crayon can make mistakes. Review important facts and outgoing actions. <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
 </footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script><script src="https://unpkg.com/docx@8.5.0/build/index.umd.js" integrity="sha384-4xaIisuLEy2lo2HkB2C4rEf7v8jbTb2kuogX6TkuEt9feTWKBSFSOzsqNNbV+sKh" crossorigin="anonymous"></script><script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js" integrity="sha384-Cck14aA9cifjYolcnjebXRfWGkz5ltHMBiG4px/j8GS+xQcb7OhNQWZYyWjQ+UwQ" crossorigin="anonymous"></script><script src="./exports.js"></script><script src="./data-cards.js"></script>
 <script src="./app.js?v=20261010-agent11"></script>
 </body>
 </html>
