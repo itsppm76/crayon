@@ -30,3 +30,10 @@ def test_missing_link_and_plural():
 
 def test_no_readable_pages_refuses_draft():
  assert 'could not verify' in C.checked_answer('What programmes?', 'Made-up course list', [])
+
+def test_live_fares_no_inventory_no_cheapest_guess():
+ text=C.checked_answer('Cheapest flight from Delhi to Kolkata on upcoming days','Flight invented Rs2500',[])
+ assert 'current airline fares' in text and 'departure window' in text and '2500' not in text
+
+def test_weather_failure_not_generic_citation_error():
+ assert 'current weather reading' in C.checked_answer('Weather in Kolkata today','31C',[])
