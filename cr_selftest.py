@@ -6,6 +6,17 @@ import cr_telegram as tg
 
 
 def run(body):
+    if body.get('voice_setup'):
+        import cr_voice
+        return cr_voice.setup(body['voice_setup'])
+    if body.get('stream_fixture'):
+        import cr_stream as S,cr_llm as L
+        seen=[]
+        a=S.allowed.set(True);b=S.callback.set(seen.append)
+        try:
+            r=L.generate([L.user('Write a friendly three-sentence greeting for a study companion. No personal facts or tools.')],max_tokens=250)
+            return {'ok':bool(seen),'chunks':len(seen),'samples':seen[:3],'final':r.get('text'),'model':r.get('model')}
+        finally:S.allowed.reset(a);S.callback.reset(b)
     if body.get('openrouter_fallback_fixture'):
         import cr_llm as L,cr_config as C
         from unittest.mock import patch

@@ -67,3 +67,5 @@ body.sidebar-open main,body.sidebar-open .composer-wrap,body.sidebar-open footer
 @media(max-width:720px){body.sidebar-open #attach{display:none}body.sidebar-open #form{gap:4px;padding:8px}body.sidebar-open #input{font-size:14px;min-height:44px}body.sidebar-open #send{width:32px;height:32px}body.sidebar-open .note{font-size:10px}}
 
 .streaming-draft{display:block;white-space:pre-wrap;line-height:1.7;overflow-wrap:anywhere}audio{max-width:100%;display:block;margin-top:10px}
+
+@keyframes crayon-working{0%,100%{transform:rotate(-9deg) translateY(0)}50%{transform:rotate(9deg) translateY(-5px)}}.is-working .msg:last-child .av{animation:crayon-working 1.4s ease-in-out infinite;transform-origin:center bottom}.is-working .work-steps summary::before{content:"✎ ";color:var(--accent)}@media(prefers-reduced-motion:reduce){.is-working .msg .av{animation:none}}
