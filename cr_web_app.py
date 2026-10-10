@@ -242,7 +242,7 @@ def history(uid, before=None):
 
 def upload(user, body):
     import os, cr_media
-    if set(body)!={'data','mime','name','caption','request_id'}:
+    if set(body) not in ({'data','mime','name','caption','request_id'},{'data','mime','name','caption','request_id','conversation_id'}):
         raise ValueError('Invalid upload fields.')
     if not isinstance(body['name'],str) or not 1<=len(body['name'])<=200 or not isinstance(body['mime'],str) or len(body['mime'])>100:
         raise ValueError('Invalid file metadata.')
@@ -254,6 +254,8 @@ def upload(user, body):
     except Exception: raise ValueError('Invalid upload encoding.') from None
     if not data or len(data)>cr_media.MAX_BYTES:raise ValueError('Upload limit is 20 MB.')
     ident=body['request_id'];uid=user['user_id']
+    conversation=body.get('conversation_id')
+    if conversation:__import__('cr_conversations').require(uid,conversation)
     if not isinstance(ident,str) or not auth.PATTERN.fullmatch(ident):raise ValueError('Invalid request ID.')
     old=db.q('SELECT state FROM web_requests WHERE user_id=%s AND id=%s',(uid,ident),'one')
     if old:return {'request_id':ident,'state':old['state']}
@@ -264,17 +266,19 @@ def upload(user, body):
     try:
         row=db.q('INSERT INTO web_requests(id,user_id,encrypted) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING RETURNING id',
             (ident,uid,encode({'name':name,'mime':mime,'bytes':len(data),'caption':body['caption'],'raw_retained':False})),'one')
-        if row:POOL.submit(_upload_run,uid,ident,user['name'],data,mime,name,body['caption'])
+        if row:POOL.submit(_upload_run,uid,ident,user['name'],data,mime,name,body['caption'],conversation)
         else:SLOTS.release()
     except Exception:SLOTS.release();raise
     return {'request_id':ident,'state':'queued'}
 
 
-def _upload_run(uid,ident,username,data,mime,name,caption):
+def _upload_run(uid,ident,username,data,mime,name,caption,conversation=None):
     try:
         row=db.q("UPDATE web_requests SET state='running',updated_at=now() WHERE user_id=%s AND id=%s AND state='queued' RETURNING id",(uid,ident),'one')
         if not row:return
-        import cr_media,cr_memory as M
+        import cr_media,cr_memory as M,cr_conversations as conversations
+        if conversation:conversations.require(uid,conversation)
+        conversation_token=conversations.current.set(conversation)
         try:
             with M.user_lock(uid):
                 if not db.q('SELECT user_id FROM web_sessions WHERE user_id=%s AND expires_at>now() LIMIT 1',(uid,),'one'):raise ValueError('Account was deleted.')
@@ -297,4 +301,6 @@ def _upload_run(uid,ident,username,data,mime,name,caption):
             items=[{'kind':'text','text':'Upload stopped: '+(str(e)[:200] if isinstance(e,ValueError) else 'Media processing failed. No analysis confirmed.')}];state='blocked'
         db.q('UPDATE web_requests SET state=%s,encrypted=%s,draft=NULL,updated_at=now() WHERE user_id=%s AND id=%s',
              (state,encode({'items':items,'file_receipt':{'name':name,'mime':mime,'bytes':len(data),'raw_retained':False}}),uid,ident),'none')
-    finally:SLOTS.release()
+    finally:
+        if 'conversation_token' in locals():conversations.current.reset(conversation_token)
+        SLOTS.release()
