@@ -29,6 +29,7 @@ def init():
     __import__('cr_web_actions').init()
     __import__('cr_history').init()
     db.q(SCHEMA, fetch='none')
+    db.q("ALTER TABLE web_requests ADD COLUMN IF NOT EXISTS progress JSONB DEFAULT '[]'::jsonb",fetch='none')
     __import__('cr_web_notifications').init()
     __import__('cr_web_rooms').init()
 
@@ -149,6 +150,11 @@ def _run(uid, ident):
         row = db.q("UPDATE web_requests SET state='running',updated_at=now() WHERE user_id=%s AND id=%s AND state='queued' RETURNING encrypted",(uid,ident),'one')
         if not row: return
         data = decode(row['encrypted'])
+        import cr_progress
+        def report(event):
+            db.q("UPDATE web_requests SET progress=(CASE WHEN jsonb_array_length(progress)<16 THEN progress ELSE progress - 0 END)||%s::jsonb WHERE user_id=%s AND id=%s AND state='running'",(json.dumps([event]),uid,ident),'none')
+        progress_token=cr_progress.callback.set(report)
+        report({'label':'Request accepted','state':'running'})
         try:
             items = dispatch(uid,data['name'],data['input'])
             try:
@@ -174,18 +180,19 @@ def _run(uid, ident):
         db.q('UPDATE web_requests SET state=%s,encrypted=%s,updated_at=now() WHERE user_id=%s AND id=%s',
              (status,encode({'items':items}),uid,ident),'none')
     finally:
+        if 'progress_token' in locals():cr_progress.callback.reset(progress_token)
         SLOTS.release()
 
 
 def result(uid, ident):
     if not isinstance(ident,str) or not auth.PATTERN.fullmatch(ident): raise ValueError('Invalid request ID.')
-    row = db.q('SELECT state,encrypted,updated_at FROM web_requests WHERE user_id=%s AND id=%s', (uid,ident),'one')
+    row = db.q('SELECT state,encrypted,updated_at,progress FROM web_requests WHERE user_id=%s AND id=%s', (uid,ident),'one')
     if not row: raise ValueError('Request not found in your account.')
     state = row['state']
     if state in ('queued','running') and (datetime.now(row['updated_at'].tzinfo)-row['updated_at']).total_seconds()>300:
         # No automatic rerun of interrupted effects.
         state = 'blocked'
-    return {'request_id':ident,'state':state,'items':decode(row['encrypted']).get('items',[]) if state in ('done','blocked') else []}
+    return {'request_id':ident,'state':state,'progress':row.get('progress') or [],'items':decode(row['encrypted']).get('items',[]) if state in ('done','blocked') else []}
 
 
 def activity(uid):

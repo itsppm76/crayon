@@ -287,6 +287,8 @@ def _ask_confirmation(name, args, ctx):
 
 
 def run(name, args, ctx):
+    import cr_progress
+    cr_progress.emit(cr_progress.LABELS.get(name,'Running a requested tool'))
     import cr_channel
     if cr_channel.channel.get() == "web" and name not in cr_channel.WEB_TOOLS:
         return {"ok": False, "verified": False, "error": "This feature is not enabled on web yet."}

@@ -113,3 +113,6 @@ Web Connections > Review free HTML form and Telegram `/public_form ADAPTER | JSO
 
 ## Public navigation bug-fix release
 Public product navigation follows observed catalog links instead of guessing slugs. Duplicate cards with the same href are one distinct navigation target. Browser results include visible links and HTTP status;404 is not successful page verification. Follow-ups such as "open the details page and show me" are accepted and can reuse a recent per-account public catalog. Public cart/checkout GET views are allowed without cart changes, form submission, login, payment or order placement. Up to5 exact visible-link steps per request, no shell/unrestricted desktop expansion. Worker navigation protocol3 prevents old workers from silently serving the new flow; current verified heartbeat resolves stale starting state. Quotas and cold-start timing still apply.
+
+## Agent workspace milestone
+Web has a refreshed responsive workspace and live request/tool activity summaries. Activity contains execution labels only, never hidden reasoning, arguments or provider results. Account/request scoping remains. This release does not claim token streaming, voice/image generation or all consumer upgrades are complete.
