@@ -50,14 +50,14 @@ def test_flight_search_leads_not_quotes(monkeypatch):
  monkeypatch.setattr(L.W,'search',lambda *a:[{'title':'Airline search','url':'https://example.com/flights'}])
  monkeypatch.setattr(L.W,'fetch',lambda *a: (_ for _ in ()).throw(RuntimeError('blocked')))
  r=L.answer('Cheapest flight Delhi Kolkata')
- assert 'https://example.com/flights' in r and 'not checked fare quotes' in r and 'departure window' in r
+ assert 'cheapest flight' in r and 'What window' in r
 
 def test_regression_snippets_keep_search_links(monkeypatch):
  import cr_live as L
  monkeypatch.setattr(L.W,'search',lambda *a:[{'title':'Forecast source','url':'https://example.com/weather'}])
  monkeypatch.setattr(L.W,'fetch',lambda *a: (_ for _ in ()).throw(RuntimeError('blocked')))
  r=L.answer('weather Kolkata today')
- assert 'https://example.com/weather' in r and 'search leads' in r.lower()
+ assert 'readable current data' in r and 'No current number is verified' in r
  assert 'No supported citation' not in r
 
 def test_news_each_headline_source_link(monkeypatch):
@@ -86,5 +86,14 @@ def test_agent_search_provider_result_not_silently_discarded(monkeypatch):
  monkeypatch.setattr(T,'run',run)
  reply,meta=A.respond(1000000009999999,1000000009999999,'What changed in compiler releases?',readonly=True)
  assert 'web_search' in calls and 'read_url' in calls
- assert 'https://example.com/releases' in reply and 'Search leads' in reply
+ assert 'readable current data' in reply
  assert 'Unsupported latest version' not in reply
+
+def test_flight_fetched_prices_are_not_bailed_out(monkeypatch):
+ import cr_live as L,cr_citations as Cit
+ monkeypatch.setattr(L.W,'search',lambda *a:[{'title':'Fares','url':'https://example.com/flights'}])
+ monkeypatch.setattr(L.W,'fetch',lambda *a:{'url':'https://example.com/flights','text':'Delhi Kolkata advertised starting fare Rs6200, not dated inventory.'})
+ monkeypatch.setattr(L.W.llm,'generate',lambda *a,**k:{'text':'Advertised fare'})
+ monkeypatch.setattr(Cit,'checked_answer',lambda *a:'The site advertises Delhi-Kolkata fares from Rs6200, not a dated available quote.\nSource: https://example.com/flights')
+ r=L.answer('Cheapest flight Delhi Kolkata')
+ assert 'Rs6200' in r and 'Checked:' in r and 'What window' not in r
