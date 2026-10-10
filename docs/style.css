@@ -83,3 +83,5 @@ body.sidebar-open main,body.sidebar-open .composer-wrap,body.sidebar-open footer
 .settled .step-label{color:var(--ink)}.settled li{animation:none}
 
 .message-actions{display:flex;gap:3px;margin-top:10px;align-items:center}.message-actions .message-icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;min-height:32px;padding:6px;border:0;border-radius:7px;background:transparent;color:var(--mut);margin:0}.message-actions .message-icon:hover{color:var(--ink);background:var(--line)}
+
+@media(max-width:540px){body.menu-open main,body.menu-open footer{display:none}body.menu-open #panel{overflow-y:auto;max-height:calc(100dvh - 110px);flex:1;align-content:flex-start}#input{line-height:1.4;min-height:42px;box-sizing:border-box}}
