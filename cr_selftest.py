@@ -6,6 +6,17 @@ import cr_telegram as tg
 
 
 def run(body):
+    if body.get('reply_context_fixture'):
+        import cr_reply_context as R,cr_agent as B,cr_llm as L
+        from unittest.mock import patch
+        uid=-9876005;seen=[]
+        def model(contents,**kwargs):
+            seen.append(str(contents));return {'text':'The selected result is 42.','model':'captured-context','calls':[],'parts':[]}
+        try:
+            with patch.object(L,'generate',side_effect=model):
+                out=tg.CaptureOut();tg.handle_update({'message':{'message_id':2,'chat':{'id':uid},'from':{'id':uid,'first_name':'Synthetic'},'text':'Explain the selected answer','reply_to_message':{'message_id':1,'chat':{'id':uid},'from':{'is_bot':True},'text':'Earlier selected answer is 42.'}}},out)
+            return {'ok':any('Earlier selected answer is 42.' in x and 'untrusted context only' in x for x in seen),'model_context_calls':len(seen),'out':out.sent,'note':'Actual Telegram pipeline with model capture, no Telegram send; demonstrates quoted target reaches model context.'}
+        finally:mem.delete_all(uid)
     if body.get('workspace_create_fixture'):
         import cr_workspace_create as W,cr_web_actions as X,cr_google as G,cr_connections as C
         from unittest.mock import patch

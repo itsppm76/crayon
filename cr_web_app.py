@@ -126,13 +126,14 @@ def dispatch(uid, name, text):
 
 def submit(user, body):
     text, ident = body.get('message'), body.get('request_id')
-    if set(body) not in ({'message','request_id'},{'message','request_id','conversation_id'}) or not isinstance(text,str) or not 1 <= len(text.strip()) <= 8000 or not isinstance(ident,str) or not auth.PATTERN.fullmatch(ident):
+    if set(body)-{'reply_to'} not in ({'message','request_id'},{'message','request_id','conversation_id'}) or not isinstance(text,str) or not 1 <= len(text.strip()) <= 8000 or not isinstance(ident,str) or not auth.PATTERN.fullmatch(ident):
         raise ValueError('Invalid message request.')
     uid = user['user_id']
     conversation=body.get('conversation_id')
     if conversation:__import__('cr_conversations').require(uid,conversation)
     if looks_like_secret(text):
         raise ValueError('Do not send passwords, keys or credentials here.')
+    quote=__import__('cr_reply_context').web(uid,conversation,body['reply_to']) if body.get('reply_to') else None
     old = db.q('SELECT state FROM web_requests WHERE user_id=%s AND id=%s', (uid,ident), 'one')
     if old:
         return {'request_id':ident,'state':old['state']}
@@ -143,7 +144,7 @@ def submit(user, body):
         raise ValueError('Crayon is busy. Wait before sending another request.')
     try:
         row = db.q('INSERT INTO web_requests(id,user_id,encrypted) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING RETURNING id',
-            (ident,uid,encode({'input':text,'name':user['name'],'conversation_id':conversation})), 'one')
+            (ident,uid,encode({'input':text,'name':user['name'],'conversation_id':conversation,'reply_context':quote})), 'one')
         if row:
             POOL.submit(_run,uid,ident)
         else:
@@ -163,6 +164,8 @@ def _run(uid, ident):
         conversation=data.get('conversation_id')
         if conversation:conversations.require(uid,conversation)
         conversation_token=conversations.current.set(conversation)
+        import cr_reply_context as R
+        reply_token=R.current.set(data.get('reply_context'))
         import cr_progress
         def report(event):
             db.q("UPDATE web_requests SET progress=(CASE WHEN jsonb_array_length(progress)<16 THEN progress ELSE progress - 0 END)||%s::jsonb WHERE user_id=%s AND id=%s AND state='running'",(json.dumps([event]),uid,ident),'none')
@@ -202,6 +205,7 @@ def _run(uid, ident):
     finally:
         if 'stream_token' in locals():cr_stream.callback.reset(stream_token)
         if 'progress_token' in locals():cr_progress.callback.reset(progress_token)
+        if 'reply_token' in locals():R.current.reset(reply_token)
         if 'conversation_token' in locals():conversations.current.reset(conversation_token)
         SLOTS.release()
 

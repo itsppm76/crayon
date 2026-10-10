@@ -107,6 +107,7 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False, channe
         contents = [llm.user(text)]
     if not contents or contents[-1]["role"] != "user":
         contents.append(llm.user(text))
+    __import__('cr_reply_context').inject(contents)
     system = build_system(uid) if not degraded and chat_id>=0 else SYSTEM.format(now=datetime.now().strftime("%c"), tz="", memory="(Group request: no private history or ambient personal memory. Only retrieve this requester's records when explicitly asked here.)" if chat_id<0 else "(memory is temporarily unavailable)")
     if channel_name == "web":
         system += "\nYou are answering in the authenticated web app. The verified Crayon account owns this shared memory. Telegram is a separate linked delivery route; browser-only accounts have no Telegram destination. Do not promise Telegram sync or reminders without a linked route. Public computer/browser and explicit work queue are available. No Google data or external sends through the chat model; use reviewed menu actions. No private group access. Never claim those happened. Do not use Telegram formatting or say a file was delivered to Telegram."

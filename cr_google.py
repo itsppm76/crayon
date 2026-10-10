@@ -334,6 +334,7 @@ def send_draft(uid, ident, short_hash, channel='telegram'):
         mid=r.json()["id"]
         db.q("DELETE FROM google_email_drafts WHERE id=%s AND user_id=%s",(ident,uid),"none")
         db.audit(uid,"google_email_sent",mid)
+        db.audit(uid,"google_email_send_receipt",json.dumps({"message_id":mid,"channel":channel,"from":content["from"],"to":content["to"],"cc":content.get("cc",[]),"bcc":content.get("bcc",[]),"subject":content["subject"]}))
         return "Sent. Google confirmed the email went through."
     except Exception:
         db.q("UPDATE google_email_drafts SET status='uncertain' WHERE id=%s AND user_id=%s",(ident,uid),"none")
