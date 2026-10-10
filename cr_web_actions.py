@@ -76,9 +76,12 @@ def preview(uid,header,body):
     else:raise ValueError('Action not enabled.')
     data={'kind':kind,'payload':payload,'text':text};digest=hashlib.sha256(json.dumps(data,sort_keys=True).encode()).hexdigest();ident=secrets.token_urlsafe(24)
     db.q("DELETE FROM web_action_reviews WHERE expires_at<now()",fetch='none')
+    # A fresh preview supersedes pending reviews for this exact user/session.
+    # Claim/hash/expiry gates still own effects; no provider action is retried.
+    db.q("UPDATE web_action_reviews SET status='superseded' WHERE user_id=%s AND session_hash=%s AND status='pending'",(uid,A.digest(header[7:])),'none')
     db.q("INSERT INTO web_action_reviews(id,user_id,session_hash,encrypted,content_hash,expires_at) VALUES(%s,%s,%s,%s,%s,now()+interval '10 minutes')",
       (ident,uid,A.digest(header[7:]),A._cipher().encrypt(json.dumps(data).encode()).decode(),digest),'none')
-    return {'review_id':ident,'hash':digest,'text':text,'kind':kind,'expires_in':600,**({'html':d['html'],'fields':d['fields']} if kind=='email' else {})}
+    return {'review_id':ident,'hash':digest,'text':text,'kind':kind,'expires_in':600,'review_fields':f,**({'html':d['html'],'fields':d['fields']} if kind=='email' else {})}
 
 def compose_preview(uid,header,body):
     import re,cr_google_chat as H
@@ -115,6 +118,8 @@ def confirm(uid,header,body):
     data=json.loads(A._cipher().decrypt(row['encrypted'].encode()))
     if hashlib.sha256(json.dumps(data,sort_keys=True).encode()).hexdigest()!=row['content_hash']:raise ValueError('Review changed. No action made.')
     kind,p=data['kind'],data['payload']
+    outcome='cancelled' if body['decision']=='cancel' else 'done'
+    receipt={}
     if kind=='email':send_decision(uid,header,body,'accepted')
     try:
         if body['decision']=='cancel':
@@ -125,13 +130,16 @@ def confirm(uid,header,body):
             text='Draft discarded. No email sent.' if kind=='email' else 'Cancelled. No external action made.'
         elif kind=='form':
             r=__import__('cr_booking').submit(uid,p['id'],p['hash'])
+            outcome='done' if r.get('ok') and r.get('verified') else 'unknown'
             text='Form result: '+json.dumps({k:r[k] for k in ('ok','verified','url','note','error') if k in r},ensure_ascii=False)+'\nA controlled form receipt is not proof of a real reservation. If unconfirmed, check the destination before any retry.'
         elif kind=='workspace_create':
             result=__import__('cr_workspace_create').apply(uid,p)
+            outcome='done' if result.get('created') and result.get('content_readback_verified') else 'unknown'
+            receipt={k:result[k] for k in ('id','url','content_readback_verified','visual_verified') if k in result}
             text=(p['kind'].capitalize()+' created: '+p['title']+'\n'+str(result.get('url') or result.get('id') or '')+'\n'+result['note']) if result.get('created') else result['note']
         elif kind=='email':
             receipt=G.send_draft(uid,p['id'],p['hash'],channel='web',return_receipt=True)
-            text=receipt['text'];send_decision(uid,header,body,'sent',receipt['message_id'])
+            text=receipt['text'];receipt={'message_id':receipt['message_id']};send_decision(uid,header,body,'sent',receipt['message_id'])
         elif kind=='calendar':text=__import__('cr_calendar_draft').create(uid,p['id'],p['hash'],channel='web')
         elif kind=='forget':
             import cr_memory as M
@@ -139,11 +147,14 @@ def confirm(uid,header,body):
                 removed=db.q('DELETE FROM facts WHERE user_id=%s AND key=%s AND value=%s RETURNING key',(uid,p['key'],p['value']),'one')
                 if not removed:raise ValueError('Saved fact changed or was removed. Refresh and review again.')
                 text='Saved fact removed. Chat history and other records were not deleted.'
-        elif kind=='sheet':text=json.dumps(__import__('cr_workspace').sheet_apply(uid,p['payload'],p['hash']),ensure_ascii=False)
+        elif kind=='sheet':
+            result=__import__('cr_workspace').sheet_apply(uid,p['payload'],p['hash'])
+            outcome='done' if result.get('verified') else 'unknown'
+            text=json.dumps(result,ensure_ascii=False)
         else:raise ValueError('Action unavailable.')
         if kind=='email' and body['decision']=='cancel':send_decision(uid,header,body,'cancelled')
         db.q('DELETE FROM web_action_reviews WHERE id=%s AND user_id=%s',(body['review_id'],uid),'none')
-        return {'text':text}
+        return {'text':text,'state':outcome,'receipt':receipt}
     except Exception:
         if kind=='email':
             try:send_decision(uid,header,body,'stopped_or_uncertain')
