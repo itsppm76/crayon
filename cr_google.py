@@ -12,7 +12,7 @@ import cr_config as C
 import cr_db as db
 
 SCOPES = ["openid", "email", "https://www.googleapis.com/auth/gmail.readonly",
-          "https://www.googleapis.com/auth/calendar.events.readonly", "https://www.googleapis.com/auth/gmail.send"]
+          "https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/gmail.send"]
 
 class GoogleError(Exception):
     pass

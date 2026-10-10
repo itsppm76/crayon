@@ -69,14 +69,14 @@ def test_calendar_preview_route(monkeypatch):
         def send(self,chat,text,markup=None):self.sent.append({'text':text,'markup':markup})
     out=Out();H.handle(K.OWNER,K.OWNER,'/calendar_slot Study | 2099-01-01T10:00:00+05:30 | 2099-01-01T11:00:00+05:30 | Asia/Calcutta',{},out)
     assert out.sent[0]['markup']['inline_keyboard'][0][0]['text']=='Create'
-def test_write_scope_only_explicit_oauth(monkeypatch):
+def test_supported_calendar_write_scope_upfront_review_still_required(monkeypatch):
     from urllib.parse import urlsplit,parse_qs
     monkeypatch.setattr(G,'configured',lambda:True)
     monkeypatch.setattr(G.db,'q',lambda *a,**kw:{'user_id':K.OWNER})
     monkeypatch.setattr(G.db,'kv_get',lambda *a:False)
     url=G.authorization_url('a'*43)
     scope=parse_qs(urlsplit(url).query)['scope'][0]
-    assert 'calendar.events.readonly' in scope
+    assert 'calendar.events.readonly' not in scope and 'calendar.events' in scope
     monkeypatch.setattr(G.db,'kv_get',lambda *a:True)
     scope=parse_qs(urlsplit(G.authorization_url('a'*43)).query)['scope'][0]
     assert 'calendar.events.readonly' not in scope and 'calendar.events' in scope

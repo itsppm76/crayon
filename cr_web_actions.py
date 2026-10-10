@@ -19,7 +19,11 @@ def preview(uid,header,body):
     init()
     if set(body)!={'kind','fields'} or not isinstance(body['fields'],dict):raise ValueError('Invalid action preview.')
     kind,f=body['kind'],body['fields'];payload={}
-    if kind=='form':
+    if kind=='workspace_create':
+        import cr_workspace_create as C
+        if set(f)!={'type','title','content'}:raise ValueError('Exact create fields required.')
+        d=C.preview(uid,f['type'],f['title'],f['content']);payload=d['payload'];text=d['text']
+    elif kind=='form':
         import cr_booking as B
         if set(f)!={'adapter','values'} or not isinstance(f['adapter'],str) or not isinstance(f['values'],dict):raise ValueError('Exact adapter and fields required.')
         d=B.preview(uid,f['adapter'],f['values'])
@@ -80,13 +84,15 @@ def confirm(uid,header,body):
     kind,p=data['kind'],data['payload']
     try:
         if body['decision']=='cancel':
-            if kind=='form':__import__('cr_booking').cancel(uid,p['id'])
+            if kind=='workspace_create':pass
+            elif kind=='form':__import__('cr_booking').cancel(uid,p['id'])
             elif kind=='email':G.cancel_draft(uid,p['id'],channel='web')
             elif kind=='calendar':__import__('cr_calendar_draft').cancel(uid,p['id'],channel='web')
             text='Cancelled. No external action made.'
         elif kind=='form':
             r=__import__('cr_booking').submit(uid,p['id'],p['hash'])
             text='Form result: '+json.dumps({k:r[k] for k in ('ok','verified','url','note','error') if k in r},ensure_ascii=False)+'\nA controlled form receipt is not proof of a real reservation. If unconfirmed, check the destination before any retry.'
+        elif kind=='workspace_create':text=json.dumps(__import__('cr_workspace_create').apply(uid,p),ensure_ascii=False)
         elif kind=='email':text=G.send_draft(uid,p['id'],p['hash'],channel='web')
         elif kind=='calendar':text=__import__('cr_calendar_draft').create(uid,p['id'],p['hash'],channel='web')
         elif kind=='forget':

@@ -291,6 +291,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         return
     if text.strip().lower() in ('/rooms','shared rooms'):
         out.send(chat_id,'Telegram shared conversations use your Telegram groups: add @crayon_v1_bot and tag it for public questions. Personal group actions require each member to opt in and review before sharing. Web shared rooms are in Menu > Shared rooms at https://itsppm76.github.io/crayon/ with explicit invite/audience review. No private history is imported and Telegram groups are not silently bridged to web rooms.');return
+    if __import__('cr_workspace_create').handle(uid,chat_id,text,out):return
     import cr_workspace_review
     if cr_workspace_review.handle(uid,chat_id,text,out):return
     import cr_booking
@@ -459,7 +460,7 @@ def handle_callback(cb, out):
     except Exception:
         pass
     data=cb.get("data","")
-    if not data.startswith(("email_send:","email_cancel:","calendar_create:","calendar_cancel:","form_submit:","form_cancel:","sheet:","ux:","work:")):return
+    if not data.startswith(("email_send:","email_cancel:","calendar_create:","calendar_cancel:","form_submit:","form_cancel:","sheet:","workspace_create:","ux:","work:")):return
     uid=cb.get("from",{}).get("id",0)
     chat_id=cb.get("message",{}).get("chat",{}).get("id")
     if uid<=0:return
@@ -467,6 +468,12 @@ def handle_callback(cb, out):
         import cr_group_actions as GA
         if not isinstance(chat_id,int) or chat_id>=0 or not GA.reviewed(uid,chat_id,data):return
         out=GA.GroupOut(out,uid,chat_id)
+    if data.startswith('workspace_create:'):
+        try:
+            parts=data.split(':')
+            with mem.user_lock(uid):out.send(chat_id,__import__('cr_workspace_create').confirm_chat(uid,chat_id,parts[2],parts[3],parts[1]))
+        except Exception as e:out.send(chat_id,str(e)[:300])
+        return
     if data.startswith('sheet:'):
         parts=data.split(':')
         if len(parts)!=4:return

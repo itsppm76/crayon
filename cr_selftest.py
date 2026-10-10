@@ -6,6 +6,20 @@ import cr_telegram as tg
 
 
 def run(body):
+    if body.get('workspace_create_fixture'):
+        import cr_workspace_create as W,cr_web_actions as X,cr_google as G,cr_connections as C
+        from unittest.mock import patch
+        uid=1000000009876004
+        try:
+            with patch.object(C,'status',return_value={'identity':'synthetic@example.com'}):
+                d=W.prepare_chat(uid,uid,'doc','Synthetic review','No provider write. Test only.')
+                cancelled=W.confirm_chat(uid,uid,d['id'],d['hash'],'cancel')
+                p=X.preview(uid,'Bearer synthetic-workspace-session',{'kind':'workspace_create','fields':{'type':'sheet','title':'Synthetic sheet','content':[['Label',1]]}})
+                web=X.confirm(uid,'Bearer synthetic-workspace-session',{'review_id':p['review_id'],'hash':p['hash'],'decision':'cancel'})
+            return {'ok':True,'telegram_preview':d['text'],'cancelled':cancelled,'web_preview':p['text'],'web_cancelled':web['text'],'google_scopes':G.SCOPES,'workspace_scopes':C.GOOGLE_SCOPES,'note':'Live encrypted one-use review DB, synthetic account identity; Cancel only. No Google API/provider creation.'}
+        finally:
+            db.q('DELETE FROM workspace_create_reviews WHERE user_id=%s',(uid,),fetch='none')
+            db.q('DELETE FROM web_action_reviews WHERE user_id=%s',(uid,),fetch='none')
     if body.get('web_compose_fixture'):
         import cr_web_actions as X,cr_google as G
         from unittest.mock import patch

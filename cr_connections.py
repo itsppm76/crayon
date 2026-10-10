@@ -9,7 +9,7 @@ import cr_config as C
 import cr_db as db
 import cr_google as G
 
-GOOGLE_SCOPES=['openid','email','https://www.googleapis.com/auth/documents','https://www.googleapis.com/auth/spreadsheets']
+GOOGLE_SCOPES=['openid','email','https://www.googleapis.com/auth/documents','https://www.googleapis.com/auth/spreadsheets','https://www.googleapis.com/auth/presentations']
 PROVIDERS={'workspace','github'}
 
 
