@@ -8,19 +8,19 @@
 <meta property="og:title" content="Crayon">
 <meta property="og:description" content="A friendly AI assistant. Ask me anything.">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="./style.css?v=20261010-agent1">
+<link rel="stylesheet" href="./style.css?v=20261010-agent2">
 </head>
 <body>
 <header>
   <div class="brand"><img src="./crayon.svg" alt="" width="28" height="28"><span>Crayon</span></div>
-  <button id="menu" class="ghost" aria-expanded="false">Menu</button><span id="identity">Signed out</span><button id="auth-open" class="ghost">Sign in</button><button id="logout" class="ghost hide">Log out</button><button id="new" class="ghost" title="Start a new chat">Clear view</button>
+  <button id="sidebar-toggle" class="ghost" aria-label="Recent chats" aria-expanded="false">Chats</button><button id="theme" class="ghost" aria-label="Toggle dark mode">Dark</button><button id="menu" class="ghost" aria-expanded="false">Menu</button><span id="identity">Signed out</span><button id="auth-open" class="ghost">Sign in</button><button id="logout" class="ghost hide">Log out</button><button id="new" class="ghost" title="Start a new chat">Clear view</button>
 </header>
 <nav id="panel" class="hide" aria-label="Crayon controls">
-<button data-command="/help">Help</button><button data-command="my tasks">Tasks</button><button data-command="show my memory">Memory</button><button data-command="my reminders">Reminders</button>
+<button data-command="/play quiz">Quick quiz</button><button data-command="/play guess">Guess a number</button><button data-command="/help">Help</button><button data-command="my tasks">Tasks</button><button data-command="show my memory">Memory</button><button data-command="my reminders">Reminders</button>
 <button data-command="/work list">Work queue</button><button data-command="/computer status">Computer</button><button id="rooms">Shared rooms</button><button id="forget-fact">Forget saved fact</button><button id="proactive">Check-ins / digests</button><button id="notifications">Notifications</button><button id="history">Full history</button><button id="activity">Web activity / files</button><button id="google-link">Link Google login</button><button id="email-link">Link email login</button><button id="telegram-merge" hidden disabled>Link Telegram / merge accounts</button><button id="connections">Connections / actions</button>
 <p>History has recorded text. Older Telegram files were not retained. New uploads are read without saving raw bytes.</p>
 </nav>
-<main id="scroll"><button id="older" class="ghost hide">Load earlier messages</button>
+<aside id="sidebar" class="hide" aria-label="Recent activity"><h2>Recent chats</h2><button id="sidebar-close" class="ghost">Close</button><button id="sidebar-history" class="ghost">All recorded history</button><p class="sidebar-note">Recent web requests. Telegram and web share one history when linked; these are not separate memory sessions.</p><div id="sidebar-list"></div></aside><main id="scroll"><button id="older" class="ghost hide">Load earlier messages</button>
   <section id="hero">
     <img src="./crayon.svg" alt="Crayon" class="face" width="96" height="96">
     <div id="auth-card" class="auth-card">
@@ -55,6 +55,6 @@
   </form>
   <p class="note">Crayon can make mistakes. Review important facts and outgoing actions. <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
 </footer>
-<script src="./app.js?v=20261010-agent1"></script>
+<script src="./app.js?v=20261010-agent2"></script>
 </body>
 </html>

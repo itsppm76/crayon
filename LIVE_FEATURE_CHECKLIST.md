@@ -116,3 +116,6 @@ Public product navigation follows observed catalog links instead of guessing slu
 
 ## Agent workspace milestone
 Web has a refreshed responsive workspace and live request/tool activity summaries. Activity contains execution labels only, never hidden reasoning, arguments or provider results. Account/request scoping remains. This release does not claim token streaming, voice/image generation or all consumer upgrades are complete.
+
+## Theme/history and games milestone
+Web has a persistent dark/light toggle and owner-scoped recent-request sidebar with access to recorded history. This is not independent chat-session memory. Telegram and web have `/play quiz`, `/play guess`, `/answer N`, `/guess N`, `/game_stop`; games are requester/chat-bound and expire after30minutes. Group games require a tagged bot command and do not import personal memory. Voice/image generation, true token streaming, personality preferences, natural follow-up expansion and MCP remain unshipped in this milestone.

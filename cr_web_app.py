@@ -76,6 +76,7 @@ def dispatch(uid, name, text):
             if looks_like_secret(text):
                 return [{'kind':'text','text':'That looks like a secret. It was not sent to the model or saved. Do not paste credentials here.'}]
             M.touch_user(uid, name)
+            if __import__('cr_games').handle(uid,uid,text,out):return out.items
             simple = text.strip().lower()
             if simple in ('my tasks','task dashboard') or text.startswith('/tasks'):
                 import cr_dashboard

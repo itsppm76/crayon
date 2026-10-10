@@ -181,6 +181,7 @@ def handle_update(upd, out=None):
             text=re.sub(r'@'+re.escape(cr_group.BOT_USERNAME)+r'\b','',msg.get('text',''),flags=re.I).strip()
             # Direct group request selects this audience, never another member's identity.
             pending_compose=False
+            if __import__('cr_games').handle(msg.get('from',{}).get('id'),chat_id,text,out):return
             if cr_group.mentioned(msg):
                 # Only an explicitly tagged answer may resume this requester's compose.
                 import cr_google as Google,time
@@ -246,6 +247,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         db.audit(uid,"telegram_reaction",f"message_id={message_id} emoji={emoji} accepted={reaction_ok}")
     if text.strip().lower().rstrip('.!') in ('hi','hey','hello','cool','thanks','thank you'):
         out.send(chat_id,"You're welcome." if text.strip().lower().rstrip('.!') in ('thanks','thank you') else "Hey! What can I help with?" if text.strip().lower().rstrip('.!') in ('hi','hey','hello') else "Got it.");return
+    if __import__('cr_games').handle(uid,chat_id,text,out):return
     if chat_id<0 and __import__('re').search(r'(?i)(?:email checks|daily check-ins|(?:morning|evening) digest|/proactive|/digest)',text):
         out.send(chat_id,'Set up private monitoring and proactive updates in a DM. Group requests do not move your background alerts here.');return
     import cr_connections as X

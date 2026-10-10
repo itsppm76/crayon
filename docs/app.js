@@ -7,6 +7,11 @@
   window.addEventListener('storage',e=>{if(e.key===SESSION_KEY&&!e.newValue){signedOut();status('Logged out in another tab.');}});
   function dropSession(){try{localStorage.removeItem(SESSION_KEY);}catch(e){}}
   function sessionTimer(expires){clearTimeout(timer);timer=setTimeout(()=>{signedOut();status('Session expired. Log in again.');},Math.max(0,expires-Date.now()));}
+  function setTheme(dark){document.documentElement.dataset.theme=dark?'dark':'light';$('#theme').textContent=dark?'Light':'Dark';try{localStorage.setItem('crayon.theme',dark?'dark':'light');}catch(e){}}
+  try{setTheme(localStorage.getItem('crayon.theme')==='dark');}catch(e){setTheme(false);}$('#theme').onclick=()=>setTheme(document.documentElement.dataset.theme!=='dark');
+  $('#sidebar-close').onclick=()=>{$('#sidebar').classList.add('hide');$('#sidebar-toggle').setAttribute('aria-expanded','false');};
+  $('#sidebar-history').onclick=()=>{loadHistory(false).catch(e=>status(e.message));$('#sidebar-close').click();};
+  $('#sidebar-toggle').onclick=async()=>{const side=$('#sidebar');side.classList.toggle('hide');$('#sidebar-toggle').setAttribute('aria-expanded',String(!side.classList.contains('hide')));if(side.classList.contains('hide'))return;const list=$('#sidebar-list');list.replaceChildren();if(!token){list.textContent='Sign in to see your private history.';return;}try{const r=await call('activity');for(const a of [...(r.activity||[])].reverse()){const b=document.createElement('button');b.className='sidebar-entry';b.textContent=new Date(a.created_at).toLocaleString()+' · '+a.state;b.onclick=()=>{clearView();for(const x of a.items)item(x);if(!a.items.length)bubble('ai','This request is '+a.state+'. Check activity before retrying.');$('#sidebar-close').click();};list.append(b);}if(!(r.activity||[]).length)list.textContent='No recent web requests yet.';}catch(e){list.textContent=e.message;}};
   const urls=[];let historyBefore=null,historyMore=false,historyPaged=false,lastHistoryKey='';
   const random=()=>{const b=new Uint8Array(32);crypto.getRandomValues(b);return btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');};
   const challenge=async s=>btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
