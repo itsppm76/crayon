@@ -14,7 +14,9 @@ def run(body):
             seen.append(str(contents));return {'text':'The selected result is 42.','model':'captured-context','calls':[],'parts':[]}
         try:
             with patch.object(L,'generate',side_effect=model):
-                out=tg.CaptureOut();tg.handle_update({'message':{'message_id':2,'chat':{'id':uid},'from':{'id':uid,'first_name':'Synthetic'},'text':'Explain the selected answer','reply_to_message':{'message_id':1,'chat':{'id':uid},'from':{'is_bot':True},'text':'Earlier selected answer is 42.'}}},out)
+                out=tg.CaptureOut();token=R.current.set(R.telegram({'chat':{'id':uid},'reply_to_message':{'message_id':1,'chat':{'id':uid},'from':{'is_bot':True},'text':'Earlier selected answer is 42.'}}))
+                try:tg._handle_text(uid,uid,'Synthetic','Explain the selected answer',2,out)
+                finally:R.current.reset(token)
             return {'ok':any('Earlier selected answer is 42.' in x and 'untrusted context only' in x for x in seen),'model_context_calls':len(seen),'out':out.sent,'note':'Actual Telegram pipeline with model capture, no Telegram send; demonstrates quoted target reaches model context.'}
         finally:mem.delete_all(uid)
     if body.get('workspace_create_fixture'):
