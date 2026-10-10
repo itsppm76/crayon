@@ -45,6 +45,7 @@ with sync_playwright() as p:
   assert len(effects)==1
   page.fill('#input','Hello after expiry');page.click('#send')
   page.wait_for_function("[...document.querySelectorAll('.msg.user')].some(n=>n.textContent.includes('Hello after expiry'))")
+  page.wait_for_function('document.querySelector("#status").textContent==="Request done"')
   assert 'Use Cancel or Edit' not in page.locator('#status').inner_text()
   # Actual helper pixel fixture tests sequence, repeated labels, unknown state.
   page.evaluate("document.querySelector('#log').replaceChildren(CrayonUX.progress([{id:'a',seq:1,label:'Reading source',state:'running'},{id:'a',seq:2,label:'Reading source',state:'done'},{id:'b',seq:3,label:'Reading source',state:'running'},{id:'b',seq:4,label:'Reading source',state:'blocked'}],'unknown'))")
