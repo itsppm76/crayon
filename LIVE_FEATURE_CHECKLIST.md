@@ -138,3 +138,5 @@ New chat headers are auto-extracted from the first successful request (up to9top
 When configured, header generation uses the existing fixed openrouter/free zero-price/privacy-guarded router (40output-token limit, no tools), with extractive fallback. Google/account-keyword requests never go to the title model. No generic paid model route. Still only first exchange/explicit focus shift, not each turn.
 
 October10 correction: automatic voice replies removed entirely, existing live reply-consent states disabled. /voice on now enables explicit speech only; /voice confirm cannot enable automatic outputs. /speak text or "say/read/speak TEXT as a voice note" are explicit requests. General replies stay text-only, regardless of previous opt-in. Ambiguous "say it" is not inferred from private history.
+
+Explicit "write/draft/compose/prepare a mail/email" is locked into Google draft/clarification workflow even when intent parser returns none. It cannot silently produce an unreviewed ordinary-chat email in place of a Send/Cancel draft. Missing content still needs clarification; CC/BCC roles aren't inferred. No send without exact reviewed draft confirmation.

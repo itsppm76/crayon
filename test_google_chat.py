@@ -192,3 +192,16 @@ def test_signature_answer_reuses_exact_draft(monkeypatch,store):
     assert H.handle(10,10,'Sam Real',{},T.CaptureOut())
     assert saved==[(10,'Sam Real')] and shown==[payload]
     assert store['google_signature_pending_10'] is None
+
+def test_explicit_write_mail_cannot_fall_into_chat(monkeypatch):
+    monkeypatch.setattr(H.llm,'ask_json',lambda *a,**k:{'action':'none'})
+    parsed=H.classify('Write a mail to uttiya.biswas2027@mastersunion.org saying he needs to buy a .tech domain for Crayon')
+    assert parsed['action']=='draft'
+    assert parsed['to']==['uttiya.biswas2027@mastersunion.org']
+
+def test_explicit_empty_parse_keeps_review_workflow(monkeypatch,store):
+    monkeypatch.setattr(H.llm,'ask_json',lambda *a,**k:{'action':'none'})
+    out=T.CaptureOut()
+    assert H.handle(10,10,'Write a mail to sam@example.com saying hello',{},out)
+    assert 'What should the email say' in out.sent[-1]['text']
+    assert store['google_compose_10']['to']==['sam@example.com']
