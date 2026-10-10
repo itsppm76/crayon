@@ -27,3 +27,6 @@ def test_missing_link_and_plural():
  assert S.requested('Send screenshots please')
  assert S.capture(22,'send screenshots')[1] is None
  assert S.url_from('screenshot mastersunion.org')=='https://mastersunion.org'
+
+def test_no_readable_pages_refuses_draft():
+ assert 'could not verify' in C.checked_answer('What programmes?', 'Made-up course list', [])

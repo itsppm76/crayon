@@ -236,7 +236,7 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False, channe
             reply = "I got stuck producing an answer. Could you rephrase or try again?"
         if not degraded and needs_check(text, reply, meta) and C.env("CRAYON_VERIFY", "1") == "1":
             reply = verify_answer(uid, text, reply, contents, system, meta)
-        if citation_pages and not meta.get('confirm'):
+        if (citation_pages or any(t in meta['tools'] for t in ('read_url','research_web','web_search'))) and not meta.get('confirm'):
             from cr_citations import checked_answer
             reply=checked_answer(text,reply,citation_pages)
         reply = honesty_guard(reply, meta)
