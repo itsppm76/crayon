@@ -35,7 +35,7 @@ def test_progress_is_context_bound_and_no_arguments(monkeypatch):
         assert seen==[{'label':'Running a requested tool','state':'running'},{'label':'Running a requested tool','state':'done'}]
     finally:P.callback.reset(token)
     P.emit('Should not leak into another request')
-    assert len(seen)==1
+    assert len(seen)==2
 
 def test_result_progress_is_owner_scoped(monkeypatch):
     calls=[]
