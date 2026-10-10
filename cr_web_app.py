@@ -234,8 +234,8 @@ def result(uid, ident):
 
 def activity(uid):
     # Requests may include private results, so output is encrypted at rest and owner-scoped.
-    rows = db.q('SELECT id,state,encrypted,created_at FROM web_requests WHERE user_id=%s ORDER BY created_at DESC LIMIT 30', (uid,))
-    return [{'id':r['id'],'state':r['state'],'created_at':str(r['created_at']),
+    rows = db.q('SELECT id,state,encrypted,created_at,progress FROM web_requests WHERE user_id=%s ORDER BY created_at DESC LIMIT 30', (uid,))
+    return [{'id':r['id'],'state':r['state'],'created_at':str(r['created_at']),'progress':r.get('progress') or [],
         'items':decode(r['encrypted']).get('items',[]) if r['state'] in ('done','blocked') else []} for r in reversed(rows)]
 
 

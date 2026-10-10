@@ -289,9 +289,9 @@ def _ask_confirmation(name, args, ctx):
 def run(name,args,ctx):
     import cr_progress as P
     label=P.LABELS.get(name,'Running a requested tool')
-    P.emit(label)
+    step=P.emit(label)
     result=_run_inner(name,args,ctx)
-    P.emit(label,'done' if result.get('ok') and result.get('verified') else 'blocked')
+    P.emit(label,'awaiting_review' if result.get('needs_confirmation') else 'done' if result.get('ok') and result.get('verified') else 'blocked',step_id=step)
     return result
 
 

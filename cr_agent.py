@@ -194,13 +194,13 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False, channe
     reply = ""
     try:
         while True:
-            __import__('cr_progress').emit('Preparing the response')
+            response_step=__import__('cr_progress').emit('Preparing the response')
             import cr_stream
             stream_token=cr_stream.allowed.set(channel_name=='web')
             try:
                 out = llm.generate(contents, system=system, tools=None if degraded or calls_used >= budget or time.monotonic()-started > 90 else T.declarations(readonly=readonly))
             finally:cr_stream.allowed.reset(stream_token)
-            __import__('cr_progress').emit('Preparing the response','done')
+            __import__('cr_progress').emit('Preparing the response','done',step_id=response_step)
             meta["model"] = out["model"]
             if not out["calls"]:
                 reply = out["text"]

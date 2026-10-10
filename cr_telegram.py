@@ -62,7 +62,15 @@ class Out:
             params = {"chat_id": chat_id, "text": ch, "disable_web_page_preview": True}
             if markup and i == len(chunks) - 1:
                 params["reply_markup"] = markup
-            api("sendMessage", **params)
+            result=api("sendMessage", **params)
+        return result.get("message_id")
+
+    def edit_status(self,chat_id,message_id,text):
+        # Display-only edits on our own status message. Never on approval text.
+        import cr_whatsapp as W
+        if W.owns(chat_id):return False
+        try:api('editMessageText',chat_id=chat_id,message_id=message_id,text=clean_text(text)[:3900],disable_web_page_preview=True);return True
+        except Exception:return False
 
     def artifact(self,chat_id,item):
         import cr_whatsapp as W
@@ -133,10 +141,16 @@ class ProgressOut:
         self.finished=threading.Event()
         self.lock=threading.Lock()
         self.lines=lines
+        self.status_id=None
+        self.last_status=0
+        self.latest_status=None
     def __getattr__(self,name):return getattr(self.out,name)
     def send(self,*args,**kwargs):
         with self.lock:
             self.finished.set()
+            if self.status_id is not None and hasattr(self.out,'edit_status'):
+                try:self.out.edit_status(self.chat_id,self.status_id,'Response ready below. Review any pending action before confirming.')
+                except Exception:pass
             return self.out.send(*args,**kwargs)
     def emit(self,line):
         with self.lock:
@@ -144,6 +158,23 @@ class ProgressOut:
             try:self.out.send(self.chat_id,line)
             except Exception:pass
             return True
+    def event(self,event):
+        # Only safe display labels, never tool arguments or private outputs.
+        states={'running':'Working','done':'Step verified','blocked':'Step stopped',
+                'awaiting_review':'Awaiting your review','verifying':'Verifying'}
+        if event.get('state') not in states:return
+        text=states[event['state']]+': '+str(event.get('label','Requested work'))[:80]
+        with self.lock:
+            if self.finished.is_set():return
+            self.latest_status=text
+            now=time.monotonic()
+            if self.status_id is not None and now-self.last_status<3:return
+            try:
+                if self.status_id is None:self.status_id=self.out.send(self.chat_id,text)
+                elif hasattr(self.out,'edit_status'):self.out.edit_status(self.chat_id,self.status_id,text)
+                self.last_status=now
+            except Exception:pass
+
     def run(self):
         for delay,line in self.lines:
             if self.finished.wait(delay):return
@@ -225,8 +256,12 @@ def handle_update(upd, out=None):
             try:
                 import cr_reply_context as R
                 token=R.current.set(R.telegram(msg))
+                import cr_progress as P
+                event_token=P.recorded.set([])
+                status_token=P.callback.set(progress.event)
                 try:__import__('cr_history').run(uid, chat_id, name, text, msg.get("message_id"), progress, _handle_text)
-                finally:R.current.reset(token)
+                finally:
+                    P.callback.reset(status_token);P.recorded.reset(event_token);R.current.reset(token)
             finally:progress.stop()
     except Exception as e:
         log.exception("handle_update failed")

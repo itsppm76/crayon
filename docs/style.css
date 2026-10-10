@@ -91,3 +91,9 @@ body.sidebar-open main,body.sidebar-open .composer-wrap,body.sidebar-open footer
 #research-focus{max-width:140px;border:1px solid #ddd;border-radius:12px;padding:8px;background:transparent;color:inherit}@media(max-width:500px){#research-focus{max-width:88px;font-size:11px}}
 
 .verified-data-card{display:grid;gap:8px;border:1px solid #ddd;border-radius:16px;padding:16px;margin-bottom:20px;background:#f8f5ed}.verified-data-card strong{font-size:28px}.verified-data-card span,.verified-data-card small{font-size:12px;color:#666}
+
+.approval-card{width:min(100%,660px);border:1px solid var(--line);border-radius:16px;background:var(--paper);padding:18px;overflow-wrap:anywhere}.approval-card h2{font-size:18px;margin:0 0 8px}.approval-state{font-weight:650;font-size:13px;color:var(--accent)}.approval-note{font-size:12px;color:var(--mut)}.approval-card .review{max-height:420px;overflow:auto;margin:14px 0;padding:14px;background:var(--bg);border-radius:10px;white-space:pre-wrap}.approval-card iframe{display:block;width:100%;height:320px;border:1px solid var(--line);background:white}.approval-card .row{position:relative}.approval-card button{min-height:44px}.approval-card button:disabled{opacity:.6;cursor:default}.approval-card[data-outcome=unknown] .approval-state,.work-steps[data-outcome=unknown] .work-heading{color:#a15f2a}.work-steps[data-outcome=blocked] .work-orbit::after,.work-steps[data-outcome=unknown] .work-orbit::after{content:'!';color:#a15f2a}.work-steps[data-outcome=cancelled] .work-orbit::after,.work-steps[data-outcome=expired] .work-orbit::after{content:'·';color:var(--mut)}@media(max-width:540px){.approval-card{padding:14px}.approval-card .row{display:grid}.approval-card .row button{width:100%}}
+
+#input{flex:1 1 160px;width:100%;min-width:0}
+
+.bubble .approval-card .review{color:var(--ink);background:var(--bg);white-space:pre-wrap}.approval-card{white-space:normal}

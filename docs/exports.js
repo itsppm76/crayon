@@ -1,9 +1,9 @@
 (()=>{const notify=t=>{const n=document.querySelector('[role=status]');if(n)n.textContent=t;};
   // ---- chat export (PDF / Word / Markdown / Slides) - all client-side ----
   function chatMessages() {
-    return [...document.querySelector('#log').querySelectorAll('.msg')].map((r) => ({
+    return [...document.querySelector('#log').querySelectorAll('.msg')].filter(r=>!r.matches('[data-private-review]')&&!r.querySelector('.approval-card')).map((r) => ({
       role: r.classList.contains('user') ? 'You' : 'Crayon',
-      text: (()=>{const n=(r.querySelector('.bubble')||r).cloneNode(true);n.querySelectorAll('button,.message-actions,.message-time,.verified-data-card').forEach(x=>x.remove());n.querySelectorAll('br').forEach(x=>x.replaceWith(document.createTextNode('\n')));n.querySelectorAll('p,div,li,h1,h2,h3,h4,pre').forEach(x=>x.append(document.createTextNode('\n')));return n.textContent.trim();})(),
+      text: (()=>{const n=(r.querySelector('.bubble')||r).cloneNode(true);n.querySelectorAll('button,.message-actions,.message-time,.verified-data-card,.approval-card').forEach(x=>x.remove());n.querySelectorAll('br').forEach(x=>x.replaceWith(document.createTextNode('\n')));n.querySelectorAll('p,div,li,h1,h2,h3,h4,pre').forEach(x=>x.append(document.createTextNode('\n')));return n.textContent.trim();})(),
     })).filter((m) => m.text);
   }
   function saveBlob(blob, name) {
