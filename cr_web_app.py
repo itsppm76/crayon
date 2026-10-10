@@ -31,6 +31,7 @@ def init():
     db.q(SCHEMA, fetch='none')
     db.q("ALTER TABLE web_requests ADD COLUMN IF NOT EXISTS progress JSONB DEFAULT '[]'::jsonb",fetch='none')
     __import__('cr_conversations').init()
+    db.q('ALTER TABLE web_requests ADD COLUMN IF NOT EXISTS draft TEXT',fetch='none')
     __import__('cr_web_notifications').init()
     __import__('cr_web_rooms').init()
 
@@ -77,6 +78,7 @@ def dispatch(uid, name, text):
             if looks_like_secret(text):
                 return [{'kind':'text','text':'That looks like a secret. It was not sent to the model or saved. Do not paste credentials here.'}]
             M.touch_user(uid, name)
+            if __import__('cr_voice').handle(uid,uid,text,out):return out.items
             if __import__('cr_games').handle(uid,uid,text,out):return out.items
             simple = text.strip().lower()
             if simple in ('my tasks','task dashboard') or text.startswith('/tasks'):
@@ -161,6 +163,10 @@ def _run(uid, ident):
         import cr_progress
         def report(event):
             db.q("UPDATE web_requests SET progress=(CASE WHEN jsonb_array_length(progress)<16 THEN progress ELSE progress - 0 END)||%s::jsonb WHERE user_id=%s AND id=%s AND state='running'",(json.dumps([event]),uid,ident),'none')
+        import cr_stream
+        def stream_report(text):
+            db.q('UPDATE web_requests SET draft=%s,updated_at=now() WHERE user_id=%s AND id=%s AND state=%s',(encode({'text':text}),uid,ident,'running'),'none')
+        stream_token=cr_stream.callback.set(stream_report)
         progress_token=cr_progress.callback.set(report)
         report({'label':'Request accepted','state':'running'})
         try:
@@ -185,9 +191,10 @@ def _run(uid, ident):
         except Exception:
             items = [{'kind':'text','text':'Request stopped. Its outcome is unconfirmed. Check your records before trying again.'}]
             status = 'blocked'
-        db.q('UPDATE web_requests SET state=%s,encrypted=%s,updated_at=now() WHERE user_id=%s AND id=%s',
+        db.q('UPDATE web_requests SET state=%s,encrypted=%s,draft=NULL,updated_at=now() WHERE user_id=%s AND id=%s',
              (status,encode({'items':items}),uid,ident),'none')
     finally:
+        if 'stream_token' in locals():cr_stream.callback.reset(stream_token)
         if 'progress_token' in locals():cr_progress.callback.reset(progress_token)
         if 'conversation_token' in locals():conversations.current.reset(conversation_token)
         SLOTS.release()
@@ -195,13 +202,13 @@ def _run(uid, ident):
 
 def result(uid, ident):
     if not isinstance(ident,str) or not auth.PATTERN.fullmatch(ident): raise ValueError('Invalid request ID.')
-    row = db.q('SELECT state,encrypted,updated_at,progress FROM web_requests WHERE user_id=%s AND id=%s', (uid,ident),'one')
+    row = db.q('SELECT state,encrypted,updated_at,progress,draft FROM web_requests WHERE user_id=%s AND id=%s', (uid,ident),'one')
     if not row: raise ValueError('Request not found in your account.')
     state = row['state']
     if state in ('queued','running') and (datetime.now(row['updated_at'].tzinfo)-row['updated_at']).total_seconds()>300:
         # No automatic rerun of interrupted effects.
         state = 'blocked'
-    return {'request_id':ident,'state':state,'progress':row.get('progress') or [],'items':decode(row['encrypted']).get('items',[]) if state in ('done','blocked') else []}
+    return {'request_id':ident,'state':state,'draft':decode(row['draft']).get('text','') if row.get('draft') and state=='running' else '', 'progress':row.get('progress') or [],'items':decode(row['encrypted']).get('items',[]) if state in ('done','blocked') else []}
 
 
 def activity(uid):
@@ -285,6 +292,6 @@ def _upload_run(uid,ident,username,data,mime,name,caption):
             except Exception:items.append({'kind':'text','text':'Upload analysis completed, but Telegram sync was not confirmed. No automatic resend.'})
         except Exception as e:
             items=[{'kind':'text','text':'Upload stopped: '+(str(e)[:200] if isinstance(e,ValueError) else 'Media processing failed. No analysis confirmed.')}];state='blocked'
-        db.q('UPDATE web_requests SET state=%s,encrypted=%s,updated_at=now() WHERE user_id=%s AND id=%s',
+        db.q('UPDATE web_requests SET state=%s,encrypted=%s,draft=NULL,updated_at=now() WHERE user_id=%s AND id=%s',
              (state,encode({'items':items,'file_receipt':{'name':name,'mime':mime,'bytes':len(data),'raw_retained':False}}),uid,ident),'none')
     finally:SLOTS.release()

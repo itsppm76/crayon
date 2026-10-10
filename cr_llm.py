@@ -121,7 +121,8 @@ def _generate_lc(contents, system, tools, json_mode, temperature, max_tokens, mo
         for attempt in range(2):
             try:
                 chat = cr_lc.build_model(model, temperature, max_tokens, json_mode, thinking_budget, tools)
-                ai = chat.invoke(msgs)
+                import cr_stream
+                ai = cr_stream.consume(chat,msgs) if cr_stream.allowed.get() and cr_stream.callback.get() and not json_mode else chat.invoke(msgs)
             except cr_lc.Unavailable:
                 raise
             except Exception as e:

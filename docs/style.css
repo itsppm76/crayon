@@ -65,3 +65,5 @@ body.sidebar-open main,body.sidebar-open .composer-wrap,body.sidebar-open footer
 @media(max-width:720px){body.sidebar-open main,body.sidebar-open .composer-wrap,body.sidebar-open footer{margin-left:180px;width:calc(100% - 180px)}body.sidebar-open #sidebar{left:8px;right:auto;width:164px;padding:12px}body.sidebar-open #hero h1{font-size:27px}body.sidebar-open #hero{padding:20px 8px}body.sidebar-open .composer{margin:0 6px}}
 
 @media(max-width:720px){body.sidebar-open #attach{display:none}body.sidebar-open #form{gap:4px;padding:8px}body.sidebar-open #input{font-size:14px;min-height:44px}body.sidebar-open #send{width:32px;height:32px}body.sidebar-open .note{font-size:10px}}
+
+.streaming-draft{display:block;white-space:pre-wrap;line-height:1.7;overflow-wrap:anywhere}audio{max-width:100%;display:block;margin-top:10px}

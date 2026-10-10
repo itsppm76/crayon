@@ -69,6 +69,7 @@ class Out:
         if W.owns(chat_id):return W.WhatsAppOut().artifact(chat_id,item)
         if len(item['data'])>2000000:raise ValueError('attachment too large')
         method,field='sendDocument','document'
+        if item['mime']=='audio/mpeg':method,field='sendVoice','voice'
         if item['mime']=='image/png':
             import io
             from PIL import Image
@@ -247,6 +248,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         db.audit(uid,"telegram_reaction",f"message_id={message_id} emoji={emoji} accepted={reaction_ok}")
     if text.strip().lower().rstrip('.!') in ('hi','hey','hello','cool','thanks','thank you'):
         out.send(chat_id,"You're welcome." if text.strip().lower().rstrip('.!') in ('thanks','thank you') else "Hey! What can I help with?" if text.strip().lower().rstrip('.!') in ('hi','hey','hello') else "Got it.");return
+    if __import__('cr_voice').handle(uid,chat_id,text,out):return
     if __import__('cr_games').handle(uid,chat_id,text,out):return
     if chat_id<0 and __import__('re').search(r'(?i)(?:email checks|daily check-ins|(?:morning|evening) digest|/proactive|/digest)',text):
         out.send(chat_id,'Set up private monitoring and proactive updates in a DM. Group requests do not move your background alerts here.');return
