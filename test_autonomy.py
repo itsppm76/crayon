@@ -68,7 +68,7 @@ def test_calendar_preview_route(monkeypatch):
         def __init__(self):self.sent=[]
         def send(self,chat,text,markup=None):self.sent.append({'text':text,'markup':markup})
     out=Out();H.handle(K.OWNER,K.OWNER,'/calendar_slot Study | 2099-01-01T10:00:00+05:30 | 2099-01-01T11:00:00+05:30 | Asia/Calcutta',{},out)
-    assert out.sent[0]['markup']['inline_keyboard'][0][0]['text']=='Create'
+    assert out.sent[0]['markup']['inline_keyboard'][0][0]['text']=='Create exactly this'
 def test_supported_calendar_write_scope_upfront_review_still_required(monkeypatch):
     from urllib.parse import urlsplit,parse_qs
     monkeypatch.setattr(G,'configured',lambda:True)
