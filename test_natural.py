@@ -16,3 +16,14 @@ def test_sheet_words_to_fields(monkeypatch):
  import cr_llm as L
  monkeypatch.setattr(L,'ask_json',lambda *a,**k:{'area':'Sheet1!A1:B1','values':[['Groceries',200]]})
  assert N.sheet_fields('Update sheet https://docs.google.com/spreadsheets/d/abcdefghijk1234567/edit A1:B1 groceries200')['values']==[['Groceries',200]]
+
+def test_web_preferences_preserve_private_delivery(monkeypatch):
+ import cr_channel as C,cr_proactive as P
+ from unittest.mock import Mock
+ token=C.channel.set('web');out=Mock();captured=[]
+ try:
+  monkeypatch.setattr(P,'settings',lambda uid:dict(P.DEFAULT))
+  monkeypatch.setattr(P,'web_update',lambda uid,f:captured.append(f) or {'text':'private in-app'})
+  assert N.handle(1,1,'send morning digests',out)
+  assert captured[0]['digest']=='morning' and captured[0]['accept'] is True
+ finally:C.channel.reset(token)
