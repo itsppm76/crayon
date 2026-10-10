@@ -164,7 +164,7 @@
     if(p.kind==='clarification'){if(p.action){bubble('ai',p.text);status('Waiting for one missing detail. Nothing changed.');return;}pendingCompose=!p.text.includes('cancelled');bubble('ai',p.text);status('Waiting for one missing detail. No email sent.');return;}
     pendingCompose=false;$('#panel').classList.add('hide');document.body.classList.remove('menu-open');$('#menu').setAttribute('aria-expanded','false');
     if(activeReview){activeReview.dispose();activeReview.card.remove();activeReview=null;}
-    const host=bubble('ai','');const card=document.createElement('section');card.className='approval-card';card.setAttribute('aria-label','Review exact action');host.append(card);
+    const host=bubble('ai','');host.parentElement.dataset.privateReview='true';const card=document.createElement('section');card.className='approval-card';card.setAttribute('aria-label','Review exact action');host.append(card);
     const heading=document.createElement('h2');heading.textContent={email:'Review email',calendar:'Review calendar event',sheet:'Review Sheet update',workspace_create:'Review Google file',form:'Review form submission',forget:'Review saved fact removal'}[p.kind]||'Review exact action';card.append(heading);
     const badge=document.createElement('p');badge.className='approval-state';badge.setAttribute('role','status');badge.textContent='Awaiting your review';card.append(badge);
     const note=document.createElement('p');note.className='approval-note';note.textContent='Nothing has been sent or changed. Review the account, destination and full contents below. Closing this view is not approval.';card.append(note);
@@ -174,7 +174,7 @@
     const labels={email:'Send exactly this',calendar:'Create exactly this',sheet:'Update exactly this',workspace_create:'Create exactly this',form:'Submit these fields once',forget:'Forget exactly this fact'};
     let claimed=false;const expires=Date.now()+Math.max(0,Number(p.expires_in)||600)*1000;
     function disable(){for(const b of row.querySelectorAll('button'))b.disabled=true;}
-    function expire(){if(claimed)return;claimed=true;disable();badge.textContent='Review expired. Prepare a fresh preview. Nothing changed.';card.dataset.outcome='expired';}
+    function expire(){if(claimed)return;claimed=true;disable();badge.textContent='Review expired. Prepare a fresh preview. Nothing changed.';card.dataset.outcome='expired';if(activeReview?.card===card)activeReview=null;status('Review expired. You can send a new request. Nothing changed.');}
     const expiry=setTimeout(expire,Math.max(0,expires-Date.now()));
     activeReview={card,dispose:()=>{claimed=true;clearTimeout(expiry);disable();}};
     for(const decision of ['confirm','cancel']){const b=document.createElement('button');b.className='ghost';b.textContent=decision==='confirm'?(labels[p.kind]||'Confirm exactly this'):'Cancel';row.append(b);b.onclick=async()=>{
