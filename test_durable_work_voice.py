@@ -19,7 +19,7 @@ def test_optin_still_required():
  out=Out()
  with patch.object(V,'enabled',return_value=False),patch('cr_llm.generate') as model:
   assert V.handle(5,5,'Can you send me a voice note, greeting me?',out)
-  model.assert_not_called();assert '/voice on' in out.sent[0]
+  model.assert_not_called();assert 'turn on voice' in out.sent[0]
 def test_safe_work_metadata_saved_with_answer():
  token=P.recorded.set([])
  try:

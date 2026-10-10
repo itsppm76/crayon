@@ -106,6 +106,14 @@ def handle(uid,chat,text,msg,out):
             show_draft(uid,chat,out,{**{k:content[k] for k in ('to','cc','bcc','subject','body')},'crayon_signature':t.startswith('add')})
         except Exception:out.send(chat,'Signature change not confirmed. Review the current draft or cancel.')
         return True
+    if re.search(r'(?i)\b(?:create|add|schedule|put|block)\b.*\b(?:calendar|meeting|event|focus time|study block)\b',text):
+        try:
+            import cr_calendar_draft as K
+            f=__import__('cr_natural').calendar_fields(text)
+            d=K.preview(uid,f['title'],f['start'],f['end'],f['timezone'],guests=f['guests'],reminder_minutes=f['reminder_minutes'])
+            out.send(chat,d['text'],markup={'inline_keyboard':[[{'text':'Create exactly this','callback_data':'calendar_create:'+d['id']+':'+d['hash']},{'text':'Cancel','callback_data':'calendar_cancel:'+d['id']}]]})
+        except Exception as e:out.send(chat,str(e)[:250]+' No event created.')
+        return True
     readmatch=re.fullmatch(r'(?:read|open|show)(?: (?:email|message))? (?:number )?(first|second|third|fourth|fifth|[1-5])',t)
     if readmatch:
         if db.kv_get('google_mail_results_chat_'+str(uid),uid)!=chat:

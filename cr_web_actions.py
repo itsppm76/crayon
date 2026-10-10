@@ -47,6 +47,7 @@ def preview(uid,header,body):
         text=d['text'].split('\n\nReply with edit/change/rewrite instructions')[0]+'\n\nWeb review: Send exactly this once, or Cancel. No email attachments.'
     elif kind=='calendar':
         import cr_calendar_draft as K
+        if set(f)=={'request'}:f=__import__('cr_natural').calendar_fields(f['request'])
         if set(f)!={'title','start','end','timezone','guests','reminder_minutes'}:raise ValueError('Exact calendar fields required.')
         d=K.preview(uid,f['title'],f['start'],f['end'],f['timezone'],guests=f['guests'],reminder_minutes=f['reminder_minutes'],channel='web')
         payload={'id':d['id'],'hash':d['hash']};text=d['text']

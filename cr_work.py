@@ -205,7 +205,7 @@ def handle(uid,chat,text,out):
             out.send(chat,view(row),markup=controls_markup(row))
         elif op=='list':
             rows=db.q('SELECT * FROM work_jobs WHERE user_id=%s ORDER BY created_at DESC LIMIT 8',(uid,))
-            out.send(chat,'Your work queue:\n'+('\n'.join(f"#{r['id']} {r['status']}: {r['title']} ({len(r['results'])}/{len(r['steps'])})" for r in rows) if rows else 'No work queued.')+'\nTry /work brief a public assignment topic, /work calculate 20*(3+2)/4 or /work research a public topic. Multi-step: /work plan Title | research topic | calculate 2+2. Results are source receipts or exact arithmetic, not a general autonomous agent.')
+            out.send(chat,'Your work queue:\n'+('\n'.join(f"#{r['id']} {r['status']}: {r['title']} ({len(r['results'])}/{len(r['steps'])})" for r in rows) if rows else 'No work queued.')+'\nAsk me to research a topic in the background, calculate something, or prepare a brief. Say pause, resume, show or export work followed by its number. Results are source receipts or exact arithmetic, not a general autonomous agent.')
         else:raise ValueError('Use /work list, research, page, calculate, brief, plan, show ID, export ID, pause ID, resume ID or cancel ID.')
     except Exception as e:
         from cr_safety import redact

@@ -19,6 +19,6 @@ def handle(uid,chat,text,out):
         value=text[10:].strip()
         if not re.fullmatch(r'[\w .-]{1,40}',value):out.send(chat,'Use a nickname up to40characters with letters, numbers, spaces, periods or hyphens.');return True
         p['nickname']='' if value.lower()=='off' else value
-    else:out.send(chat,'Current style: '+p.get('style','warm')+'. Nickname: '+(p.get('nickname') or 'none')+'. /persona warm|concise|playful|coach, /nickname name, /nickname off.');return True
+    else:out.send(chat,'Current style: '+p.get('style','warm')+'. Nickname: '+(p.get('nickname') or 'none')+'. Say be concise, be playful, or call me followed by your nickname.');return True
     db.q("UPDATE users SET settings=jsonb_set(settings,'{persona}',%s::jsonb) WHERE user_id=%s",(json.dumps(p),uid),'none')
     out.send(chat,'Persona saved. This changes style only, not permissions or follow-ups.');return True
