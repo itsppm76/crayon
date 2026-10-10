@@ -140,3 +140,5 @@ When configured, header generation uses the existing fixed openrouter/free zero-
 October10 correction: automatic voice replies removed entirely, existing live reply-consent states disabled. /voice on now enables explicit speech only; /voice confirm cannot enable automatic outputs. /speak text or "say/read/speak TEXT as a voice note" are explicit requests. General replies stay text-only, regardless of previous opt-in. Ambiguous "say it" is not inferred from private history.
 
 Explicit "write/draft/compose/prepare a mail/email" is locked into Google draft/clarification workflow even when intent parser returns none. It cannot silently produce an unreviewed ordinary-chat email in place of a Send/Cancel draft. Missing content still needs clarification; CC/BCC roles aren't inferred. No send without exact reviewed draft confirmation.
+
+Web assistant output auto-links valid http/https URLs with new-tab noopener/noreferrer anchors, preserves text through text nodes (no innerHTML), excludes credentials and unsafe schemes, strips trailing sentence punctuation.390/1280mock-history pixels and unsafe HTML/javascript text acceptance inspected.
