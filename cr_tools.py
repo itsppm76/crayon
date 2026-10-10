@@ -394,3 +394,12 @@ def computer_browse(ctx,url,follow_link_text='',follow_links=None):
         if len(data)>1000000:raise ValueError('Screenshot too large')
         ctx['meta'].setdefault('artifacts',[]).append({'filename':'crayon-browser.png','mime':'image/png','data':data})
     return result
+
+@tool('mcp_public_tool','Call an admin-approved read-only MCP tool ONLY when the user explicitly requests that named server/tool with public input. No private history, personal data or secrets. Use /mcp to list enabled servers.',{'server':S,'tool':S,'arguments_json':S},['server','tool','arguments_json'])
+def mcp_public_tool(ctx,server,tool,arguments_json):
+    import json,cr_mcp
+    source=ctx.get('meta',{}).get('user_text','')
+    if server.lower() not in source.lower() or tool.lower() not in source.lower():return {'ok':False,'verified':False,'error':'Name the MCP server and tool explicitly in your request.'}
+    if ctx.get('readonly'):return {'ok':False,'verified':False,'error':'MCP is disabled for scheduled work.'}
+    # Remote result is untrusted, and never changes system instructions.
+    return cr_mcp.call(server,tool,json.loads(arguments_json))

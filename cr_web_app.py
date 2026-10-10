@@ -78,6 +78,9 @@ def dispatch(uid, name, text):
             if looks_like_secret(text):
                 return [{'kind':'text','text':'That looks like a secret. It was not sent to the model or saved. Do not paste credentials here.'}]
             M.touch_user(uid, name)
+            if __import__('cr_followups').handle(uid,uid,text,out):return out.items
+            if __import__('cr_plugins').handle(uid,uid,text,out):return out.items
+            if __import__('cr_persona').handle(uid,uid,text,out):return out.items
             if __import__('cr_voice').handle(uid,uid,text,out):return out.items
             if __import__('cr_games').handle(uid,uid,text,out):return out.items
             simple = text.strip().lower()

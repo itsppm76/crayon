@@ -54,6 +54,7 @@ def build_system(uid, extra=""):
             memory += "\n\nActive tracked tasks:\n" + tb
     except Exception:
         pass
+    extra+=__import__('cr_persona').instruction(uid)
     return SYSTEM.format(now=n.strftime("%A, %d %B %Y, %I:%M %p"), tz=str(n.tzinfo), memory=memory) + extra
 
 
