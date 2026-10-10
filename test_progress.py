@@ -32,7 +32,7 @@ def test_progress_is_context_bound_and_no_arguments(monkeypatch):
     try:
         monkeypatch.setattr(Tools,'now_local',lambda uid:__import__('datetime').datetime(2026,10,10))
         Tools.run('get_time',{}, {'uid':12,'meta':{}})
-        assert seen==[{'label':'Running a requested tool','state':'running'}]
+        assert seen==[{'label':'Running a requested tool','state':'running'},{'label':'Running a requested tool','state':'done'}]
     finally:P.callback.reset(token)
     P.emit('Should not leak into another request')
     assert len(seen)==1

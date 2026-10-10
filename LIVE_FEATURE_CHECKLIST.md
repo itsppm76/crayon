@@ -142,3 +142,5 @@ October10 correction: automatic voice replies removed entirely, existing live re
 Explicit "write/draft/compose/prepare a mail/email" is locked into Google draft/clarification workflow even when intent parser returns none. It cannot silently produce an unreviewed ordinary-chat email in place of a Send/Cancel draft. Missing content still needs clarification; CC/BCC roles aren't inferred. No send without exact reviewed draft confirmation.
 
 Web assistant output auto-links valid http/https URLs with new-tab noopener/noreferrer anchors, preserves text through text nodes (no innerHTML), excludes credentials and unsafe schemes, strips trailing sentence punctuation.390/1280mock-history pixels and unsafe HTML/javascript text acceptance inspected.
+
+Work panel: rotating decorative status words, animated event rows, explicit done green checks and blocked warnings, collapsed settled panel on final outcome, reduced motion disables animation/word cycling. Backend tools emit completion only after ok+verified; preparation emits done after model return. No hidden reasoning/tool arguments.390/1280local pixels and transition fixture inspected; deployed acceptance pending.

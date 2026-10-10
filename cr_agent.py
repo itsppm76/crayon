@@ -179,6 +179,7 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False, channe
             try:
                 out = llm.generate(contents, system=system, tools=None if degraded or calls_used >= budget or time.monotonic()-started > 90 else T.declarations(readonly=readonly))
             finally:cr_stream.allowed.reset(stream_token)
+            __import__('cr_progress').emit('Preparing the response','done')
             meta["model"] = out["model"]
             if not out["calls"]:
                 reply = out["text"]

@@ -286,9 +286,16 @@ def _ask_confirmation(name, args, ctx):
             "note": "NOT done yet. The user must reply YES to confirm; do not claim it happened."}
 
 
-def run(name, args, ctx):
-    import cr_progress
-    cr_progress.emit(cr_progress.LABELS.get(name,'Running a requested tool'))
+def run(name,args,ctx):
+    import cr_progress as P
+    label=P.LABELS.get(name,'Running a requested tool')
+    P.emit(label)
+    result=_run_inner(name,args,ctx)
+    P.emit(label,'done' if result.get('ok') and result.get('verified') else 'blocked')
+    return result
+
+
+def _run_inner(name, args, ctx):
     import cr_channel
     if cr_channel.channel.get() == "web" and name not in cr_channel.WEB_TOOLS:
         return {"ok": False, "verified": False, "error": "This feature is not enabled on web yet."}

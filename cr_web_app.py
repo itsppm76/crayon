@@ -171,7 +171,7 @@ def _run(uid, ident):
             db.q('UPDATE web_requests SET draft=%s,updated_at=now() WHERE user_id=%s AND id=%s AND state=%s',(encode({'text':text}),uid,ident,'running'),'none')
         stream_token=cr_stream.callback.set(stream_report)
         progress_token=cr_progress.callback.set(report)
-        report({'label':'Request accepted','state':'running'})
+        report({'label':'Request accepted','state':'done'})
         try:
             items = dispatch(uid,data['name'],data['input'])
             try:
