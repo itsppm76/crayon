@@ -117,6 +117,7 @@ def dispatch(uid, name, text):
             # Never consume a pending action created in another channel.
             reply, meta = A.respond(uid, chat_destination, text, name, channel_name='web')
             out.send(uid, reply)
+            __import__('cr_voice').reply_audio(uid,uid,reply,meta,out)
             for item in meta.get('artifacts', []):
                 out.artifact(uid, item)
             return out.items
