@@ -22,3 +22,9 @@ def test_turn_context_isolated(monkeypatch):
 
 def test_create_validates_no_guess(monkeypatch):
     with pytest.raises(ValueError):C.create(2,'')
+
+def test_list_dates_json_safe(monkeypatch):
+    import json
+    from datetime import datetime
+    monkeypatch.setattr(C.db,'q',lambda *a,**kw:[{'id':'a'*43,'title':'First','created_at':datetime(2026,10,10)}])
+    assert '2026' in json.dumps(C.list_for(2))

@@ -19,7 +19,8 @@ def require(uid,ident):
     if not row:raise ValueError('Conversation not found in your account.')
     return row
 def list_for(uid):
-    return db.q('SELECT id,title,created_at FROM web_conversations WHERE user_id=%s ORDER BY created_at DESC LIMIT 50',(uid,))
+    rows=db.q('SELECT id,title,created_at FROM web_conversations WHERE user_id=%s ORDER BY created_at DESC LIMIT 50',(uid,))
+    return [{**r,'created_at':str(r['created_at'])} for r in rows]
 def history(uid,ident):
     require(uid,ident)
     rows=db.q('SELECT id,role,content,ts FROM messages WHERE user_id=%s AND conversation_id=%s ORDER BY id DESC LIMIT 100',(uid,ident))
