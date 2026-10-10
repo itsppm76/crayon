@@ -20,3 +20,12 @@ Live base acceptance was completed separately using the owner's Telegram account
 ## Limits
 
 Review cards remain transient private views and are not stored in model/chat history. Clearing view does not cancel server pending review, but cannot approve it; tickets expire. Existing private-result isolation is deliberate. UI unknown results require checking destination, never a generated retry. Telegram edits are best-effort; the final response remains the durable receipt. SQL/provider lifecycle is unchanged except superseding pending reviews and explicit display outcomes. No guarantee of external delivery or file visual correctness.
+
+Review rework: private preview rows and receipts are excluded from the common
+export collector for Markdown, PDF, Word and Slides. Legacy approval cards are
+excluded too. Private review DOM is not scanned for sourced-answer data cards.
+Expiry clears the matching active-review lock; buttons remain disabled and
+normal chat resumes without submitting or retrying the expired ticket.
+`check_private_review_exports.py` exercises every exporter with instrumented
+libraries, checking public content survives and preview/receipt secrets do not.
+The 390/1280 browser fixture checks expiry followed by a normal chat request.
