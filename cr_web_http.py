@@ -184,9 +184,10 @@ def handle(h, method, raw=b''):
             reply(h,200,{'activity':W.activity(user['user_id'])},cors=True)
         elif method=='GET' and p.path=='/web/connections':
             reply(h,200,__import__('cr_web_actions').connections(user['user_id']),cors=True)
-        elif method=='POST' and p.path in ('/web/action-preview','/web/action-confirm','/web/private-read','/web/connect'):
+        elif method=='POST' and p.path in ('/web/action-preview','/web/compose-preview','/web/action-confirm','/web/private-read','/web/connect'):
             import cr_web_actions as X
-            if p.path=='/web/action-preview':result=X.preview(user['user_id'],h.headers.get('Authorization',''),body)
+            if p.path=='/web/compose-preview':result=X.compose_preview(user['user_id'],h.headers.get('Authorization',''),body)
+            elif p.path=='/web/action-preview':result=X.preview(user['user_id'],h.headers.get('Authorization',''),body)
             elif p.path=='/web/action-confirm':result=X.confirm(user['user_id'],h.headers.get('Authorization',''),body)
             elif p.path=='/web/private-read':result=X.read(user['user_id'],body)
             else:result=X.connect(user['user_id'],body)

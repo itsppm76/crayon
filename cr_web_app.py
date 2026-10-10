@@ -110,7 +110,7 @@ def dispatch(uid, name, text):
                 return [{'kind':'text','text':'Web: chat, memory, notes, tasks, research, calculations, CSV/charts, computer/browser and /work controls. Standalone reminder/work results appear in Menu > Notifications, not phone/email/push. Telegram-backed reminders still arrive in Telegram. Uploads use +. Google actions use Menu > Connections. Group rooms/deletion remain locked.'}]
             # Do not fall into the model for features whose channel review is not implemented yet.
             import re
-            if re.search(r'(?i)\b(gmail|inbox|email|e-mail|calendar|google|workspace|github|sheet|doc|booking|book|delete|wipe|forget|digest|proactive|watch)\b', text) or text.startswith(('/email','/google','/connect','/calendar','/delete','/forget')):
+            if re.search(r'(?i)\b(gmail|inbox|email|e-mail|mail|calendar|google|workspace|github|sheet|doc|booking|book|delete|wipe|forget|digest|proactive|watch)\b', text) or text.startswith(('/email','/google','/connect','/calendar','/delete','/forget')):
                 return [{'kind':'text','text':'For Google reads, email/calendar/Sheet previews use Menu > Connections / actions. Rooms and deletion are not enabled in web chat. No external action was made.'}]
             if simple in ('yes','confirm','go ahead','do it','send it'):
                 return [{'kind':'text','text':'Web confirmations are not enabled yet. Nothing was sent or deleted.'}]
@@ -176,7 +176,7 @@ def _run(uid, ident):
             items = dispatch(uid,data['name'],data['input'])
             try:
                 import re
-                if looks_like_secret(data['input']) or re.search(r'(?i)\b(gmail|inbox|email|e-mail|calendar|google|workspace|github|sheet|doc|booking|book|delete|wipe|forget|digest|proactive|watch)\b',data['input']) or data['input'].startswith(('/email','/google','/connect','/calendar','/delete','/forget')):
+                if looks_like_secret(data['input']) or re.search(r'(?i)\b(gmail|inbox|email|e-mail|mail|calendar|google|workspace|github|sheet|doc|booking|book|delete|wipe|forget|digest|proactive|watch)\b',data['input']) or data['input'].startswith(('/email','/google','/connect','/calendar','/delete','/forget')):
                     raise StopIteration
                 import cr_accounts
                 destination=cr_accounts.telegram_destination(uid)

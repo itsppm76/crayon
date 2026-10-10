@@ -122,3 +122,10 @@ def test_form_web_confirmation_result_excludes_image(config):
     config.setattr(B,'submit',lambda *a:{'ok':True,'verified':True,'note':'Controlled test received','screenshot':'PRIVATE_BASE64'})
     r=X.confirm(17,'Bearer '+'a'*43,{'review_id':'r','hash':digest,'decision':'confirm'})
     assert 'PRIVATE_BASE64' not in r['text'] and 'not proof of a real reservation' in r['text']
+
+def test_compose_preserves_exact_roles_and_session_review(monkeypatch):
+    import cr_web_actions as X,cr_google_chat as H
+    monkeypatch.setattr(H,'classify',lambda t:{'action':'draft','to':['sam@example.com'],'cc':[],'bcc':[],'subject':'Domain','body':'Please buy a .tech domain.'})
+    seen=[];monkeypatch.setattr(X,'preview',lambda uid,h,b:seen.append((uid,h,b)) or {'review_id':'ticket'})
+    assert X.compose_preview(10,'Bearer token',{'message':'Write a mail to sam@example.com asking for a domain'})=={'review_id':'ticket'}
+    assert seen[0][1]=='Bearer token' and seen[0][2]['kind']=='email'

@@ -6,6 +6,18 @@ import cr_telegram as tg
 
 
 def run(body):
+    if body.get('web_compose_fixture'):
+        import cr_web_actions as X,cr_google as G
+        from unittest.mock import patch
+        uid=1000000009876003
+        try:
+            with patch.object(G,'status',return_value={'email':'synthetic@example.com'}),patch.object(G,'sender_name',return_value='Synthetic Tester'):
+                p=X.compose_preview(uid,'Bearer synthetic-web-session',{'message':'Write a mail to recipient@example.com saying he needs to buy a .tech domain for Crayon'})
+                cancelled=X.confirm(uid,'Bearer synthetic-web-session',{'review_id':p['review_id'],'hash':p['hash'],'decision':'cancel'})
+            return {'ok':True,'preview':p['text'],'cancelled':cancelled['text'],'note':'Actual live model/encrypted session-bound review; synthetic sender/recipient; Cancel only, no Gmail call/send.'}
+        finally:
+            db.q('DELETE FROM google_email_drafts WHERE user_id=%s',(uid,),fetch='none')
+            db.q('DELETE FROM web_action_reviews WHERE user_id=%s',(uid,),fetch='none')
     if body.get('compose_router_fixture'):
         import cr_google_chat as H
         from unittest.mock import patch

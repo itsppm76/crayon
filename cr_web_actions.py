@@ -54,6 +54,21 @@ def preview(uid,header,body):
       (ident,uid,A.digest(header[7:]),A._cipher().encrypt(json.dumps(data).encode()).decode(),digest),'none')
     return {'review_id':ident,'hash':digest,'text':text,'kind':kind,'expires_in':600}
 
+def compose_preview(uid,header,body):
+    import re,cr_google_chat as H
+    from cr_safety import looks_like_secret
+    if set(body)!={'message'} or not isinstance(body['message'],str) or not 1<=len(body['message'])<=8000 or looks_like_secret(body['message']):raise ValueError('Invalid compose request.')
+    text=body['message'];parsed=H.classify(text)
+    addresses=re.findall(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+",text)
+    fields={k:parsed.get(k,[]) for k in ('to','cc','bcc')}
+    for k in fields:
+        if isinstance(fields[k],str):fields[k]=[fields[k]]
+        if not isinstance(fields[k],list) or any(x not in addresses for x in fields[k]):raise ValueError('Give exact To/CC/BCC addresses. No recipient guessed.')
+    if set(addresses)!=set(fields['to']+fields['cc']+fields['bcc']):raise ValueError('Give exact To/CC/BCC roles for every address.')
+    fields.update(subject=parsed.get('subject',''),body=parsed.get('body',''))
+    if not fields['subject'] or not fields['body']:raise ValueError('Please give recipient and email content. No draft or send confirmed.')
+    return preview(uid,header,{'kind':'email','fields':fields})
+
 def confirm(uid,header,body):
     if set(body)!={'review_id','hash','decision'} or body['decision'] not in ('confirm','cancel') or not isinstance(body['review_id'],str) or not isinstance(body['hash'],str):raise ValueError('Invalid review decision.')
     init()
