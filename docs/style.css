@@ -81,3 +81,5 @@ body.sidebar-open main,body.sidebar-open .composer-wrap,body.sidebar-open footer
 .quote-stage{max-width:780px;margin:0 auto 8px;padding:9px 14px;border-left:3px solid var(--accent);background:var(--wash);border-radius:9px;font-size:12px;display:flex;gap:10px;align-items:center}.quote-stage span{flex:1;overflow:hidden}.quote-stage button{font-size:12px;min-height:32px}
 
 .settled .step-label{color:var(--ink)}.settled li{animation:none}
+
+.message-actions{display:flex;gap:3px;margin-top:10px;align-items:center}.message-actions .message-icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;min-height:32px;padding:6px;border:0;border-radius:7px;background:transparent;color:var(--mut);margin:0}.message-actions .message-icon:hover{color:var(--ink);background:var(--line)}

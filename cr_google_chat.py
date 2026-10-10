@@ -99,6 +99,13 @@ def handle(uid,chat,text,msg,out):
         except G.GoogleError as e:
             if 'No single current draft' not in str(e):out.send(chat,str(e));return True
         except Exception:out.send(chat,'Could not edit. No email sent; review the original draft or cancel.');return True
+    if t in ('add crayon signature','remove crayon signature'):
+        try:
+            ident,digest,content=G.current_content(uid)
+            if db.kv_get('google_reviewed_'+str(uid),None)!=[ident,digest]:raise G.GoogleError('Review this draft first.')
+            show_draft(uid,chat,out,{**{k:content[k] for k in ('to','cc','bcc','subject','body')},'crayon_signature':t.startswith('add')})
+        except Exception:out.send(chat,'Signature change not confirmed. Review the current draft or cancel.')
+        return True
     readmatch=re.fullmatch(r'(?:read|open|show)(?: (?:email|message))? (?:number )?(first|second|third|fourth|fifth|[1-5])',t)
     if readmatch:
         if db.kv_get('google_mail_results_chat_'+str(uid),uid)!=chat:

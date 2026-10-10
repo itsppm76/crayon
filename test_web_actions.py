@@ -14,7 +14,7 @@ def config(monkeypatch):
 
 def test_web_preview_only_no_send(config):
     calls=[]
-    config.setattr(X.G,'make_draft',lambda uid,f,structured,channel:{'id':'draft','hash':'hash','text':'From: own@example.com\nTo: user@example.com\nExact body'})
+    config.setattr(X.G,'make_draft',lambda uid,f,structured,channel:{'id':'draft','hash':'hash','html':'<p>Exact body</p>','fields':f,'text':'From: own@example.com\nTo: user@example.com\nExact body'})
     config.setattr(X.G,'send_draft',lambda *a:pytest.fail('preview cannot send'))
     config.setattr(X.db,'q',lambda sql,p=(),fetch='all':calls.append((sql,p)))
     r=X.preview(17,'Bearer '+'a'*43,{'kind':'email','fields':dict(to=['user@example.com'],cc=[],bcc=[],subject='Hi',body='Body')})

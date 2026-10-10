@@ -81,13 +81,27 @@ def confirm_chat(uid,chat,ident,h,decision):
     if hashlib.sha256(json.dumps(p,sort_keys=True).encode()).hexdigest()!=r['content_hash']:raise ValueError('Review changed.')
     return json.dumps(apply(uid,p),ensure_ascii=False)
 
+def natural_fields(text):
+    from cr_safety import looks_like_secret
+    if not isinstance(text,str) or not 1<=len(text)<=8000 or looks_like_secret(text):raise ValueError('Give a bounded request without secrets.')
+    match=re.search(r'(?i)\b(?:make|create|prepare|build|draft)\b.*?\b(doc(?:ument)?|sheet|spreadsheet|slides|presentation)\b',text)
+    if not match:return None
+    kind={'document':'doc','spreadsheet':'sheet','presentation':'slides'}.get(match[1].lower(),match[1].lower())
+    import cr_llm as L
+    result=L.ask_json(text,system='Prepare a new private Google '+kind+' from only this user request. Return JSON {"title":"...","content":...}. Doc content is plain text up to12000characters; Sheet content is an array up to20rows/10cells with raw values; Slides content is1-10objects with title/body. Do the writing and structure. Never invent personal expenses, notes, dates or facts. If personal source material is missing return {"question":"Ask for that material"}. General educational content may be composed. No private sources, tools, sharing, sends, markup or formulas. Not a create action; user reviews the full result first.',default={}) or {}
+    if result.get('question'):raise ValueError(str(result['question'])[:250])
+    return fields(kind,result.get('title'),result.get('content'))
+
 def handle(uid,chat,text,out):
     match=re.match(r'(?is)^create (?:google )?(doc|sheet|slides)\s+(.+)$',text.strip())
-    if not match:return False
+    candidate=re.search(r'(?i)\b(?:make|create|prepare|build|draft)\b.*?\b(doc(?:ument)?|sheet|spreadsheet|slides|presentation)\b',text)
+    if not candidate:return False
     try:
-        kind=match[1].lower();parts=match[2].split(' | ',1)
-        if len(parts)!=2:raise ValueError('Use create '+kind+' TITLE | '+('exact document text' if kind=='doc' else 'JSON rows' if kind=='sheet' else '[{"title":"Slide title","body":"Slide content"}]'))
-        d=prepare_chat(uid,chat,kind,parts[0],parts[1] if kind=='doc' else json.loads(parts[1]))
+        if match and ' | ' in match[2]:
+            kind=match[1].lower();parts=match[2].split(' | ',1)
+            f=fields(kind,parts[0],parts[1] if kind=='doc' else json.loads(parts[1]))
+        else:f=natural_fields(text)
+        d=prepare_chat(uid,chat,f['kind'],f['title'],f['content'])
         out.send(chat,d['text'],markup={'inline_keyboard':[[{'text':'Create exactly this','callback_data':'workspace_create:confirm:'+d['id']+':'+d['hash']},{'text':'Cancel','callback_data':'workspace_create:cancel:'+d['id']+':'+d['hash']}]]})
     except Exception as e:out.send(chat,'Workspace create preview not ready: '+str(e)[:300])
     return True

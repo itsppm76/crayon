@@ -21,6 +21,10 @@ def preview(uid,header,body):
     kind,f=body['kind'],body['fields'];payload={}
     if kind=='workspace_create':
         import cr_workspace_create as C
+        if set(f)=={'request'}:
+            generated=C.natural_fields(f['request'])
+            if not generated:raise ValueError('Ask to create a doc, sheet or slides.')
+            f={'type':generated['kind'],'title':generated['title'],'content':generated['content']}
         if set(f)!={'type','title','content'}:raise ValueError('Exact create fields required.')
         d=C.preview(uid,f['type'],f['title'],f['content']);payload=d['payload'];text=d['text']
     elif kind=='form':
@@ -36,7 +40,7 @@ def preview(uid,header,body):
         payload={'key':f['key'],'value':rows[0]['value']}
         text='Forget this exact saved fact?\n'+f['key']+': '+rows[0]['value']+'\nThis removes only this saved fact. Chat history, notes and copies elsewhere remain. It is not all-data deletion.'
     elif kind=='email':
-        if set(f)!={'to','cc','bcc','subject','body'}:raise ValueError('Exact email fields required.')
+        if set(f)-{'crayon_signature'}!={'to','cc','bcc','subject','body'}:raise ValueError('Exact email fields required.')
         d=G.make_draft(uid,f,structured=True,channel='web')
         # Current draft remains encrypted in provider module. This session ticket gates web sends separately.
         payload={'id':d['id'],'hash':d['hash']}
@@ -56,7 +60,7 @@ def preview(uid,header,body):
     db.q("DELETE FROM web_action_reviews WHERE expires_at<now()",fetch='none')
     db.q("INSERT INTO web_action_reviews(id,user_id,session_hash,encrypted,content_hash,expires_at) VALUES(%s,%s,%s,%s,%s,now()+interval '10 minutes')",
       (ident,uid,A.digest(header[7:]),A._cipher().encrypt(json.dumps(data).encode()).decode(),digest),'none')
-    return {'review_id':ident,'hash':digest,'text':text,'kind':kind,'expires_in':600}
+    return {'review_id':ident,'hash':digest,'text':text,'kind':kind,'expires_in':600,**({'html':d['html'],'fields':d['fields']} if kind=='email' else {})}
 
 def compose_preview(uid,header,body):
     import re,cr_google_chat as H

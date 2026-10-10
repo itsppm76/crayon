@@ -6,6 +6,23 @@ import cr_telegram as tg
 
 
 def run(body):
+    if body.get('ux_drafting_fixture'):
+        import cr_web_actions as X,cr_google as G,cr_connections as C,cr_workspace_create as W
+        from unittest.mock import patch
+        uid=1000000009876006
+        try:
+            with patch.object(G,'status',return_value={'email':'synthetic@example.com'}),patch.object(G,'sender_name',return_value='Synthetic Tester'),patch.object(C,'status',return_value={'identity':'synthetic@example.com'}):
+                p=X.compose_preview(uid,'Bearer synthetic-style-session',{'message':'Write a mail to recipient@example.com requesting a domain. No invented facts.'})
+                html_ok='<html>' in p.get('html','') and p['fields']['crayon_signature'] is False
+                f={**p['fields'],'crayon_signature':True};q=X.preview(uid,'Bearer synthetic-style-session',{'kind':'email','fields':f})
+                signed='Sent by Crayon AI' in q['html'];X.confirm(uid,'Bearer synthetic-style-session',{'review_id':q['review_id'],'hash':q['hash'],'decision':'cancel'})
+                content=W.natural_fields('Make a doc explaining photosynthesis for a beginner')
+                w=X.preview(uid,'Bearer synthetic-style-session',{'kind':'workspace_create','fields':{'type':content['kind'],'title':content['title'],'content':content['content']}})
+                X.confirm(uid,'Bearer synthetic-style-session',{'review_id':w['review_id'],'hash':w['hash'],'decision':'cancel'})
+            return {'ok':html_ok and signed,'html_preview':html_ok,'signature_preview':signed,'natural_doc_title':content['title'],'natural_doc_chars':len(content['content']),'note':'Live model and encrypted review with synthetic account identity; Cancel only. No Gmail send or Google file creation.'}
+        finally:
+            db.q('DELETE FROM google_email_drafts WHERE user_id=%s',(uid,),fetch='none')
+            db.q('DELETE FROM web_action_reviews WHERE user_id=%s',(uid,),fetch='none')
     if body.get('reply_context_fixture'):
         import cr_reply_context as R,cr_agent as B,cr_llm as L
         from unittest.mock import patch

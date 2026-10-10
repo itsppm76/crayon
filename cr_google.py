@@ -294,14 +294,17 @@ def make_draft(uid, text, structured=False, channel='telegram'):
     if looks_like_secret(json.dumps(text)):raise GoogleError('Draft appears to contain a secret')
     if not sender_name(uid):raise GoogleError('Set your email signature name first. No draft created.')
     body=re.sub(r'(?i)\[(?:your|sender(?:\'s)?)\s*(?:full\s*)?name\]|<your name>|\{your name\}',lambda m:sender_name(uid),body)
+    signature=bool(isinstance(text,dict) and text.get('crayon_signature') is True)
     content={'from':row['email'],'to':to,'cc':cc,'bcc':bcc,'subject':clean_text(subject),'body':clean_text(body)}
+    content['crayon_signature']=signature
+    content['html']=__import__('cr_email_style').render(content['body'],signature)
     serialized=json.dumps(content,sort_keys=True)
     digest=hashlib.sha256(serialized.encode()).hexdigest()
     ident=secrets.token_hex(5)
     db.q("DELETE FROM google_email_drafts WHERE user_id=%s AND origin=%s AND status='pending'",(uid,channel),"none")
     db.q("INSERT INTO google_email_drafts(id,user_id,encrypted_content,content_hash,origin,expires_at) VALUES(%s,%s,%s,%s,%s,now()+interval '10 minutes')",(ident,uid,encrypt(uid,content),digest,channel),"none")
-    display=f"Draft only, not sent. Expires in 10 minutes.\nFrom: {content['from']}\nTo: {', '.join(to)}\nCC: {', '.join(cc) or 'none'}\nBCC: {', '.join(bcc) or 'none'}\nAttachments: none.\nSubject: {content['subject']}\n\n{content['body']}"
-    if structured:return {"text":display+"\n\nReply with edit/change/rewrite instructions to revise. Tap Send or say 'send it'. Say 'cancel' to discard.","id":ident,"hash":digest[:12]}
+    display=f"Draft only, not sent. Expires in 10 minutes.\nFrom: {content['from']}\nTo: {', '.join(to)}\nCC: {', '.join(cc) or 'none'}\nBCC: {', '.join(bcc) or 'none'}\nAttachments: none.\nFormat: clean HTML with plain-text alternative. Crayon AI signature: {'on' if signature else 'off'}.\nSubject: {content['subject']}\n\n{content['body']}"
+    if structured:return {"text":display+"\n\nHTML uses a simple bordered white card, natural paragraph spacing, no remote images. Say add crayon signature / remove crayon signature to review that change.\n\nReply with edit/change/rewrite instructions to revise. Tap Send or say 'send it'. Say 'cancel' to discard.","id":ident,"hash":digest[:12],"html":content["html"],"fields":{k:content[k] for k in ("to","cc","bcc","subject","body","crayon_signature")}}
     return display+f"\n\nSend exactly this: /email_send {ident} {digest[:12]}\nCancel: /email_cancel {ident}"
 
 
@@ -325,6 +328,7 @@ def send_draft(uid, ident, short_hash, channel='telegram'):
             raise GoogleError("Draft content changed; create a new draft")
         if status(uid).get("email")!=content["from"]:raise GoogleError("Connected account changed; create a new draft")
         m=EmailMessage();m["From"]=content["from"];m["To"]=", ".join(content["to"]) if isinstance(content["to"],list) else content["to"];m["Subject"]=content["subject"];m.set_content(content["body"])
+        if content.get('html'):m.add_alternative(content['html'],subtype='html')
         if content.get('cc'):m['Cc']=', '.join(content['cc'])
         if content.get('bcc'):m['Bcc']=', '.join(content['bcc'])
         token=_access(uid)
