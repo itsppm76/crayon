@@ -4,7 +4,7 @@ import cr_llm as llm
 
 def unavailable(question,search_results=None):
     if re.search(r"(?i)\bflight|airfare|fare\b",question):
-        return "I could not get current airline fares, so I cannot honestly name the cheapest flight or departure day. What departure window should I compare, for example the next7days or next30days? Prices and seats need a live airline or flight-search check."
+        return "I could not get current airline fares, so I cannot honestly name the cheapest flight or departure day. What departure window should I compare, for example the next 7 days or next 30 days? Prices and seats need a live airline or flight-search check."
     if re.search(r"(?i)\bweather|temperature|forecast\b",question):
         return "I could not get a current weather reading. I will not guess the temperature or forecast. Try a current weather source for the place and date you need."
     if re.search(r"(?i)\bprice|cheapest|cost|stock|availability\b",question):

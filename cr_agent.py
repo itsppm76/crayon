@@ -168,7 +168,12 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False, channe
                 meta['tools'].append('computer_browse')
                 reply=('Product page verified.\n'+'\n'.join(result.get('action_log',[]))+'\nScreenshot attached. No purchase or checkout.') if result.get('verified') and meta.get('artifacts') else 'Product page not completed: '+result.get('error','No screenshot confirmed.')
                 mem.add_message(uid,'assistant',reply);return reply,meta
+    import cr_live
+    if cr_live.requested(text):
+        reply=cr_live.answer(text);meta['tools'].append('live_public_lookup')
+        mem.add_message(uid,'assistant',reply);return reply,meta
     citation_pages=[]
+    search_results=[]
     urls=re.findall(r'https?://[^\s<>]+',text)
     for url in urls[:2]:
         url=url.rstrip('.,);]')
@@ -212,6 +217,12 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False, channe
                     res = {"ok": False, "error": "repeated identical call blocked; change approach or stop"}
                 else:
                     res = T.run(c["name"], c["args"], ctx)
+                if c['name']=='web_search' and res.get('ok'):
+                    found=res.get('results',[])
+                    search_results.extend(found)
+                    for lead in found[:3]:
+                        page=T.run('read_url',{'url':lead.get('url','')},ctx)
+                        if page.get('verified') and page.get('text'):citation_pages.append(page)
                 if c['name']=='read_url' and res.get('verified') and res.get('text'):citation_pages.append(res)
                 if c['name']=='research_web':citation_pages.extend(res.get('pages',[]))
                 meta.setdefault("trace", []).append({"tool": c["name"], "ok": bool(res.get("ok")), "verified": bool(res.get("verified")), "error": str(res.get("error", ""))[:160]})
@@ -239,6 +250,9 @@ def respond(uid, chat_id, text, name="", goal_mode=False, readonly=False, channe
         if (citation_pages or any(t in meta['tools'] for t in ('read_url','research_web','web_search'))) and not meta.get('confirm'):
             from cr_citations import checked_answer
             reply=checked_answer(text,reply,citation_pages)
+            if search_results and reply.startswith(('I could not','The pages I read')):
+                from cr_live import lead_reply
+                reply=lead_reply(text,search_results)
         reply = honesty_guard(reply, meta)
         if meta.get("confirm"):
             reply = f"{meta['confirm']}? This can't be undone. Reply YES to confirm or NO to cancel (valid for 10 minutes)."

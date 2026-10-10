@@ -51,7 +51,9 @@ def answer(msg):
                 missing=[topics[i] for i,result in enumerate(results) if not result['items']]
                 if not found['items']:return 'No dated news results returned for that request. I will not substitute old headlines. Try a narrower topic.'
                 lines=['News headlines'+(' for '+found['day'] if day else ' from the past day')+' (India time):']
-                for index,item in enumerate(found['items'],1):lines+=['',str(index)+'. '+item['title'],item['source']+' | '+item['published'][:16].replace('T',' ')+' IST']
+                for index,item in enumerate(found['items'],1):
+                    lines+=['',str(index)+'. '+item['title'],item['source']+' | '+item['published'][:16].replace('T',' ')+' IST']
+                    if msg.get('source_links'):lines.append(item['url'])
                 if missing:lines+=['','No matching dated headlines found for: '+', '.join(missing)]
                 lines+=['','Source: Google News index. These are published headlines, not independently verified article summaries.']
                 return '\n'.join(lines)

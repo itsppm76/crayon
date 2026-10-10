@@ -37,3 +37,31 @@ def test_live_fares_no_inventory_no_cheapest_guess():
 
 def test_weather_failure_not_generic_citation_error():
  assert 'current weather reading' in C.checked_answer('Weather in Kolkata today','31C',[])
+
+def test_dynamic_public_lookup_triggers():
+ import cr_live as L
+ assert L.requested('Cheapest flight from Delhi to Kolkata on any upcoming days')
+ assert L.requested('Weather in Kolkata today')
+ assert L.requested('Search the web for current news')
+ assert not L.requested('Search for my emails')
+
+def test_flight_search_leads_not_quotes(monkeypatch):
+ import cr_live as L
+ monkeypatch.setattr(L.W,'search',lambda *a:[{'title':'Airline search','url':'https://example.com/flights'}])
+ monkeypatch.setattr(L.W,'fetch',lambda *a: (_ for _ in ()).throw(RuntimeError('blocked')))
+ r=L.answer('Cheapest flight Delhi Kolkata')
+ assert 'https://example.com/flights' in r and 'not checked fare quotes' in r and 'departure window' in r
+
+def test_regression_snippets_keep_search_links(monkeypatch):
+ import cr_live as L
+ monkeypatch.setattr(L.W,'search',lambda *a:[{'title':'Forecast source','url':'https://example.com/weather'}])
+ monkeypatch.setattr(L.W,'fetch',lambda *a: (_ for _ in ()).throw(RuntimeError('blocked')))
+ r=L.answer('weather Kolkata today')
+ assert 'https://example.com/weather' in r and 'search leads' in r.lower()
+ assert 'No supported citation' not in r
+
+def test_news_each_headline_source_link(monkeypatch):
+ import cr_live as L
+ monkeypatch.setattr(L.W,'news',lambda *a:{'items':[{'title':'A','url':'https://news.google.com/a','source':'Publisher','published':'2026-10-10T10:00:00+05:30'},{'title':'B','url':'https://news.google.com/b','source':'Publisher','published':'2026-10-10T11:00:00+05:30'}]})
+ r=L.answer('latest news')
+ assert 'https://news.google.com/a' in r and 'https://news.google.com/b' in r
