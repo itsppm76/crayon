@@ -48,6 +48,39 @@ def free_json(prompt,system='',default=None,temperature=0,max_tokens=450):
     except Exception:return default
 
 
+# Prepared only. Not selected until deployment key's free/no-billing tier is verified.
+GEMINI_INTENT_MODEL='gemini-3.1-flash-lite'
+_gemini_available_until=0
+_gemini_last_available=None
+
+
+def gemini_json(prompt,system='',default=None,temperature=0,max_tokens=450):
+    """Pinned model, no configurable model/fallback/retry. Tier is account-bound."""
+    import cr_config as C,httpx,time
+    global _gemini_available_until,_gemini_last_available
+    if not C.GEMINI_KEY:return default
+    if _gemini_last_available is False and time.monotonic()<_gemini_available_until:return default
+    try:
+        r=httpx.post('https://generativelanguage.googleapis.com/v1beta/models/'+GEMINI_INTENT_MODEL+':generateContent',headers={'x-goog-api-key':C.GEMINI_KEY},json={'contents':[{'role':'user','parts':[{'text':prompt}]}],'systemInstruction':{'parts':[{'text':system}]},'generationConfig':{'temperature':temperature,'maxOutputTokens':max_tokens,'responseMimeType':'application/json','thinkingConfig':{'thinkingBudget':0}}},timeout=30)
+        if r.status_code!=200:
+            _gemini_last_available=False;_gemini_available_until=time.monotonic()+300
+            return default
+        text=''.join(p.get('text','') for p in r.json()['candidates'][0]['content']['parts'] if not p.get('thought'))
+        value=json.loads(text)
+        _gemini_last_available=True;_gemini_available_until=time.monotonic()+300
+        return value
+    except Exception:
+        _gemini_last_available=False;_gemini_available_until=time.monotonic()+300
+        return default
+
+
+def probe_gemini_availability():
+    """One bounded cached check. Never called at import/startup or while awaiting tier."""
+    import time
+    if time.monotonic()<_gemini_available_until:return _gemini_last_available
+    return gemini_json('Return exactly {"ready":true}',system='JSON readiness check',default=None,max_tokens=50)=={'ready':True}
+
+
 def classify(text):
     if not isinstance(text,str) or not 1 <= len(text.strip()) <= 8000 or looks_like_secret(text):
         raise ValueError('Ask in plain language without passwords or secrets.')

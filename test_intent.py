@@ -132,3 +132,34 @@ def test_all_legacy_google_commands_private_dm_only(cmd,monkeypatch):
  monkeypatch.setattr(T.db,'audit',lambda *a,**k:None)
  out=T.CaptureOut();T._handle_text(1,-9,'Test',cmd,1,out)
  assert any('only work in your private chat' in r['text'] for r in out.sent)
+
+
+def test_prepared_gemini_pinned_no_fallback_and_cached_probe(monkeypatch):
+ import cr_config as C,httpx
+ monkeypatch.setattr(C,'GEMINI_KEY','test')
+ monkeypatch.setattr(C,'GEMINI_MODEL','not-this-model')
+ monkeypatch.setattr(I,'_gemini_available_until',0)
+ monkeypatch.setattr(I,'_gemini_last_available',None)
+ calls=[]
+ class Response:
+  status_code=200
+  def json(self):return {'candidates':[{'content':{'parts':[{'text':'{"ready":true}'}]}}]}
+ monkeypatch.setattr(httpx,'post',lambda url,**kw:calls.append((url,kw)) or Response())
+ assert I.probe_gemini_availability() is True
+ assert I.probe_gemini_availability() is True
+ assert len(calls)==1 and I.GEMINI_INTENT_MODEL in calls[0][0]
+ assert calls[0][1]['json']['generationConfig']['responseMimeType']=='application/json'
+
+
+def test_prepared_gemini_error_cached_no_retry(monkeypatch):
+ import cr_config as C,httpx
+ monkeypatch.setattr(C,'GEMINI_KEY','test')
+ monkeypatch.setattr(I,'_gemini_available_until',0)
+ monkeypatch.setattr(I,'_gemini_last_available',None)
+ calls=[]
+ class Response:status_code=429
+ monkeypatch.setattr(httpx,'post',lambda *a,**kw:calls.append(1) or Response())
+ assert I.gemini_json('test') is None
+ assert I.gemini_json('test') is None
+ assert I.probe_gemini_availability() is False
+ assert len(calls)==1
