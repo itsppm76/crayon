@@ -68,4 +68,6 @@ body.sidebar-open main,body.sidebar-open .composer-wrap,body.sidebar-open footer
 
 .streaming-draft{display:block;white-space:pre-wrap;line-height:1.7;overflow-wrap:anywhere}audio{max-width:100%;display:block;margin-top:10px}
 
-@keyframes crayon-working{0%,100%{transform:rotate(-9deg) translateY(0)}50%{transform:rotate(9deg) translateY(-5px)}}.is-working .msg:last-child .av{animation:crayon-working 1.4s ease-in-out infinite;transform-origin:center bottom}.is-working .work-steps summary::before{content:"✎ ";color:var(--accent)}@media(prefers-reduced-motion:reduce){.is-working .msg .av{animation:none}}
+@keyframes crayon-working{0%,100%{transform:rotate(-9deg) translateY(0)}50%{transform:rotate(9deg) translateY(-5px)}}.is-working .working-row .av{animation:crayon-working 1.4s ease-in-out infinite;transform-origin:center bottom}.is-working .work-steps summary::before{content:"✎ ";color:var(--accent)}@media(prefers-reduced-motion:reduce){.is-working .msg .av{animation:none}}
+
+.working-row{flex-wrap:wrap}.working-row .work-steps{flex-basis:calc(100% - 36px);margin-top:14px}.working-row .typing-bubble{flex:1;min-width:0}@media(max-width:540px){.working-row .work-steps{flex-basis:100%}}
