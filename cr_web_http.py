@@ -117,6 +117,15 @@ def handle(h, method, raw=b''):
             elif method=='POST':result=P.web_update(user['user_id'],body)
             else:raise ValueError('Invalid settings action.')
             reply(h,200,result,cors=True)
+        elif p.path=='/web/mcp':
+            import cr_mcp_user as U
+            uid=user['user_id']
+            if method=='GET':result={'connectors':U.connectors(uid),'notice':U.NOTICE}
+            elif method=='POST' and set(body)=={'action','name','url','accept'} and body['action']=='add':result=U.add(uid,body['name'],body['url'],body['accept'])
+            elif method=='POST' and set(body)=={'action','name'} and body['action']=='remove':result=U.remove(uid,body['name'])
+            elif method=='POST' and set(body)=={'action','review_id','decision'} and body['action']=='confirm':result=U.confirm(uid,body['review_id'],body['decision'])
+            else:raise ValueError('Invalid connector action.')
+            reply(h,200,result,cors=True)
         elif p.path.startswith('/web/rooms'):
             import cr_web_rooms as R
             uid=user['user_id']

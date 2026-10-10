@@ -6,6 +6,7 @@ current=ContextVar('crayon_conversation',default=None)
 def init():
     db.q('CREATE TABLE IF NOT EXISTS web_conversations(user_id BIGINT NOT NULL,id TEXT NOT NULL,title TEXT NOT NULL,created_at TIMESTAMPTZ DEFAULT now(),PRIMARY KEY(user_id,id))',fetch='none')
     db.q('ALTER TABLE messages ADD COLUMN IF NOT EXISTS conversation_id TEXT',fetch='none')
+    db.q('ALTER TABLE messages ADD COLUMN IF NOT EXISTS encrypted_media TEXT',fetch='none')
     db.q("ALTER TABLE messages ADD COLUMN IF NOT EXISTS work_events JSONB DEFAULT '[]'::jsonb",fetch='none')
     db.q('ALTER TABLE web_requests ADD COLUMN IF NOT EXISTS conversation_id TEXT',fetch='none')
 def create(uid,title):
@@ -24,8 +25,8 @@ def list_for(uid):
     return [{**r,'created_at':str(r['created_at'])} for r in rows]
 def history(uid,ident):
     require(uid,ident)
-    rows=db.q('SELECT id,role,content,ts,work_events FROM messages WHERE user_id=%s AND conversation_id=%s ORDER BY id DESC LIMIT 100',(uid,ident))
-    return {'messages':[{'id':str(r['id']),'role':r['role'],'text':r['content'],'time':str(r['ts']),'work_events':r.get('work_events') or []} for r in reversed(rows)]}
+    rows=db.q('SELECT id,role,content,ts,work_events,encrypted_media FROM messages WHERE user_id=%s AND conversation_id=%s ORDER BY id DESC LIMIT 100',(uid,ident))
+    return {'messages':[{'id':str(r['id']),'role':r['role'],'text':r['content'],'time':str(r['ts']),'work_events':r.get('work_events') or [],'media':__import__('cr_web_app').decode(r['encrypted_media']).get('items',[]) if r.get('encrypted_media') else []} for r in reversed(rows)]}
 
 def title_from_text(text):
     """Cost-free extractive topic header, no extra provider upload."""

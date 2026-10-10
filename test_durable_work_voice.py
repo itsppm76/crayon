@@ -6,7 +6,7 @@ class Out:
  def artifact(self,chat,item):self.files.append(item)
 def test_explicit_requested_greeting_audio():
  out=Out()
- with patch('cr_memory.add_message'),patch.object(V,'enabled',return_value=True),patch('cr_llm.generate',return_value={'text':'Hello! Good to hear from you.'}) as model,patch.object(V,'synthesize',return_value={'data':b'fixture'}) as synth:
+ with patch('cr_memory.add_message'),patch.object(V,'enabled',return_value=True),patch('cr_llm.generate',return_value={'text':'Hello! Good to hear from you.'}) as model,patch.object(V,'synthesize',return_value={'data':b'fixture','filename':'voice.mp3','mime':'audio/mpeg'}) as synth:
   assert V.handle(5,5,'Can you send me a voice note, greeting me?',out)
   assert out.files and synth.call_args.args[1]=='Hello! Good to hear from you.'
   assert 'text-only' in model.call_args.kwargs['system']
@@ -27,5 +27,5 @@ def test_safe_work_metadata_saved_with_answer():
   with patch.object(M.db,'q') as q:
    M.add_message(5,'assistant','Hello')
    assert 'work_events' in q.call_args.args[0]
-   assert 'Preparing the response' in q.call_args.args[1][-1]
+   assert 'Preparing the response' in q.call_args.args[1][-2]
  finally:P.recorded.reset(token)

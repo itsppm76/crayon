@@ -78,11 +78,11 @@ def forget(uid, key):
     return db.q("SELECT 1 FROM facts WHERE user_id=%s AND key=%s", (uid, key), "one") is None
 
 
-def add_message(uid, role, content):
+def add_message(uid, role, content, media=None):
     ident=__import__('cr_conversations').current.get()
     events=__import__('cr_progress').snapshot() if role=='assistant' else []
-    db.q('INSERT INTO messages(user_id,role,content,conversation_id,work_events) VALUES(%s,%s,%s,%s,%s::jsonb)',
-         (uid,role,redact(content)[:6000],ident,__import__('json').dumps(events)),'none')
+    db.q('INSERT INTO messages(user_id,role,content,conversation_id,work_events,encrypted_media) VALUES(%s,%s,%s,%s,%s::jsonb,%s)',
+         (uid,role,redact(content)[:6000],ident,__import__('json').dumps(events),__import__('cr_web_app').encode({'items':media}) if media else None),'none')
 
 
 def recent_messages(uid, n=None):

@@ -117,6 +117,7 @@ def dispatch(uid, name, text):
             # Never consume a pending action created in another channel.
             reply, meta = A.respond(uid, chat_destination, text, name, channel_name='web')
             out.send(uid, reply)
+            out.items.extend({'kind':'mcp_review',**r} for r in meta.get('mcp_reviews',[]))
             for item in meta.get('artifacts', []):
                 out.artifact(uid, item)
             return out.items
@@ -238,14 +239,14 @@ def history(uid, before=None):
         if cursor.tzinfo is None:raise ValueError('History cursor needs timezone.')
     params=(uid,cursor,uid,cursor) if before else (uid,uid)
     condition=' AND ts<%s' if before else ''
-    rows=db.q("SELECT 'message' AS kind,id::text AS id,role,content,NULL::text AS encrypted,ts,work_events FROM messages WHERE user_id=%s"+condition+
-      " UNION ALL SELECT 'receipt',id,'receipt',NULL,encrypted,ts,'[]'::jsonb FROM channel_history WHERE user_id=%s"+condition+" ORDER BY ts DESC,id DESC LIMIT 51",params)
+    rows=db.q("SELECT 'message' AS kind,id::text AS id,role,content,NULL::text AS encrypted,ts,work_events,encrypted_media FROM messages WHERE user_id=%s"+condition+
+      " UNION ALL SELECT 'receipt',id,'receipt',NULL,encrypted,ts,'[]'::jsonb,NULL::text FROM channel_history WHERE user_id=%s"+condition+" ORDER BY ts DESC,id DESC LIMIT 51",params)
     page=rows[:50];items=[]
     for r in reversed(page):
         if r['kind']=='receipt':
             data=json.loads(auth._cipher().decrypt(r['encrypted'].encode()))
             for role in ('user','assistant'):items.append({'id':r['id']+role,'role':role,'text':data[role],'time':str(r['ts']),'media_missing':False})
-        else:items.append({'id':r['id'],'role':r['role'],'text':r['content'],'time':str(r['ts']),'work_events':r.get('work_events') or [],'media_missing':r['content'].startswith('[User sent media:')})
+        else:items.append({'id':r['id'],'role':r['role'],'text':r['content'],'time':str(r['ts']),'work_events':r.get('work_events') or [],'media':decode(r['encrypted_media']).get('items',[]) if r.get('encrypted_media') else [],'media_missing':r['content'].startswith('[User sent media:')})
     return {'messages':items,'has_more':len(rows)>50,'before':page[-1]['ts'].isoformat() if page else None}
 
 
