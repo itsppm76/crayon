@@ -1,0 +1,1 @@
+{"name":"Crayon","short_name":"Crayon","description":"Your conversations, memory and work.","id":"/crayon/","start_url":"/crayon/?source=pwa","scope":"/crayon/","display":"standalone","background_color":"#fffdf8","theme_color":"#fffdf8","icons":[{"src":"./crayon.svg","sizes":"any","type":"image/svg+xml","purpose":"any"}]}
