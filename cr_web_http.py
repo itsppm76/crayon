@@ -203,8 +203,12 @@ def handle(h, method, raw=b''):
             reply(h,200,result,cors=True)
         elif method=='POST' and p.path=='/web/upload':
             reply(h,202,W.upload(user,body),cors=True)
+        elif method=='POST' and p.path=='/web/intent':
+            from cr_safety import looks_like_secret
+            if set(body)!={'message'} or not isinstance(body['message'],str) or not 1<=len(body['message'])<=8000 or looks_like_secret(body['message']):raise ValueError('Invalid intent request.')
+            reply(h,200,__import__('cr_intent').issue(user['user_id'],h.headers.get('Authorization',''),body['message']),cors=True)
         elif method=='POST' and p.path=='/web/chat':
-            reply(h,202,W.submit(user,body),cors=True)
+            reply(h,202,W.submit(user,body,h.headers.get('Authorization','')),cors=True)
         elif method=='GET' and p.path=='/web/result':
             q=parse_qs(p.query)
             if set(q)!={'id'} or len(q['id'])!=1: raise ValueError('Invalid result request.')

@@ -3,7 +3,8 @@ from pathlib import Path
 def test_send_email_routes_to_review_before_model():
     js=Path('docs/app.js').read_text()
     route=js.index('if(pendingCompose||')
-    assert 'prepare|send' in js[route:route+180]
+    assert "intent.route==='email'" in js[route:route+180]
+    assert "call('intent'" in js[:route]
     assert "call('connections')" in js[route:route+900]
     assert "call('compose-preview'" in js[route:route+900]
     assert route < js.index("submitAndWait('chat'")

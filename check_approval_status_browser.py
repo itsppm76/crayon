@@ -14,6 +14,7 @@ with sync_playwright() as p:
    if '/web/' not in u:r.abort();return
    path=u.split('/web/')[1];body=json.loads(r.request.post_data or '{}')
    v={'id':1898030949,'name':'Fixture acceptance','expires_at':time.time()+3600} if path=='me' else {'messages':[],'has_more':False,'conversations':[]}
+   if path=='intent':v={'route':'chat','args':{},'ticket':'fixture-ticket'}
    if path=='connections':v={'google':'owner@example.com','workspace':'owner@example.com'}
    if path=='action-preview':
     ticket[0]+=1;v={'review_id':'r'+str(ticket[0]),'hash':'h'+str(ticket[0]),'kind':body['kind'],'text':'From: owner@example.com\nTo: recipient@example.com\nSubject: UX fixture\n\nExact body $50 <script>alert(1)</script>\n'+('long line '*30),'html':html,'review_fields':body['fields'],'expires_in':0.1 if state['expiry'] else 600}
@@ -44,6 +45,7 @@ with sync_playwright() as p:
   assert len(effects)==1
   page.fill('#input','Hello after expiry');page.click('#send')
   page.wait_for_function("[...document.querySelectorAll('.msg.user')].some(n=>n.textContent.includes('Hello after expiry'))")
+  page.wait_for_function('document.querySelector("#status").textContent==="Request done"')
   assert 'Use Cancel or Edit' not in page.locator('#status').inner_text()
   # Actual helper pixel fixture tests sequence, repeated labels, unknown state.
   page.evaluate("document.querySelector('#log').replaceChildren(CrayonUX.progress([{id:'a',seq:1,label:'Reading source',state:'running'},{id:'a',seq:2,label:'Reading source',state:'done'},{id:'b',seq:3,label:'Reading source',state:'running'},{id:'b',seq:4,label:'Reading source',state:'blocked'}],'unknown'))")

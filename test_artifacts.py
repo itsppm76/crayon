@@ -40,8 +40,10 @@ def test_export_requires_user_request():
 
 
 def test_real_handle_dispatches_artifact(monkeypatch):
-    import cr_telegram as T
+    import cr_telegram as T,cr_intent as I
+    monkeypatch.setattr(I,'classify',lambda text:{'route':'chat','args':{}})
     monkeypatch.setattr(T.db,'audit',lambda *a,**k:None)
+    monkeypatch.setattr(T.db,'kv_get',lambda k,d=None:d)
     monkeypatch.setattr(T,'_over_cap',lambda uid:False)
     monkeypatch.setattr(T.A,'respond',lambda *a:('Here is the file',{'artifacts':[{'filename':'crayon.csv','mime':'text/csv','data':b'x,y'}]}))
     import cr_google_chat as H
