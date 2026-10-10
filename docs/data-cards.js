@@ -2,6 +2,7 @@
 (()=>{
 const log=document.querySelector('#log');
 const render=()=>log.querySelectorAll('.msg.ai .bubble').forEach(b=>{
+ if(b.closest('[data-private-review]')||b.querySelector('.approval-card'))return;
  if(b.dataset.cardChecked)return;b.dataset.cardChecked='yes';
  const text=b.textContent;
  if(!/Source:/.test(text))return;
