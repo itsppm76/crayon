@@ -24,7 +24,7 @@ def show_draft(uid,chat,out,arg):
         out.send(chat,'What name should your emails sign with? I kept this draft. Reply with just your real name, or cancel. This is saved only for your account.')
         return
     d=G.make_draft(uid,arg,structured=True)
-    out.send(chat,d['text'],markup={"inline_keyboard":[[{"text":"Send","callback_data":"email_send:"+d['id']+":"+d['hash']},{"text":"Cancel","callback_data":"email_cancel:"+d['id']}]]})
+    out.send(chat,d['text'],markup={"inline_keyboard":[[{"text":"Send exactly this","callback_data":"email_send:"+d['id']+":"+d['hash']},{"text":"Cancel","callback_data":"email_cancel:"+d['id']}]]})
     db.kv_set('google_reviewed_'+str(uid),[d['id'],d['hash']])
     db.kv_set('google_review_chat_'+str(uid),chat)
 
@@ -48,7 +48,7 @@ def handle(uid,chat,text,msg,out):
             guests=[e.strip() for e in fields[4].split(',') if e.strip()] if len(fields)==6 and fields[4].lower()!='none' else []
             minutes=int(fields[5]) if len(fields)==6 and fields[5].lower()!='default' else None
             d=K.preview(uid,*fields[:4],guests=guests,reminder_minutes=minutes)
-            out.send(chat,d['text'],markup={'inline_keyboard':[[{'text':'Create','callback_data':'calendar_create:'+d['id']+':'+d['hash']},{'text':'Cancel','callback_data':'calendar_cancel:'+d['id']}]]})
+            out.send(chat,d['text'],markup={'inline_keyboard':[[{'text':'Create exactly this','callback_data':'calendar_create:'+d['id']+':'+d['hash']},{'text':'Cancel','callback_data':'calendar_cancel:'+d['id']}]]})
         except G.GoogleError as e:out.send(chat,str(e))
         return True
     stored_name=db.kv_get('google_signature_pending_'+str(uid),None)
