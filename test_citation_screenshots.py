@@ -65,3 +65,26 @@ def test_news_each_headline_source_link(monkeypatch):
  monkeypatch.setattr(L.W,'news',lambda *a:{'items':[{'title':'A','url':'https://news.google.com/a','source':'Publisher','published':'2026-10-10T10:00:00+05:30'},{'title':'B','url':'https://news.google.com/b','source':'Publisher','published':'2026-10-10T11:00:00+05:30'}]})
  r=L.answer('latest news')
  assert 'https://news.google.com/a' in r and 'https://news.google.com/b' in r
+
+def test_agent_search_provider_result_not_silently_discarded(monkeypatch):
+ import cr_agent as A,cr_memory as M,cr_tools as T,cr_config as CFG
+ monkeypatch.setattr(M,'touch_user',lambda *a:None)
+ monkeypatch.setattr(M,'add_message',lambda *a:None)
+ monkeypatch.setattr(A,'_history_contents',lambda *a:[])
+ monkeypatch.setattr(A,'build_system',lambda *a:'System')
+ monkeypatch.setattr(__import__('cr_mcp_user'),'connectors',lambda *a:{})
+ monkeypatch.setattr(__import__('cr_reply_context'),'inject',lambda *a:None)
+ monkeypatch.setattr(A,'needs_check',lambda *a:False)
+ monkeypatch.setattr(A,'honesty_guard',lambda reply,*a:reply)
+ outputs=iter([{'model':'fake','calls':[{'name':'web_search','args':{'query':'compiler releases'}}],'parts':[]},{'model':'fake','calls':[],'text':'Unsupported latest version','parts':[]}])
+ monkeypatch.setattr(A.llm,'generate',lambda *a,**k:next(outputs))
+ calls=[]
+ def run(tool,args,ctx):
+  calls.append(tool)
+  if tool=='web_search':return {'ok':True,'verified':True,'results':[{'title':'Compiler releases','url':'https://example.com/releases'}]}
+  return {'ok':False,'verified':False}
+ monkeypatch.setattr(T,'run',run)
+ reply,meta=A.respond(1000000009999999,1000000009999999,'What changed in compiler releases?',readonly=True)
+ assert 'web_search' in calls and 'read_url' in calls
+ assert 'https://example.com/releases' in reply and 'Search leads' in reply
+ assert 'Unsupported latest version' not in reply
