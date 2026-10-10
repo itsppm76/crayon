@@ -122,3 +122,13 @@ def test_classifier_no_free_key_fail_closed(monkeypatch):
  monkeypatch.setattr(C,'OPENROUTER_KEY','')
  monkeypatch.setattr(L,'openrouter_fallback',lambda *a,**k:pytest.fail('no free key'))
  assert I.classify('Tell me about yourself in your voice')['route']=='clarify'
+
+
+@pytest.mark.parametrize('cmd',['/connect_google','/disconnect_google','/google_status','/gmail','/gmail_read 1','/calendar','/email_draft x','/email_send x h','/email_cancel x'])
+def test_all_legacy_google_commands_private_dm_only(cmd,monkeypatch):
+ import cr_telegram as T,cr_google as G
+ monkeypatch.setattr(G,'configured',lambda:pytest.fail('private Google branch entered in group'))
+ monkeypatch.setattr(I,'classify',lambda *a:{'route':'chat','args':{}})
+ monkeypatch.setattr(T.db,'audit',lambda *a,**k:None)
+ out=T.CaptureOut();T._handle_text(1,-9,'Test',cmd,1,out)
+ assert any('only work in your private chat' in r['text'] for r in out.sent)
