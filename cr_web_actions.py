@@ -53,6 +53,7 @@ def preview(uid,header,body):
         payload={'id':d['id'],'hash':d['hash']};text=d['text']
     elif kind=='sheet':
         import cr_workspace as S,cr_connections as X
+        if set(f)=={'request'}:f=__import__('cr_natural').sheet_fields(f['request'])
         if set(f)!={'sid','area','values'}:raise ValueError('Exact sheet fields required.')
         d=S.sheet_preview(uid,f['sid'],f['area'],f['values']);payload=d
         text='Sheet update preview only.\nAccount: '+str((X.status(uid,'workspace') or {}).get('identity'))+'\nSpreadsheet: '+f['sid']+'\nRange: '+f['area']+'\nBefore: '+json.dumps(d['payload']['before'])+'\nWrite as RAW values: '+json.dumps(f['values'])+'\nNo formulas. Compare-before-write and readback. Expires in 10 minutes.'

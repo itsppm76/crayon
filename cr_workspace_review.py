@@ -35,11 +35,12 @@ def confirm(uid,chat,ident,h,decision):
     except Exception:raise ValueError('Sheet write stopped or uncertain. Check the Sheet; do not retry automatically.') from None
 
 def handle(uid,chat,text,out):
-    if not text.lower().startswith('update sheet '):return False
+    if not __import__('re').search(r'(?i)\b(?:update|change|edit|write|fill)\b.*\b(?:sheet|spreadsheet)\b',text):return False
     try:
         args=text[len('update sheet '):].split(' | ')
-        if len(args)!=3:raise ValueError('Use update sheet SPREADSHEET_ID | Sheet1!A1:B2 | [["text",1],["next",2]]')
-        d=preview(uid,chat,args[0],args[1],json.loads(args[2]))
+        if len(args)==3:d=preview(uid,chat,args[0],args[1],json.loads(args[2]))
+        else:
+            f=__import__('cr_natural').sheet_fields(text);d=preview(uid,chat,f['sid'],f['area'],f['values'])
         out.send(chat,d['text'],markup={'inline_keyboard':[[{'text':'Update exactly this','callback_data':'sheet:confirm:'+d['id']+':'+d['hash']},{'text':'Cancel','callback_data':'sheet:cancel:'+d['id']+':'+d['hash']}]]})
     except Exception as e:out.send(chat,'Sheet preview not ready: '+str(e)[:250])
     return True

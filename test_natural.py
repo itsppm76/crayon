@@ -5,3 +5,14 @@ import pytest
 def test_plain_routes(text,command):assert N.translate(text)==command
 @pytest.mark.parametrize('text',['send this email','delete all files','transfer money','read my inbox','call someone','buy a car'])
 def test_no_effect_guess(text):assert N.translate(text)==text
+
+def test_calendar_guest_not_in_request_rejected(monkeypatch):
+ import cr_llm as L
+ monkeypatch.setattr(L,'ask_json',lambda *a,**k:dict(title='Study',start='2026-10-11T10:00:00+05:30',end='2026-10-11T11:00:00+05:30',timezone='Asia/Calcutta',guests=['invented@example.com'],reminder_minutes=None))
+ with pytest.raises(ValueError,match='exact email'):N.calendar_fields('Create a study block tomorrow at10am')
+def test_sheet_missing_identity_one_question():
+ with pytest.raises(ValueError,match='Which Sheet'):N.sheet_fields('Update my expenses sheet')
+def test_sheet_words_to_fields(monkeypatch):
+ import cr_llm as L
+ monkeypatch.setattr(L,'ask_json',lambda *a,**k:{'area':'Sheet1!A1:B1','values':[['Groceries',200]]})
+ assert N.sheet_fields('Update sheet https://docs.google.com/spreadsheets/d/abcdefghijk1234567/edit A1:B1 groceries200')['values']==[['Groceries',200]]
