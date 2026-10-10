@@ -56,3 +56,9 @@ No paid activity initiated. Google public verification/possible restricted-scope
 Latest 15:02 checkpoint: worker Playwright/Chromium and Debian browser libraries installed; direct controlled form inspection verified with zero POST. The real Telegram preview at 14:57 failed because a 14:56 idle-stop left a fresh cached heartbeat. Lifecycle fix clears readiness on accepted start/stop and serializes readiness/activity/enqueue against idle-stop. Full suite: 203 passed. Live preview/Submit remain unproven. Awake-but-exited worker needs a host restart or explicit supervisor start; API start on an already-awake host does not rerun postStart. Public-news topic/date/relevance/publisher cleanup is deployed, but post-fix group acceptance is still pending.
 
 2.35:223automated tests. Complete generated emails use supplied context and user intent, with no invented facts and exact-body mode when requested. Real group action acceptance pending; WhatsApp two-way remains pending Meta provisioning cooldown.
+
+## Public citation/screenshot regression (October 10, 2026)
+
+Reported: programme answer cited an unrelated terms page, and a group answer denied screenshot support. Public citation rewrites now require claim-specific exact evidence quotes from the fetched URL; programme claims cannot use terms/privacy/legal pages. This checks provenance mechanically, not the truth of every semantic inference. Missing evidence is reported instead of substituted.
+
+Telegram screenshot requests use the existing fresh public-only browser and return PNG photos in the originating DM/group. Exact mentions are still required in groups; no personal memory or account data is read. Missing links are asked for, errors/walls are labelled, private networks/account portals blocked. Shared free browser quotas and wake/sleep remain. WhatsApp groups are NOT supported by the Meta test transport. Live acceptance remains pending until the real requested transport/test audience is confirmed.

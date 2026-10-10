@@ -191,6 +191,8 @@ def handle_update(upd, out=None):
                     state=Google.decrypt(uid,blob) if blob else {}
                     pending_compose=state.get('chat')==chat_id and state.get('until',0)>time.time()
                 except Exception:pending_compose=False
+            import cr_screenshots
+            if cr_screenshots.group_request(msg,out):return
             if GA.action_request(text) or pending_compose:
                 if uid<=0 or msg.get('sender_chat') or any(msg.get(k) for k in ('forward_origin','forward_from','via_bot')):
                     out.send(chat_id,'Account actions need your direct request, not an anonymous or forwarded message.');return
