@@ -400,7 +400,7 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
             out.send(chat_id, reply)
     elif cmd in ("/connect_google", "/disconnect_google", "/google_status", "/gmail", "/gmail_read", "/calendar", "/email_draft", "/email_send", "/email_cancel"):
         import cr_google as G
-        if msg_private_invalid(uid) or (chat_id!=uid and chat_id>=0):
+        if msg_private_invalid(uid) or (cmd in ('/connect_google','/disconnect_google','/google_status') and chat_id!=uid) or (chat_id!=uid and chat_id>=0):
             out.send(chat_id, "Google commands only work in your private chat with Crayon.")
             return
         try:

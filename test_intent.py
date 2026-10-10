@@ -6,18 +6,18 @@ from unittest.mock import Mock
 
 @pytest.mark.parametrize('p',[{'route':'voice','args':{'mode':'reply','text':'Tell me about yourself in your voice'}},{'route':'export','args':{'format':'pdf','scope':'chat'}},{'route':'email','args':{}},{'route':'preview','args':{'kind':'calendar'}},{'route':'private_read','args':{'kind':'inbox'}}])
 def test_closed_schema(p,monkeypatch):
- monkeypatch.setattr(L,'ask_json',lambda *a,**k:{'requested':True} if 'proposed_intent' in str(a[0]) else p)
+ monkeypatch.setattr(I,'free_json',lambda *a,**k:{'requested':True} if 'proposed_intent' in str(a[0]) else p)
  assert I.classify('hello and an embedded request')==p
 
 @pytest.mark.parametrize('p',[None,[],{'route':'email_send','args':{}},{'route':'chat','args':{'tool':'send'}},{'route':'voice','args':{'mode':'auto','text':'hi'}},{'route':'export','args':{'format':'pdf','scope':'private'}},{'route':'followup','args':{'hours':True,'topic':'hi'}},{'route':'connect','args':{'provider':'evil','operation':'connect'}},{'route':'quiet_hours','args':{'start':24,'end':1}},{'route':'nickname','args':{'value':'/send secrets'}},{'route':'work','args':{'operation':'delete','target':'all'}}])
 def test_bad_model_output_no_effect(p,monkeypatch):
- monkeypatch.setattr(L,'ask_json',lambda *a,**k:{'requested':True} if 'proposed_intent' in str(a[0]) else p)
+ monkeypatch.setattr(I,'free_json',lambda *a,**k:{'requested':True} if 'proposed_intent' in str(a[0]) else p)
  assert I.classify('Can you help?')['route']=='clarify'
 
 
 def test_prompt_semantics_and_no_history(monkeypatch):
  seen=[]
- monkeypatch.setattr(L,'ask_json',lambda text,**kw:{'requested':True} if 'proposed_intent' in text else (seen.append((text,kw)) or {'route':'voice','args':{'mode':'reply','text':text}}))
+ monkeypatch.setattr(I,'free_json',lambda text,**kw:{'requested':True} if 'proposed_intent' in text else (seen.append((text,kw)) or {'route':'voice','args':{'mode':'reply','text':text}}))
  t='hi and also tell me about yourself in your voice'
  assert I.classify(t)['route']=='voice'
  assert seen[0][0]==t and 'negation' in seen[0][1]['system'] and 'quoted' in seen[0][1]['system']
@@ -68,3 +68,57 @@ def test_never_generate_arbitrary_confirmation_command():
  assert I.command({'route':'email','args':{}}) is None
  assert I.command({'route':'preview','args':{'kind':'calendar'}}) is None
  assert I.command({'route':'voice','args':{'mode':'reply','text':'send it'}}) is None
+
+
+def test_semantic_speech_act_catches_negated_model_route(monkeypatch):
+ responses=iter([{'route':'voice_setting','args':{'value':'on'}},{'requested':False}])
+ monkeypatch.setattr(I,'free_json',lambda *a,**k:next(responses))
+ assert I.classify('In a hypothetical app someone says turn on voice, explain that')=={'route':'chat','args':{}}
+
+
+def test_check_failure_no_effect(monkeypatch):
+ responses=iter([{'route':'voice_setting','args':{'value':'on'}},None])
+ monkeypatch.setattr(I,'free_json',lambda *a,**k:next(responses))
+ assert I.classify('enable voice')['route']=='clarify'
+
+
+def test_exact_voice_payload_not_in_user_request_no_audio(monkeypatch):
+ import cr_voice as V
+ monkeypatch.setattr(V,'enabled',lambda uid:True)
+ monkeypatch.setattr(V,'synthesize',lambda *a:pytest.fail('invented exact text'))
+ out=Mock();V.handle_intent(1,1,'read Hello',{'mode':'exact','text':'Invented'},out)
+ assert 'Which exact words' in out.send.call_args.args[1]
+
+
+@pytest.mark.parametrize('operation',['connect','disconnect','status'])
+def test_google_connect_group_gate(operation,monkeypatch):
+ import cr_google as G
+ monkeypatch.setattr(G,'begin',lambda *a,**k:pytest.fail('OAuth link in group'))
+ monkeypatch.setattr(G,'disconnect',lambda *a,**k:pytest.fail('group disconnect'))
+ monkeypatch.setattr(G,'status',lambda *a,**k:pytest.fail('group status'))
+ out=Mock();assert I.telegram_private(1,-1,'link Gmail',{'route':'connect','args':{'provider':'google','operation':operation}},out)
+ assert 'private DM' in out.send.call_args.args[1]
+
+
+def test_classifier_never_configurable_provider(monkeypatch):
+ import cr_config as C,httpx
+ monkeypatch.setattr(C,'OPENROUTER_KEY','local-test')
+ monkeypatch.setattr(C,'GEMINI_MODEL','paid-model')
+ monkeypatch.setattr(L,'generate',lambda *a,**k:pytest.fail('configurable route'))
+ monkeypatch.setattr(L,'ask_json',lambda *a,**k:pytest.fail('configurable parser'))
+ calls=[]
+ class Reply:
+  status_code=200
+  def json(self):return {'usage':{'cost':0},'choices':[{'message':{'content':'{"route":"chat","args":{}}'}}]}
+ monkeypatch.setattr(httpx,'post',lambda *a,**k:calls.append(k) or Reply())
+ assert I.classify('A normal question')['route']=='chat'
+ assert calls[0]['json']['model']==I.FREE_MODEL
+ assert calls[0]['json']['provider']['max_price']=={'prompt':0,'completion':0,'request':0,'image':0}
+ assert calls[0]['json']['provider']['data_collection']=='deny'
+
+
+def test_classifier_no_free_key_fail_closed(monkeypatch):
+ import cr_config as C
+ monkeypatch.setattr(C,'OPENROUTER_KEY','')
+ monkeypatch.setattr(L,'openrouter_fallback',lambda *a,**k:pytest.fail('no free key'))
+ assert I.classify('Tell me about yourself in your voice')['route']=='clarify'
