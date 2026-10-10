@@ -34,8 +34,8 @@ def confirm(uid,chat,ident,h,decision):
     try:return json.dumps(S.sheet_apply(uid,content['preview']['payload'],content['preview']['hash']),ensure_ascii=False)
     except Exception:raise ValueError('Sheet write stopped or uncertain. Check the Sheet; do not retry automatically.') from None
 
-def handle(uid,chat,text,out):
-    if not __import__('re').search(r'(?i)\b(?:update|change|edit|write|fill)\b.*\b(?:sheet|spreadsheet)\b',text):return False
+def handle(uid,chat,text,out,semantic=False):
+    if not semantic and not __import__('re').search(r'(?i)\b(?:update|change|edit|write|fill)\b.*\b(?:sheet|spreadsheet)\b',text):return False
     try:
         args=text[len('update sheet '):].split(' | ')
         if len(args)==3:d=preview(uid,chat,args[0],args[1],json.loads(args[2]))

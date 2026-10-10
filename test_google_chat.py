@@ -50,6 +50,8 @@ def test_friendly_draft_hides_ids(monkeypatch,store):
 
 @pytest.mark.parametrize('text',['Plz connect to my Google','pls link to my Gmail account','connect Google','please connect my Google account','link my Gmail','how do I connect Google','/connect_google'])
 def test_connect_text_no_keyboard(monkeypatch,text):
+    import cr_intent as I
+    monkeypatch.setattr(I,'classify',lambda text:{'route':'connect','args':{'provider':'google','operation':'connect'}} if not text.startswith('/') else {'route':'chat','args':{}})
     monkeypatch.setattr(T.db,'audit',lambda *a,**k:None)
     monkeypatch.setattr(H.G,'configured',lambda:True)
     monkeypatch.setattr(H.G,'begin',lambda uid:'https://example.com/connect-test')

@@ -163,6 +163,8 @@ def test_group_optin_phrase_routes_to_consent():
 
 
 def test_group_proactive_cannot_move_private_alerts(monkeypatch):
+    import cr_intent as I
+    monkeypatch.setattr(I,'classify',lambda text:{'route':'proactive','args':{'kind':'proactive','value':'on'}})
     monkeypatch.setattr(T.db,'audit',lambda *a:None)
     out=T.CaptureOut();T._handle_text(22,-991,'Test','turn on daily check-ins',None,out)
     assert 'private monitoring' in out.sent[0]['text']

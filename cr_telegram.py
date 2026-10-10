@@ -288,12 +288,21 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         db.audit(uid,"telegram_reaction",f"message_id={message_id} emoji={emoji} accepted={reaction_ok}")
     if text.strip().lower().rstrip('.!') in ('hi','hey','hello','cool','thanks','thank you'):
         out.send(chat_id,"You're welcome." if text.strip().lower().rstrip('.!') in ('thanks','thank you') else "Hey! What can I help with?" if text.strip().lower().rstrip('.!') in ('hi','hey','hello') else "Got it.");return
-    text=__import__('cr_natural').translate(text)
-    if __import__('cr_followups').handle(uid,chat_id,text,out):return
-    if __import__('cr_plugins').handle(uid,chat_id,text,out):return
-    if __import__('cr_persona').handle(uid,chat_id,text,out):return
-    if __import__('cr_voice').handle(uid,chat_id,text,out):return
-    if __import__('cr_games').handle(uid,chat_id,text,out):return
+    import cr_intent as I
+    intent=I.classify(text)
+    if intent['route']=='clarify':out.send(chat_id,intent['args']['question']);return
+    if intent['route']=='voice':__import__('cr_voice').handle_intent(uid,chat_id,text,intent['args'],out);return
+    if intent['route']=='image':out.send(chat_id,'No verified free image-generation provider is connected. No image generated or paid provider used. Image analysis and public screenshots are available.');return
+    if I.telegram_private(uid,chat_id,text,intent,out):return
+    command=I.command(intent)
+    if command:text=command
+    if command or text.lstrip().startswith('/'):
+        text=__import__('cr_natural').translate(text)
+    if (command or text.lstrip().startswith('/')) and __import__('cr_followups').handle(uid,chat_id,text,out):return
+    if (command or text.lstrip().startswith('/')) and __import__('cr_plugins').handle(uid,chat_id,text,out):return
+    if (command or text.lstrip().startswith('/')) and __import__('cr_persona').handle(uid,chat_id,text,out):return
+    if text.lstrip().startswith('/') and __import__('cr_voice').handle(uid,chat_id,text,out):return
+    if (command or text.lstrip().startswith('/')) and __import__('cr_games').handle(uid,chat_id,text,out):return
     if chat_id<0 and __import__('re').search(r'(?i)(?:email checks|daily check-ins|(?:morning|evening) digest|/proactive|/digest)',text):
         out.send(chat_id,'Set up private monitoring and proactive updates in a DM. Group requests do not move your background alerts here.');return
     import cr_connections as X
@@ -332,15 +341,15 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         return
     if text.strip().lower() in ('/rooms','shared rooms'):
         out.send(chat_id,'Telegram shared conversations use your Telegram groups: add @crayon_v1_bot and tag it for public questions. Personal group actions require each member to opt in and review before sharing. Web shared rooms are in Menu > Shared rooms at https://itsppm76.github.io/crayon/ with explicit invite/audience review. No private history is imported and Telegram groups are not silently bridged to web rooms.');return
-    if __import__('cr_workspace_create').handle(uid,chat_id,text,out):return
+    if text.lstrip().startswith('/') and __import__('cr_workspace_create').handle(uid,chat_id,text,out):return
     import cr_workspace_review
-    if cr_workspace_review.handle(uid,chat_id,text,out):return
+    if text.lstrip().startswith('/') and cr_workspace_review.handle(uid,chat_id,text,out):return
     import cr_booking
     if cr_booking.handle(uid,chat_id,text,out):return
     import cr_dashboard
-    if cr_dashboard.handle(uid,chat_id,text,out):return
+    if (command or text.lstrip().startswith('/')) and cr_dashboard.handle(uid,chat_id,text,out):return
     import cr_work
-    if cr_work.handle(uid,chat_id,text,out):return
+    if (command or text.lstrip().startswith('/')) and cr_work.handle(uid,chat_id,text,out):return
     plain=text.strip().lower().rstrip('.!')
     aliases={"help":"/help","connect google":"/connect_google","disconnect google":"/disconnect_google","google status":"/google_status","what do you remember about me?":"/memory","what do you remember about me":"/memory","show my memory":"/memory","memory review":"/memory_review","turn on daily check-ins":"/proactive on","turn off daily check-ins":"/proactive off","morning digest":"/digest morning","evening digest":"/digest evening","turn off digests":"/digest off","my digest":"/digest_now"}
     if plain=="privacy options":
@@ -350,7 +359,8 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
     text=aliases.get(plain,text)
     if (not text.startswith('/') or text.startswith('/calendar_slot')) and (chat_id==uid or chat_id<0):
         import cr_google_chat
-        if cr_google_chat.handle(uid,chat_id,text,None,out):return
+        if intent['route']!='chat' or text.lstrip().startswith('/calendar_slot') or any(db.kv_get(k+str(uid),None) for k in ('google_compose_','google_signature_pending_')) or plain in ('send it','send','yes send it','cancel','cancel draft','cancel email'):
+            if cr_google_chat.handle(uid,chat_id,text,None,out):return
     fields = text.split(None,1)
     if not fields:return
     cmd, arg = fields[0], fields[1] if len(fields)>1 else ""

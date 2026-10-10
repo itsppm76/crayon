@@ -3,7 +3,8 @@ import pytest
 import cr_web_app as W
 
 def prep(monkeypatch,destination=None):
- import cr_memory as M,cr_accounts,cr_agent
+ import cr_memory as M,cr_accounts,cr_agent,cr_intent as I
+ monkeypatch.setattr(I,'classify',lambda text:{'route':'chat','args':{}})
  monkeypatch.setattr(W.db,'q',lambda *a,**k:{'user_id':17})
  monkeypatch.setattr(M,'touch_user',lambda *a:None)
  monkeypatch.setattr(cr_accounts,'telegram_destination',lambda uid:destination)

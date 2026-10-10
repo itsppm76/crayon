@@ -31,9 +31,9 @@ def handle(uid,chat,text,out):
     import cr_channel
     if cr_channel.channel.get()!='web':return False
     if re.match(r'(?i)(?:(?:show|open)(?: my)? task |mark .* (?:step|task step) (?:in|for|of) )',text.strip()):return __import__('cr_dashboard').handle(uid,chat,text,out)
-    command=translate(text)
+    command={'/connect_google':'connect google','/disconnect_google':'disconnect google','/google_status':'status google'}.get(text,translate(text))
     if re.fullmatch(r'(?i)(pause|resume|cancel|show|export)(?: my)? (?:work|job|research|brief)(?: on| about| called)? .+',text.strip()):return __import__('cr_work').handle(uid,chat,text,out)
-    if command==text:return False
+    if command==text and not command.startswith(('/work','/tasks','/plugins','/mcp','/memory','/digest','/proactive','/quiet_hours','connect ','disconnect ','status ')):return False
     if command.startswith(('/voice','/speak','/persona','/nickname','/play','/game_stop')):return False
     if chat!=uid:out.send(chat,'This account setting needs your private chat.');return True
     if command.startswith('/work'):
@@ -48,9 +48,16 @@ def handle(uid,chat,text,out):
         op,value=command.split();key='proactive' if op=='/proactive' else 'digest';P=__import__('cr_proactive');settings=P.settings(uid);f={k:settings[k] for k in P.DEFAULT};f[key]=value=='on' if key=='proactive' else value;out.send(chat,P.web_update(uid,{**f,'accept':True})['text']);return True
     if command.startswith('/quiet_hours '):
         P=__import__('cr_proactive');a,b=map(int,command.split()[1:]);settings=P.settings(uid);f={k:settings[k] for k in P.DEFAULT};f.update(quiet_start=a,quiet_end=b,accept=True);out.send(chat,P.web_update(uid,f)['text']);return True
-    if re.fullmatch(r'(connect|disconnect) (workspace|github)',command):
+    if re.fullmatch(r'(connect|disconnect|status) (workspace|github|google)',command):
         op,provider=command.split();X=__import__('cr_connections')
+        if provider=='google':
+            G=__import__('cr_google')
+            if op=='connect':out.send(chat,'Review your Google account permissions: '+G.begin(uid))
+            elif op=='status':out.send(chat,str(G.status(uid)))
+            else:out.send(chat,str(G.disconnect(uid)))
+            return True
         if op=='connect':out.send(chat,'Review your own '+provider+' account permissions here: '+X.begin(uid,provider))
+        elif op=='status':out.send(chat,str(X.status(uid,provider)))
         else:X.disconnect(uid,provider);out.send(chat,'Local connector removed. Provider revocation may need checking.')
         return True
     return False

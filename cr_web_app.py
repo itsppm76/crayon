@@ -78,19 +78,31 @@ def dispatch(uid, name, text):
             if looks_like_secret(text):
                 return [{'kind':'text','text':'That looks like a secret. It was not sent to the model or saved. Do not paste credentials here.'}]
             M.touch_user(uid, name)
-            if __import__('cr_natural').handle(uid,uid,text,out):return out.items
-            text=__import__('cr_natural').translate(text)
-            if __import__('cr_followups').handle(uid,chat_destination,text,out):return out.items
-            if __import__('cr_plugins').handle(uid,uid,text,out):return out.items
-            if __import__('cr_persona').handle(uid,uid,text,out):return out.items
-            if __import__('cr_voice').handle(uid,uid,text,out):return out.items
-            if __import__('cr_games').handle(uid,uid,text,out):return out.items
+            import cr_intent as I
+            intent=I.current.get() or I.classify(text)
+            if intent['route']=='clarify':return [{'kind':'text','text':intent['args']['question']}]
+            if intent['route']=='voice':
+                __import__('cr_voice').handle_intent(uid,uid,text,intent['args'],out)
+                return out.items
+            if intent['route']=='image':return [{'kind':'text','text':'I do not have a verified free image-generation provider connected. No image generated and no paid provider used. Image analysis and public screenshots are available.'}]
+            command=I.command(intent)
+            if command:text=command
+            if command or text.lstrip().startswith('/'):
+                if __import__('cr_natural').handle(uid,uid,text,out):return out.items
+                text=__import__('cr_natural').translate(text)
+            if (command or text.lstrip().startswith('/')) and __import__('cr_followups').handle(uid,chat_destination,text,out):return out.items
+            if (command or text.lstrip().startswith('/')) and __import__('cr_plugins').handle(uid,uid,text,out):return out.items
+            if (command or text.lstrip().startswith('/')) and __import__('cr_persona').handle(uid,uid,text,out):return out.items
+            if text.lstrip().startswith('/') and __import__('cr_voice').handle(uid,uid,text,out):return out.items
+            if (command or text.lstrip().startswith('/')) and __import__('cr_games').handle(uid,uid,text,out):return out.items
+            if intent['route'] in ('email','private_read','preview','mcp_connect','export'):
+                return [{'kind':'text','text':'This request needs its private result or exact review in the web app. No external action made.'}]
             simple = text.strip().lower()
             if simple in ('my tasks','task dashboard') or text.startswith('/tasks'):
                 import cr_dashboard
                 cr_dashboard.handle(uid, uid, text, out)
                 return out.items
-            if text.startswith('/work') or simple in ('my work queue','show my work queue') or text.lower().startswith(('background research:','work in background:')):
+            if text.startswith('/work') or intent['route']=='work':
                 import cr_work
                 cr_work.handle(uid,chat_destination,text,out)
                 return out.items
@@ -133,11 +145,16 @@ def dispatch(uid, name, text):
         cr_channel.channel.reset(marker)
 
 
-def submit(user, body):
+def submit(user, body, header=""):
     text, ident = body.get('message'), body.get('request_id')
-    if set(body)-{'reply_to'} not in ({'message','request_id'},{'message','request_id','conversation_id'}) or not isinstance(text,str) or not 1 <= len(text.strip()) <= 8000 or not isinstance(ident,str) or not auth.PATTERN.fullmatch(ident):
+    if set(body)-{'reply_to','intent_ticket','research_focus'} not in ({'message','request_id'},{'message','request_id','conversation_id'}) or not isinstance(text,str) or not 1 <= len(text.strip()) <= 8000 or not isinstance(ident,str) or not auth.PATTERN.fullmatch(ident):
         raise ValueError('Invalid message request.')
     uid = user['user_id']
+    intent=None
+    if body.get('intent_ticket'):
+        intent=__import__('cr_intent').recover(uid,header,text,body['intent_ticket'])
+    focus=body.get('research_focus','')
+    if focus not in ('','web','deep','academic','social','video'):raise ValueError('Invalid research focus.')
     conversation=body.get('conversation_id')
     if conversation:__import__('cr_conversations').require(uid,conversation)
     if looks_like_secret(text):
@@ -153,7 +170,7 @@ def submit(user, body):
         raise ValueError('Crayon is busy. Wait before sending another request.')
     try:
         row = db.q('INSERT INTO web_requests(id,user_id,encrypted) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING RETURNING id',
-            (ident,uid,encode({'input':text,'name':user['name'],'conversation_id':conversation,'reply_context':quote})), 'one')
+            (ident,uid,encode({'input':text,'name':user['name'],'conversation_id':conversation,'reply_context':quote,'intent':intent,'research_focus':focus})), 'one')
         if row:
             POOL.submit(_run,uid,ident)
         else:
@@ -186,7 +203,13 @@ def _run(uid, ident):
         progress_token=cr_progress.callback.set(report)
         cr_progress.emit('Request accepted','done')
         try:
-            items = dispatch(uid,data['name'],data['input'])
+            import cr_intent as I
+            intent_token=I.current.set(data.get('intent'))
+            focus=data.get('research_focus','')
+            routed=data['input']
+            if focus and (data.get('intent') or {}).get('route')=='chat':routed='Research focus ['+focus+']: '+routed
+            try:items = dispatch(uid,data['name'],routed)
+            finally:I.current.reset(intent_token)
             try:
                 import re
                 if looks_like_secret(data['input']) or re.search(r'(?i)\b(gmail|inbox|email|e-mail|mail|calendar|google|workspace|github|sheet|doc|booking|book|delete|wipe|forget|digest|proactive|watch)\b',data['input']) or data['input'].startswith(('/email','/google','/connect','/calendar','/delete','/forget')):

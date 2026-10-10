@@ -29,7 +29,7 @@ def show_draft(uid,chat,out,arg):
     db.kv_set('google_review_chat_'+str(uid),chat)
 
 
-def handle(uid,chat,text,msg,out):
+def handle(uid,chat,text,msg,out,semantic=None):
     if text.strip().lower()=='enable calendar booking':
         if msg and any(msg.get(k) for k in ('forward_origin','forward_from','via_bot')):
             out.send(chat,'Calendar permission needs a direct account-owner request.');return True
@@ -124,7 +124,7 @@ def handle(uid,chat,text,msg,out):
         return True
     confirm=t in ('send it','send','yes send it','send this email','send the email','cancel','cancel draft','cancel email')
     candidate=bool(re.search(r'\b(emails?|e-mails?|gmail|inbox|mails?|calendar|schedule|meetings)\b',t))
-    if not (confirm or candidate or state):return False
+    if not (confirm or candidate or state or semantic):return False
     if msg and any(msg.get(k) for k in ('forward_origin','forward_from','via_bot')):
         out.send(chat,'Google actions need a request directly from you, not forwarded content.');return True
     try:
@@ -187,7 +187,7 @@ def handle(uid,chat,text,msg,out):
             out.send(chat,(result or 'No inbox messages returned for the past7days.')+'\nPast7days, bounded excerpts only. Your mail never goes to Gemini.')
             return True
         intent=classify(text)
-        action=intent.get('action')
+        action='draft' if semantic and semantic['route']=='email' else intent.get('action')
         if action not in ('inbox','calendar','draft'):return False
         if action=='inbox':out.send(chat,'Checking your mail...');out.send(chat,G.inbox(uid,str(intent.get('query') or 'newer_than:1d')[:500],friendly=True));db.kv_set('google_mail_results_chat_'+str(uid),chat)
         elif action=='calendar':out.send(chat,'Checking your calendar for the next 7 days...');out.send(chat,G.calendar(uid))

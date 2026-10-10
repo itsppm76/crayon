@@ -14,6 +14,7 @@ with sync_playwright() as p:
    if '/web/' not in u:r.abort();return
    path=u.split('/web/')[1];body=json.loads(r.request.post_data or '{}')
    v={'id':1898030949,'name':'Fixture acceptance','expires_at':time.time()+3600} if path=='me' else {'messages':[],'has_more':False,'conversations':[]}
+   if path=='intent':v={'route':'chat','args':{},'ticket':'fixture-ticket'}
    if path=='connections':v={'google':'owner@example.com','workspace':'owner@example.com'}
    if path=='action-preview':
     ticket[0]+=1;v={'review_id':'r'+str(ticket[0]),'hash':'h'+str(ticket[0]),'kind':body['kind'],'text':'From: owner@example.com\nTo: recipient@example.com\nSubject: UX fixture\n\nExact body $50 <script>alert(1)</script>\n'+('long line '*30),'html':html,'review_fields':body['fields'],'expires_in':0.1 if state['expiry'] else 600}
