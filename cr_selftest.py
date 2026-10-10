@@ -10,8 +10,12 @@ def run(body):
         import cr_web_app as W,cr_voice as V,cr_llm as L,cr_progress as P
         from unittest.mock import patch
         uid=1000000009876007;token=P.recorded.set([])
+        real_q=db.q
+        def synthetic_session(sql,params=(),fetch='all'):
+            if sql.startswith('SELECT user_id FROM web_sessions') and params==(uid,):return {'user_id':uid}
+            return real_q(sql,params,fetch)
         try:
-            with patch.object(V,'enabled',return_value=True),patch.object(V,'synthesize',return_value={'filename':'fixture.wav','mime':'audio/wav','data':__import__('base64').b64decode('UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=')}),patch.object(L,'generate',return_value={'text':'Hello! Good to hear from you.'}):
+            with patch.object(db,'q',side_effect=synthetic_session),patch.object(V,'enabled',return_value=True),patch.object(V,'synthesize',return_value={'filename':'fixture.wav','mime':'audio/wav','data':__import__('base64').b64decode('UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=')}),patch.object(L,'generate',return_value={'text':'Hello! Good to hear from you.'}):
                 items=W.dispatch(uid,'Synthetic','Can you send me a voice note, greeting me?')
             h=W.history(uid)['messages'];answer=next(m for m in h if m['role']=='assistant')
             return {'ok':any(i['kind']=='artifact' for i in items) and bool(answer.get('media')) and 'Requested audio generated' not in answer['text'],'stored_audio_items':len(answer.get('media',[])),'work_events':len(answer.get('work_events',[])),'note':'Actual web dispatch and encrypted history with captured model/audio. No provider audio generation or playback-quality acceptance.'}
