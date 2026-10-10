@@ -38,3 +38,13 @@ def test_protocol_modern_discover_then_tools_list():
   assert U.session('https://example.com/mcp','tools/list')=={'tools':[]}
   assert [x['method'] for x in calls]==['server/discover','tools/list']
   assert calls[1]['params']['_meta']['io.modelcontextprotocol/protocolVersion']=='2026-07-28'
+
+def test_review_tool_available_in_web_and_no_ambient_disclosure():
+ import cr_channel as C,cr_tools as T
+ assert 'mcp_review_tool' in C.WEB_TOOLS
+ ctx={'uid':1,'chat_id':1,'channel_name':'web','meta':{'user_text':'Use server lookup for Delhi'}}
+ with patch.object(U,'prepare',return_value={'review_id':'r','text':'review'}) as prepare:
+  assert T.mcp_review_tool(ctx,'server','lookup','{"topic":"Delhi"}')['review_prepared']
+  assert ctx['meta']['mcp_reviews'][0]['review_id']=='r'
+  assert not T.mcp_review_tool(ctx,'server','lookup','{"topic":"private memory not in request"}')['ok']
+  assert prepare.call_count==1

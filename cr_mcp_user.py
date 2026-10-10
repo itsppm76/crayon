@@ -56,6 +56,7 @@ def add(uid,name,url,accept):
  c=connectors(uid)
  if len(c)>=5 and name not in c:raise ValueError('At most5connectors.')
  c[name]={'url':url,'tools':safe,'consent_at':int(time.time()),'notice':NOTICE};db.kv_set('mcp_connectors_'+str(uid),c)
+ db.audit(uid,'mcp_connector_consent',json.dumps({'name':name,'url':url,'notice':NOTICE}))
  return {'name':name,'tools':safe,'notice':NOTICE}
 def remove(uid,name):
  c=connectors(uid);c.pop(name,None);db.kv_set('mcp_connectors_'+str(uid),c);return {'removed':True}
@@ -85,6 +86,7 @@ def confirm(uid,ident,decision):
  p=G.decrypt(uid,row['value'])
  if p['until']<time.time() or connectors(uid).get(p['server'],{}).get('url')!=p['url']:raise ValueError('Review expired or connector changed.')
  import cr_progress
+ db.audit(uid,'mcp_call_review_confirmed',json.dumps({'server':p['server'],'tool':p['tool'],'destination':p['url']}))
  cr_progress.emit('Calling reviewed MCP tool')
  try:r=session(p['url'],'tools/call',{'name':p['tool'],'arguments':p['arguments']})
  except Exception:raise ValueError('MCP result unconfirmed. Check the server before another call. No retry.') from None
