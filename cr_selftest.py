@@ -6,6 +6,19 @@ import cr_telegram as tg
 
 
 def run(body):
+    if body.get('compose_router_fixture'):
+        import cr_google_chat as H
+        from unittest.mock import patch
+        uid=1000000009876002
+        try:
+            out=tg.CaptureOut()
+            with patch.object(H.G,'status',return_value={'email':'synthetic@example.com'}),patch.object(H.G,'sender_name',return_value='Synthetic Tester'):
+                handled=H.handle(uid,uid,'Write a mail to recipient@example.com saying that he needs to buy a .tech domain for Crayon',{},out)
+            rows=db.q('SELECT id,status FROM google_email_drafts WHERE user_id=%s',(uid,))
+            return {'ok':handled and len(rows)==1 and bool(out.sent and out.sent[-1]['markup']),'out':out.sent,'drafts':len(rows),'note':'Live model and internal encrypted draft DB. Sender/recipient synthetic; transport captured; no Gmail request/send.'}
+        finally:
+            db.q('DELETE FROM google_email_drafts WHERE user_id=%s',(uid,),fetch='none')
+            db.q('DELETE FROM kv WHERE key LIKE %s',('%'+str(uid)+'%',),fetch='none')
     if body.get('voice_setup'):
         import cr_voice
         return cr_voice.setup(body['voice_setup'])

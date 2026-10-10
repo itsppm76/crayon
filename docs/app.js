@@ -96,7 +96,7 @@
   }
   window.addEventListener('message',e=>{if(e.origin!==API||e.source!==popup||!verifier)return;if(e.data?.type==='crayon-login-error'){verifier='';clearTimeout(loginTimer);status(String(e.data.error||'Sign-in stopped. Try again.'));return;}if(e.data?.type!=='crayon-login')return;clearTimeout(loginTimer);finishLogin(verifier,loginDeadline);});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&token&&!busy&&!historyPaged)loadHistory(false,true).catch(e=>status(e.message));if(!document.hidden&&!token&&localStorage.getItem(SESSION_KEY)){restoreAttempts=0;restoreSession();}if(!document.hidden&&verifier){clearTimeout(loginTimer);finishLogin(verifier,loginDeadline);}});
-  function renderHistory(m){const b=bubble(m.role,m.text);if(m.media_missing){const n=document.createElement('div');n.className='media-missing';n.textContent='Original Telegram media was not retained by Crayon. Reupload it to view or analyze it.';b.append(n);}const t=document.createElement('div');t.className='message-time';t.textContent=new Date(m.time).toLocaleString();b.append(t);}
+  function renderHistory(m){const b=bubble(m.role,m.text);if(m.media_missing){const n=document.createElement('div');n.className='media-missing';n.textContent='Original Telegram media was not retained by Crayon. Reupload it to view or analyze it.';b.append(n);}const t=document.createElement('div');t.className='message-time';const d=new Date(m.time);if(!Number.isNaN(d.getTime())){t.textContent=d.toLocaleString();b.append(t);}}
   async function loadHistory(older,passive=false){
     if(!token){status('Log in to see your history.');return;}
     const session=token;const h=await call('history'+(older&&historyBefore?'?before='+encodeURIComponent(historyBefore):''));
