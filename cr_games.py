@@ -4,7 +4,9 @@ import cr_db as db
 QUIZZES=[('Which planet is known as the Red Planet?',['Venus','Mars','Jupiter','Mercury'],1),('What is 12 x 8?',['84','88','96','108'],2),('Which is a prime number?',['21','27','29','33'],2),('Water freezes at what temperature in Celsius?',['0','10','32','100'],0)]
 def handle(uid,chat,text,out):
     key='game:'+str(uid)+':'+str(chat)
-    state=db.kv_get(key) or {}
+    raw_candidate=text.strip().lower().rstrip('.!')
+    candidates={o.lower() for q,options,a in QUIZZES for o in options}
+    state=(db.kv_get(key) or {}) if raw_candidate.isdigit() or raw_candidate in candidates else {}
     if state.get('expires',0)>time.time() and not text.startswith('/'):
         raw=text.strip().lower().rstrip('.!')
         if raw.isdigit():text=('/answer ' if state.get('type')=='quiz' else '/guess ')+raw
