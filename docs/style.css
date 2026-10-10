@@ -97,3 +97,12 @@ body.sidebar-open main,body.sidebar-open .composer-wrap,body.sidebar-open footer
 #input{flex:1 1 160px;width:100%;min-width:0}
 
 .bubble .approval-card .review{color:var(--ink);background:var(--bg);white-space:pre-wrap}.approval-card{white-space:normal}
+
+/* One quiet composer boundary; text always owns a full-width lane. */
+#form{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:12px;border-radius:24px;box-shadow:0 2px 10px #29282404;background:var(--card)}
+.composer-input{width:100%;min-width:0;padding:2px 4px}.composer-input #input{display:block;width:100%;min-width:0;min-height:36px;max-height:180px;height:auto;flex:none;padding:4px 0;font-size:16px;line-height:1.5;box-sizing:border-box;overflow-y:auto}
+.composer-actions,.composer-tools,.composer-submit{display:flex;align-items:center;gap:4px;min-width:0}.composer-actions{justify-content:space-between}.composer-submit{flex:none}.composer-mode{min-width:0;max-width:180px;flex:1}
+#form .composer-icon{display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;border:0;border-radius:12px;background:transparent;color:var(--mut);cursor:pointer}#form .composer-icon:hover{background:var(--bg);color:var(--ink)}#form .composer-icon:disabled{opacity:.4;cursor:default}.composer-icon svg,#send svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#form #research-focus{max-width:180px;width:100%;height:44px;padding:0 26px 0 8px;border:0;border-radius:10px;font-family:inherit;font-size:13px;line-height:1.3;background:transparent;color:var(--ink);cursor:pointer}#form .composer-mode:focus-within{outline:2px solid var(--accent);outline-offset:1px;border-radius:10px}
+#form #send{width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--card)}#form #send:disabled{background:var(--line);color:var(--mut)}#form #mic[aria-pressed=true]{color:#b3261e;background:#b3261e10}#form #mic[aria-pressed=true] svg{fill:currentColor;stroke:none}
+@media(max-width:540px){#form{padding:10px;border-radius:22px;gap:4px}.composer-input #input{min-height:36px;font-size:16px}.composer-mode{max-width:156px}#form #research-focus{max-width:156px}body.sidebar-open #form{padding:8px}body.sidebar-open #attach{display:grid}body.sidebar-open .composer-actions{flex-wrap:wrap}}

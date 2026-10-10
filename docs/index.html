@@ -50,14 +50,22 @@
 </main>
 <footer><div id="attachment-stage" class="hide" aria-label="Staged attachment"></div>
   <form id="form" autocomplete="off">
-    <button id="mic" type="button" class="ghost" aria-label="Record voice">Mic</button><button id="attach" type="button" class="ghost" aria-label="Upload image or file">+</button><input id="file" type="file" class="hide"><select id="research-focus" aria-label="Research focus"><option value="">Agent</option><option value="web">Web research</option><option value="deep">Deep research</option><option value="academic">Academic</option><option value="social">Social</option><option value="video">Video</option></select><textarea id="input" rows="1" maxlength="8000" disabled placeholder="Ask Crayon, or give it a task..." aria-label="Ask Crayon, or give it a task..."></textarea>
-    <button id="send" type="submit" aria-label="Send">
-      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
+    <div class="composer-input"><textarea id="input" rows="1" maxlength="8000" disabled placeholder="Ask Crayon..." aria-label="Ask Crayon, or give it a task..."></textarea></div>
+    <div class="composer-actions">
+      <div class="composer-tools">
+        <button id="attach" type="button" class="composer-icon" aria-label="Upload image or file" title="Upload image or file"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+        <input id="file" type="file" class="hide">
+        <div class="composer-mode"><select id="research-focus" aria-label="Research focus"><option value="">Agent</option><option value="web">Web research</option><option value="deep">Deep research</option><option value="academic">Academic</option><option value="social">Social</option><option value="video">Video</option></select></div>
+      </div>
+      <div class="composer-submit">
+        <button id="mic" type="button" class="composer-icon" aria-label="Record voice" title="Record voice"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg></button>
+        <button id="send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+      </div>
+    </div>
   </form>
   <p class="note">Crayon can make mistakes. Review important facts and outgoing actions. <a href="https://crayon-v1.onrender.com/privacy" target="_blank" rel="noopener">Privacy</a></p>
 </footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous"></script><script src="https://unpkg.com/docx@8.5.0/build/index.umd.js" integrity="sha384-4xaIisuLEy2lo2HkB2C4rEf7v8jbTb2kuogX6TkuEt9feTWKBSFSOzsqNNbV+sKh" crossorigin="anonymous"></script><script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js" integrity="sha384-Cck14aA9cifjYolcnjebXRfWGkz5ltHMBiG4px/j8GS+xQcb7OhNQWZYyWjQ+UwQ" crossorigin="anonymous"></script><script src="./exports.js"></script><script src="./data-cards.js"></script>
-<script src="./ux.js"></script><script src="./app.js?v=20261010-approval-status1"></script>
+<script src="./ux.js"></script><script src="./app.js?v=20261010-composer1"></script>
 </body>
 </html>
