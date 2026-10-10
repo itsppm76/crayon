@@ -164,7 +164,7 @@ def _tavily(query, n=5):
     key = C.env("TAVILY_API_KEY", "")
     if not key:
         raise RuntimeError("no TAVILY_API_KEY")
-    news = bool(re.search(r"\b(news|latest|today|yesterday|breaking|score|scores|price|results?|live|this week)\b", query, re.I))
+    news = bool(re.search(r"\b(news|headlines|breaking)\b", query, re.I))
     body = {"query": query[:400], "max_results": n, "topic": "news" if news else "general", "search_depth": "basic"}
     r = _c.post("https://api.tavily.com/search", json=body, headers={"Authorization": "Bearer " + key}, timeout=15.0)
     if r.status_code != 200:

@@ -7,7 +7,7 @@ def requested(text):
  return bool(re.search(r'(?i)\b(?:web search|search the web|search for|look up|latest news|news today|weather|forecast|cheapest flight|flight prices?|airfares?|current price|price today)\b',text)) and not bool(re.search(r'(?i)\b(?:my inbox|my emails?|my calendar|send|remind|schedule|connect)\b',text))
 
 def lead_reply(text,results):
- leads='\n\n'.join(re.sub(r'(?i)(?:₹|Rs\.?|INR)\s*[0-9,]+','[advertised price not checked]',r.get('title','Source')[:150])+'\n'+r['url'] for r in results[:5] if r.get('url','').startswith('https://'))
+ leads='\n\n'.join(re.sub(r'(?i)(?:₹|Rs\.?|INR|\$|€|£)\s*[0-9,]+','[advertised price not checked]',r.get('title','Source')[:150])+'\n'+r['url'] for r in results[:5] if r.get('url','').startswith('https://'))
  return 'I searched, but could not verify a current answer from readable pages. Search leads, not confirmed current facts:\n\n'+leads+'\n\nTell me the place/date or exact item to narrow the check.'
 
 def answer(text):
@@ -23,7 +23,7 @@ def answer(text):
  for row in results[:3]:
   try:pages.append(W.fetch(row['url']))
   except Exception:pass
- leads='\n\n'.join((re.sub(r'(?i)(?:₹|Rs\.?|INR)\s*[0-9,]+', '[advertised fare not checked]',r.get('title','Source')[:150])+'\n'+r['url']) for r in results[:5] if r.get('url','').startswith('https://'))
+ leads='\n\n'.join((re.sub(r'(?i)(?:₹|Rs\.?|INR|\$|€|£)\s*[0-9,]+', '[advertised fare not checked]',r.get('title','Source')[:150])+'\n'+r['url']) for r in results[:5] if r.get('url','').startswith('https://'))
  if re.search(r'(?i)\bflight|airfare|fare\b',text):
   return 'I searched the web, but search listings do not verify available airline fares or the cheapest departure day.\n\nSearch leads, not checked fare quotes:\n'+leads+'\n\nWhat departure window should I compare: the next 7 days or next 30 days? Airline inventory and final total need checking before calling any flight cheapest.\nSearch checked: '+when
  if pages:
