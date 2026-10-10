@@ -88,11 +88,13 @@ def confirm(uid,header,body):
             elif kind=='form':__import__('cr_booking').cancel(uid,p['id'])
             elif kind=='email':G.cancel_draft(uid,p['id'],channel='web')
             elif kind=='calendar':__import__('cr_calendar_draft').cancel(uid,p['id'],channel='web')
-            text='Cancelled. No external action made.'
+            text='Draft discarded. No email sent.' if kind=='email' else 'Cancelled. No external action made.'
         elif kind=='form':
             r=__import__('cr_booking').submit(uid,p['id'],p['hash'])
             text='Form result: '+json.dumps({k:r[k] for k in ('ok','verified','url','note','error') if k in r},ensure_ascii=False)+'\nA controlled form receipt is not proof of a real reservation. If unconfirmed, check the destination before any retry.'
-        elif kind=='workspace_create':text=json.dumps(__import__('cr_workspace_create').apply(uid,p),ensure_ascii=False)
+        elif kind=='workspace_create':
+            result=__import__('cr_workspace_create').apply(uid,p)
+            text=(p['kind'].capitalize()+' created: '+p['title']+'\n'+str(result.get('url') or result.get('id') or '')+'\n'+result['note']) if result.get('created') else result['note']
         elif kind=='email':text=G.send_draft(uid,p['id'],p['hash'],channel='web')
         elif kind=='calendar':text=__import__('cr_calendar_draft').create(uid,p['id'],p['hash'],channel='web')
         elif kind=='forget':
