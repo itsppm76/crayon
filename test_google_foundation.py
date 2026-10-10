@@ -216,7 +216,7 @@ def test_send_mime_all_reviewed_recipients(monkeypatch):
         def __exit__(self,*a):pass
         def post(self,*a,**k):seen.append(message_from_bytes(base64.urlsafe_b64decode(k['json']['raw'])));return Reply()
     monkeypatch.setattr(G.httpx,'Client',Client)
-    assert 'Sent' in G.send_draft(11,'id',digest[:12])
+    assert 'Email sent to' in G.send_draft(11,'id',digest[:12])
     assert seen[0]['To']=='a@example.com, b@example.com' and seen[0]['Cc']=='c@example.com' and seen[0]['Bcc']=='d@example.com'
 
 
