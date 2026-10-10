@@ -30,7 +30,7 @@ import cr_web_app as W
 def test_progress_is_context_bound_and_no_arguments(monkeypatch):
     seen=[];token=P.callback.set(seen.append)
     try:
-        monkeypatch.setattr(T,'now_local',lambda uid:__import__('datetime').datetime(2026,10,10))
+        monkeypatch.setattr(Tools,'now_local',lambda uid:__import__('datetime').datetime(2026,10,10))
         Tools.run('get_time',{}, {'uid':12,'meta':{}})
         assert seen==[{'label':'Running a requested tool','state':'running'}]
     finally:P.callback.reset(token)
