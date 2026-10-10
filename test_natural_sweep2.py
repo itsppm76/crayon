@@ -36,9 +36,32 @@ def test_web_draft_continuation_keeps_request_and_recipient():
 
 def test_private_read_uses_returned_email_selection_no_id_homework():
  import cr_web_actions as X
- with patch.object(X.db,'kv_get',return_value=['a','b']):
+ with patch.object(X.db,'kv_get',return_value={'ids':['a','b'],'until':9999999999}):
   assert X.natural_read_fields(1,'email_read','read the second email')=={'id':'b'}
   assert X.natural_read_fields(1,'email_read','read email 1')=={'id':'a'}
 def test_private_file_link_extracts_id_without_model():
  import cr_web_actions as X
  assert X.natural_read_fields(1,'doc','read https://docs.google.com/document/d/abcdefghijklmnop/edit')=={'id':'abcdefghijklmnop'}
+
+def test_private_read_selection_expired_or_other_session():
+ import cr_web_actions as X,pytest
+ with patch.object(X.db,'kv_get',return_value={'ids':['a'],'until':0}):
+  with pytest.raises(ValueError):X.natural_read_fields(1,'email_read','read first email','s')
+ with patch.object(X.db,'kv_get',return_value={}) as kv:
+  with pytest.raises(ValueError):X.natural_read_fields(1,'email_read','read first email','other')
+  assert kv.call_args.args[0]=='web_mail_results_1_other'
+
+def test_plain_task_step_control_without_numbers():
+ import cr_dashboard as D
+ task={'id':7,'title':'Presentation','steps':[{'n':1,'title':'Draft outline','status':'done'},{'n':2,'title':'Practice talk','status':'todo'}]}
+ with patch.object(D.T,'list_tasks',return_value={'tasks':[task]}):
+  assert D.natural_control(1,'mark next step in Presentation done')=='/tasks done 7 2 | You reported this step done.'
+  assert D.natural_control(1,'mark Practice step in Presentation blocked, waiting for slides')=='/tasks blocked 7 2 | waiting for slides'
+  assert D.natural_control(1,'show my task Presentation')=='/tasks show 7'
+
+def test_preview_calendar_and_sheet_return_clear_missing_question():
+ import cr_web_actions as X,cr_natural as N
+ with patch.object(X,'init'),patch.object(N,'calendar_fields',side_effect=N.Clarification('What day?')):
+  assert X.preview(1,'Bearer s',{'kind':'calendar','fields':{'request':'create a meeting'}})=={'kind':'clarification','action':'calendar','text':'What day?'}
+ with patch.object(X,'init'):
+  assert X.preview(1,'Bearer s',{'kind':'sheet','fields':{'request':'update my budget sheet'}})['action']=='sheet'

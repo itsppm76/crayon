@@ -47,13 +47,19 @@ def preview(uid,header,body):
         text=d['text'].split('\n\nReply with edit/change/rewrite instructions')[0]+'\n\nWeb review: Send exactly this once, or Cancel. No email attachments.'
     elif kind=='calendar':
         import cr_calendar_draft as K
-        if set(f)=={'request'}:f=__import__('cr_natural').calendar_fields(f['request'])
+        if set(f)=={'request'}:
+            import cr_natural as N
+            try:f=N.calendar_fields(f['request'])
+            except N.Clarification as e:return {'kind':'clarification','action':'calendar','text':str(e)}
         if set(f)!={'title','start','end','timezone','guests','reminder_minutes'}:raise ValueError('Exact calendar fields required.')
         d=K.preview(uid,f['title'],f['start'],f['end'],f['timezone'],guests=f['guests'],reminder_minutes=f['reminder_minutes'],channel='web')
         payload={'id':d['id'],'hash':d['hash']};text=d['text']
     elif kind=='sheet':
         import cr_workspace as S,cr_connections as X
-        if set(f)=={'request'}:f=__import__('cr_natural').sheet_fields(f['request'])
+        if set(f)=={'request'}:
+            import cr_natural as N
+            try:f=N.sheet_fields(f['request'])
+            except N.Clarification as e:return {'kind':'clarification','action':'sheet','text':str(e)}
         if set(f)!={'sid','area','values'}:raise ValueError('Exact sheet fields required.')
         d=S.sheet_preview(uid,f['sid'],f['area'],f['values']);payload=d
         text='Sheet update preview only.\nAccount: '+str((X.status(uid,'workspace') or {}).get('identity'))+'\nSpreadsheet: '+f['sid']+'\nRange: '+f['area']+'\nBefore: '+json.dumps(d['payload']['before'])+'\nWrite as RAW values: '+json.dumps(f['values'])+'\nNo formulas. Compare-before-write and readback. Expires in 10 minutes.'
@@ -128,19 +134,22 @@ def confirm(uid,header,body):
         db.q("UPDATE web_action_reviews SET status='stopped' WHERE id=%s AND user_id=%s",(body['review_id'],uid),'none')
         raise G.GoogleError('Action stopped or uncertain. Check the destination before preparing another request. No automatic retry.') from None
 
-def natural_read_fields(uid,kind,text):
+def natural_read_fields(uid,kind,text,session_key=""):
+    if not isinstance(text,str) or not 1<=len(text)<=8000:raise ValueError("Ask what you want to read.")
     import re
     if kind=='inbox':
         parsed=__import__('cr_google_chat').classify(text)
         return {'query':parsed.get('query') or 'newer_than:1d'}
     if kind=='email_read':
         m=re.search(r'(?i)\b(first|second|third|fourth|fifth|[1-5])\b',text)
-        ids=db.kv_get('web_mail_results_'+str(uid),[]) or []
+        import time
+        saved=db.kv_get('web_mail_results_'+str(uid)+'_'+session_key,{}) or {}
+        ids=saved.get('ids',[]) if saved.get('until',0)>time.time() else []
         n={'first':0,'second':1,'third':2,'fourth':3,'fifth':4}.get(m[1].lower(),int(m[1])-1 if m and m[1].isdigit() else -1) if m else -1
         if not 0<=n<len(ids):raise ValueError('Which email? Ask me to show your inbox first, then say read the first email.')
         return {'id':ids[n]}
     if kind in ('doc','sheet'):
-        m=re.search(r'https://docs\.google\.com/(?:document|spreadsheets)/d/([A-Za-z0-9_-]{15,150})',text)
+        m=re.search(r'https://docs\.google\.com/'+('document' if kind=='doc' else 'spreadsheets')+r'/d/([A-Za-z0-9_-]{15,150})',text)
         if not m:raise ValueError('Which file? Send its link once. Name discovery needs separate Drive permission.')
         return {'id':m[1],**({'range':'A1:J20'} if kind=='sheet' else {})}
     if kind=='github':
@@ -150,12 +159,14 @@ def natural_read_fields(uid,kind,text):
     if kind=='calendar':return {}
     raise ValueError('Private read type unavailable.')
 
-def read(uid,body):
+def read(uid,body,header=""):
+    import time
+    session_key=A.digest(header[7:]) if header else ""
     import re
     if set(body)!={'kind','fields'} or not isinstance(body['fields'],dict):raise ValueError('Invalid private read.')
     kind,f=body['kind'],body['fields']
-    if set(f)=={'request'}:f=natural_read_fields(uid,kind,f['request'])
-    if kind=='inbox' and set(f)=={'query'} and isinstance(f['query'],str):text=G.inbox(uid,f['query']);db.kv_set('web_mail_results_'+str(uid),re.findall(r'ID: ([A-Za-z0-9_-]+)',text))
+    if set(f)=={'request'}:f=natural_read_fields(uid,kind,f['request'],session_key)
+    if kind=='inbox' and set(f)=={'query'} and isinstance(f['query'],str):text=G.inbox(uid,f['query']);db.kv_set('web_mail_results_'+str(uid)+'_'+session_key,{'ids':re.findall(r'ID: ([A-Za-z0-9_-]+)',text),'until':time.time()+600})
     elif kind=='email_read' and set(f)=={'id'} and isinstance(f['id'],str):text=G.read_message(uid,f['id'])
     elif kind=='calendar' and not f:
         text=G.calendar(uid)

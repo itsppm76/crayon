@@ -198,7 +198,7 @@ def handle(h, method, raw=b''):
             if p.path=='/web/compose-preview':result=X.compose_preview(user['user_id'],h.headers.get('Authorization',''),body)
             elif p.path=='/web/action-preview':result=X.preview(user['user_id'],h.headers.get('Authorization',''),body)
             elif p.path=='/web/action-confirm':result=X.confirm(user['user_id'],h.headers.get('Authorization',''),body)
-            elif p.path=='/web/private-read':result=X.read(user['user_id'],body)
+            elif p.path=='/web/private-read':result=X.read(user['user_id'],body,h.headers.get('Authorization',''))
             else:result=X.connect(user['user_id'],body)
             reply(h,200,result,cors=True)
         elif method=='POST' and p.path=='/web/upload':

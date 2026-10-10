@@ -1,5 +1,6 @@
 """Plain-language front door for deterministic settings and safe internal routes."""
 import re,json
+class Clarification(ValueError):pass
 
 def translate(text):
     t=text.strip();low=t.lower().rstrip('.!?')
@@ -29,6 +30,7 @@ def translate(text):
 def handle(uid,chat,text,out):
     import cr_channel
     if cr_channel.channel.get()!='web':return False
+    if re.match(r'(?i)(?:(?:show|open)(?: my)? task |mark .* (?:step|task step) (?:in|for|of) )',text.strip()):return __import__('cr_dashboard').handle(uid,chat,text,out)
     command=translate(text)
     if re.fullmatch(r'(?i)(pause|resume|cancel|show|export)(?: my)? (?:work|job|research|brief)(?: on| about| called)? .+',text.strip()):return __import__('cr_work').handle(uid,chat,text,out)
     if command==text:return False
@@ -57,7 +59,7 @@ def calendar_fields(text):
     from datetime import datetime
     import cr_llm as L,cr_memory as M
     parsed=L.ask_json(text,system='Parse a calendar creation request. Current local time '+datetime.now().astimezone().isoformat()+'. Return {title,start,end,timezone,guests,reminder_minutes} with ISO times including offset and IANA timezone. No send/create. Only exact emails from user text may be guests. If start date/time, timezone or invitation intent is unclear return {question:missing question}. Solo focus/study blocks have no guests. Do not infer contact email or a meeting with someone means a silent hold. Default duration60minutes only for a clear solo block. For a coordination request end time can default30minutes after exact start. Missing invite address asks. Reminder default null.',default={}) or {}
-    if parsed.get('question'):raise ValueError(str(parsed['question'])[:250])
+    if parsed.get('question'):raise Clarification(str(parsed['question'])[:250])
     expected={'title','start','end','timezone','guests','reminder_minutes'}
     if set(parsed)!=expected:raise ValueError('What day, time and timezone should I use, and should anyone be invited?')
     emails=re.findall(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}',text)
@@ -67,8 +69,8 @@ def calendar_fields(text):
 def sheet_fields(text):
     import cr_llm as L
     link=re.search(r'https://docs\.google\.com/spreadsheets/d/([A-Za-z0-9_-]{15,150})',text)
-    if not link:raise ValueError('Which Sheet should I update? Send its link once. File-name discovery needs Drive access, which is not connected by the current Workspace scope.')
+    if not link:raise Clarification('Which Sheet should I update? Send its link once. File-name discovery needs Drive access, which is not connected by the current Workspace scope.')
     parsed=L.ask_json(text,system='Extract only the requested Sheet cell changes from this text. Return {area:"Sheet1!A1:B2",values:[["text",1]]}. Up to20rows/10columns. RAW only, no formulas. Do not read any Sheet or infer existing values, expenses, cells or ranges. If requested cells or values are missing return {question:missing question}. No actions.',default={}) or {}
-    if parsed.get('question'):raise ValueError(str(parsed['question'])[:250])
+    if parsed.get('question'):raise Clarification(str(parsed['question'])[:250])
     if set(parsed)!={'area','values'}:raise ValueError('What cells and values should change?')
     return {'sid':link[1],'area':parsed['area'],'values':parsed['values']}

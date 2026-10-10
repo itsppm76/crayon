@@ -23,7 +23,28 @@ def render(uid):
     lines+=['','Tell me a goal to plan or work on. Ask to export your tasks or research a topic in the background.']
     return '\n'.join(lines)
 
+def natural_control(uid,text):
+    m=re.fullmatch(r'(?i)(?:show|open)(?: my)? task (.+)',text.strip())
+    status=re.fullmatch(r'(?i)mark (?:the )?(.*?) (?:step|task step) (?:in|for|of) (.+?) (?:as )?(done|doing|blocked|todo)(?:[,:] (.+))?',text.strip())
+    if not m and not status:return None
+    tasks=T.list_tasks({'uid':uid})['tasks']
+    name=m[1] if m else status[2]
+    choices=[t for t in tasks if name.lower() in t['title'].lower()]
+    if len(choices)!=1:raise ValueError('Which task? '+('; '.join(t['title'] for t in choices[:6]) or 'No matching task found. Ask to show your tasks.'))
+    task=choices[0]
+    if m:return '/tasks show '+str(task['id'])
+    steps=task['steps'];needle=status[1].lower()
+    matches=[s for s in steps if needle in s['title'].lower()]
+    if needle=='next':matches=[s for s in steps if s['status'] in ('todo','doing')][:1]
+    if len(matches)!=1:raise ValueError('Which step? '+('; '.join(s['title'] for s in steps[:8])))
+    note=status[4] or ('You reported this step '+status[3].lower()+'.')
+    return '/tasks '+status[3].lower()+' '+str(task['id'])+' '+str(matches[0]['n'])+' | '+note
+
 def handle(uid,chat,text,out):
+    try:
+        text=natural_control(uid,text) or text
+    except ValueError as e:
+        out.send(chat,str(e));return True
     if text.strip().lower() in ('my tasks','task dashboard','what should i work on next?','what should i work on next','list my pending tasks'):text='/tasks'
     if not (text=='/tasks' or text.startswith('/tasks ')):return False
     try:
@@ -32,7 +53,7 @@ def handle(uid,chat,text,out):
         elif parts[1]=='add':
             T.mem.touch_user(uid)
             fields=[x.strip() for x in text[len('/tasks add '):].split(' | ')]
-            if not 2<=len(fields)<=9 or any(not x for x in fields):raise ValueError('Use /tasks add Title | step1 | step2 (up to8 steps).')
+            if not 2<=len(fields)<=9 or any(not x for x in fields):raise ValueError('Tell me the task title and the steps you want to track.')
             r=T.create_task({'uid':uid,'chat_id':chat},fields[0],fields[1:])
             if not r['verified']:raise ValueError(r.get('error','Task not confirmed'))
             out.send(chat,'Task saved and checked.\n\n'+render(uid))
@@ -55,12 +76,12 @@ def handle(uid,chat,text,out):
             for s in t['steps']:lines+=['',f"{s['n']}. {s['title']} [{s['status']}]",s['result']]
             out.send(chat,'\n'.join(lines))
         elif parts[1] in ('done','doing','blocked','todo'):
-            if len(parts)<4 or ' | ' not in parts[3]:raise ValueError('Use /tasks done/doing/blocked/todo ID STEP | your status note. Only mark done when finished.')
+            if len(parts)<4 or ' | ' not in parts[3]:raise ValueError('Name the task and step, and tell me its status. Only mark done when finished.')
             step,note=parts[3].split(' | ',1)
             if not note.strip():raise ValueError('Add a completion note.')
             r=T.update_step({'uid':uid},int(parts[2]),int(step),parts[1],note[:600])
             if not r['verified']:raise ValueError(r.get('error','Update unverified'))
             out.send(chat,'Your status note was saved. This is your reported result, not independently checked.\n\n'+render(uid))
-        else:raise ValueError('Use /tasks, add Title | steps, export, show ID, or done ID STEP | result.')
+        else:raise ValueError('Ask to show or export your tasks, or name a task and step to update.')
     except Exception as e:out.send(chat,'Task request not completed: '+str(e)[:200])
     return True
