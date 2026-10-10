@@ -68,15 +68,26 @@ def compose_preview(uid,header,body):
     import re,cr_google_chat as H
     from cr_safety import looks_like_secret
     if set(body)!={'message'} or not isinstance(body['message'],str) or not 1<=len(body['message'])<=8000 or looks_like_secret(body['message']):raise ValueError('Invalid compose request.')
-    text=body['message'];parsed=H.classify(text)
+    key='web_compose_pending_'+str(uid)+'_'+A.digest(header[7:])
+    pending=db.kv_get(key,None)
+    saved=G.decrypt(uid,pending) if pending else {}
+    if body['message'].strip().lower() in ('cancel','never mind','stop'):
+        db.kv_set(key,None);return {'kind':'clarification','text':'Draft preparation cancelled. No email sent.'}
+    import time
+    text=(saved['request']+'\nAdditional user detail: '+body['message']) if saved.get('until',0)>time.time() else body['message']
+    db.kv_set(key,G.encrypt(uid,{'request':text,'until':time.time()+600}))
+    parsed=H.classify(text)
     addresses=re.findall(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+",text)
     fields={k:parsed.get(k,[]) for k in ('to','cc','bcc')}
     for k in fields:
         if isinstance(fields[k],str):fields[k]=[fields[k]]
         if not isinstance(fields[k],list) or any(x not in addresses for x in fields[k]):raise ValueError('Give exact To/CC/BCC addresses. No recipient guessed.')
+    if not fields['to']:
+        return {'kind':'clarification','text':"Who should receive it? Give their email address. I kept what you want the email to say."}
     if set(addresses)!=set(fields['to']+fields['cc']+fields['bcc']):raise ValueError('Give exact To/CC/BCC roles for every address.')
     fields.update(subject=parsed.get('subject',''),body=parsed.get('body',''))
-    if not fields['subject'] or not fields['body']:raise ValueError('Please give recipient and email content. No draft or send confirmed.')
+    if not fields['subject'] or not fields['body']:return {'kind':'clarification','text':'What should the email say? I kept the recipients.'}
+    db.kv_set(key,None)
     return preview(uid,header,{'kind':'email','fields':fields})
 
 def confirm(uid,header,body):
@@ -117,10 +128,34 @@ def confirm(uid,header,body):
         db.q("UPDATE web_action_reviews SET status='stopped' WHERE id=%s AND user_id=%s",(body['review_id'],uid),'none')
         raise G.GoogleError('Action stopped or uncertain. Check the destination before preparing another request. No automatic retry.') from None
 
+def natural_read_fields(uid,kind,text):
+    import re
+    if kind=='inbox':
+        parsed=__import__('cr_google_chat').classify(text)
+        return {'query':parsed.get('query') or 'newer_than:1d'}
+    if kind=='email_read':
+        m=re.search(r'(?i)\b(first|second|third|fourth|fifth|[1-5])\b',text)
+        ids=db.kv_get('web_mail_results_'+str(uid),[]) or []
+        n={'first':0,'second':1,'third':2,'fourth':3,'fifth':4}.get(m[1].lower(),int(m[1])-1 if m and m[1].isdigit() else -1) if m else -1
+        if not 0<=n<len(ids):raise ValueError('Which email? Ask me to show your inbox first, then say read the first email.')
+        return {'id':ids[n]}
+    if kind in ('doc','sheet'):
+        m=re.search(r'https://docs\.google\.com/(?:document|spreadsheets)/d/([A-Za-z0-9_-]{15,150})',text)
+        if not m:raise ValueError('Which file? Send its link once. Name discovery needs separate Drive permission.')
+        return {'id':m[1],**({'range':'A1:J20'} if kind=='sheet' else {})}
+    if kind=='github':
+        m=re.search(r'(?:https://github.com/)?([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)',text)
+        if not m:raise ValueError('Which public GitHub repository? Give its link or owner/name.')
+        return {'repo':m[1]}
+    if kind=='calendar':return {}
+    raise ValueError('Private read type unavailable.')
+
 def read(uid,body):
+    import re
     if set(body)!={'kind','fields'} or not isinstance(body['fields'],dict):raise ValueError('Invalid private read.')
     kind,f=body['kind'],body['fields']
-    if kind=='inbox' and set(f)=={'query'} and isinstance(f['query'],str):text=G.inbox(uid,f['query'])
+    if set(f)=={'request'}:f=natural_read_fields(uid,kind,f['request'])
+    if kind=='inbox' and set(f)=={'query'} and isinstance(f['query'],str):text=G.inbox(uid,f['query']);db.kv_set('web_mail_results_'+str(uid),re.findall(r'ID: ([A-Za-z0-9_-]+)',text))
     elif kind=='email_read' and set(f)=={'id'} and isinstance(f['id'],str):text=G.read_message(uid,f['id'])
     elif kind=='calendar' and not f:
         text=G.calendar(uid)

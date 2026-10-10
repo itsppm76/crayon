@@ -179,6 +179,15 @@ def handle(uid,chat,text,out):
     if text.strip().lower() in ('my work queue','show my work queue'):text='/work list'
     match=re.fullmatch(r'(?i)(?:work in background|background research): (.+)',text.strip())
     if match:text='/work brief '+match[1]
+    selection=re.fullmatch(r'(?i)(pause|resume|cancel|show|export)(?: my)? (?:work|job|research|brief)(?: on| about| called)? (.+)',text.strip())
+    if selection and not text.startswith('/'):
+        op,target=selection[1].lower(),selection[2].strip()
+        rows=db.q('SELECT * FROM work_jobs WHERE user_id=%s ORDER BY created_at DESC LIMIT 30',(uid,))
+        hits=[r for r in rows if target.lower() in r['title'].lower() or any(target.lower() in str(s.get('input','')).lower() for s in r.get('steps',[]))]
+        if target.lower() in ('latest','last','most recent') and rows:hits=rows[:1]
+        if len(hits)!=1:
+            out.send(chat,'Which work do you mean? '+('; '.join(r['title'] for r in (hits or rows)[:5]) or 'No matching work in your account.'));return True
+        text='/work '+op+' '+str(hits[0]['id'])
     if not (text=='/work' or text.startswith('/work ')):return False
     bits=text.split(None,2);op=bits[1] if len(bits)>1 else 'list'
     try:

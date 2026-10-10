@@ -30,6 +30,7 @@ def handle(uid,chat,text,out):
     import cr_channel
     if cr_channel.channel.get()!='web':return False
     command=translate(text)
+    if re.fullmatch(r'(?i)(pause|resume|cancel|show|export)(?: my)? (?:work|job|research|brief)(?: on| about| called)? .+',text.strip()):return __import__('cr_work').handle(uid,chat,text,out)
     if command==text:return False
     if command.startswith(('/voice','/speak','/persona','/nickname','/play','/game_stop')):return False
     if chat!=uid:out.send(chat,'This account setting needs your private chat.');return True
