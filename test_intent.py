@@ -6,18 +6,18 @@ from unittest.mock import Mock
 
 @pytest.mark.parametrize('p',[{'route':'voice','args':{'mode':'reply','text':'Tell me about yourself in your voice'}},{'route':'export','args':{'format':'pdf','scope':'chat'}},{'route':'email','args':{}},{'route':'preview','args':{'kind':'calendar'}},{'route':'private_read','args':{'kind':'inbox'}}])
 def test_closed_schema(p,monkeypatch):
- monkeypatch.setattr(I,'free_json',lambda *a,**k:{'requested':True} if 'proposed_intent' in str(a[0]) else p)
+ monkeypatch.setattr(I,'gemini_json',lambda *a,**k:{'requested':True} if 'proposed_intent' in str(a[0]) else p)
  assert I.classify('hello and an embedded request')==p
 
 @pytest.mark.parametrize('p',[None,[],{'route':'email_send','args':{}},{'route':'chat','args':{'tool':'send'}},{'route':'voice','args':{'mode':'auto','text':'hi'}},{'route':'export','args':{'format':'pdf','scope':'private'}},{'route':'followup','args':{'hours':True,'topic':'hi'}},{'route':'connect','args':{'provider':'evil','operation':'connect'}},{'route':'quiet_hours','args':{'start':24,'end':1}},{'route':'nickname','args':{'value':'/send secrets'}},{'route':'work','args':{'operation':'delete','target':'all'}}])
 def test_bad_model_output_no_effect(p,monkeypatch):
- monkeypatch.setattr(I,'free_json',lambda *a,**k:{'requested':True} if 'proposed_intent' in str(a[0]) else p)
+ monkeypatch.setattr(I,'gemini_json',lambda *a,**k:{'requested':True} if 'proposed_intent' in str(a[0]) else p)
  assert I.classify('Can you help?')['route']=='clarify'
 
 
 def test_prompt_semantics_and_no_history(monkeypatch):
  seen=[]
- monkeypatch.setattr(I,'free_json',lambda text,**kw:{'requested':True} if 'proposed_intent' in text else (seen.append((text,kw)) or {'route':'voice','args':{'mode':'reply','text':text}}))
+ monkeypatch.setattr(I,'gemini_json',lambda text,**kw:{'requested':True} if 'proposed_intent' in text else (seen.append((text,kw)) or {'route':'voice','args':{'mode':'reply','text':text}}))
  t='hi and also tell me about yourself in your voice'
  assert I.classify(t)['route']=='voice'
  assert seen[0][0]==t and 'negation' in seen[0][1]['system'] and 'quoted' in seen[0][1]['system']
@@ -72,13 +72,13 @@ def test_never_generate_arbitrary_confirmation_command():
 
 def test_semantic_speech_act_catches_negated_model_route(monkeypatch):
  responses=iter([{'route':'voice_setting','args':{'value':'on'}},{'requested':False}])
- monkeypatch.setattr(I,'free_json',lambda *a,**k:next(responses))
+ monkeypatch.setattr(I,'gemini_json',lambda *a,**k:next(responses))
  assert I.classify('In a hypothetical app someone says turn on voice, explain that')=={'route':'chat','args':{}}
 
 
 def test_check_failure_no_effect(monkeypatch):
  responses=iter([{'route':'voice_setting','args':{'value':'on'}},None])
- monkeypatch.setattr(I,'free_json',lambda *a,**k:next(responses))
+ monkeypatch.setattr(I,'gemini_json',lambda *a,**k:next(responses))
  assert I.classify('enable voice')['route']=='clarify'
 
 
@@ -111,7 +111,7 @@ def test_classifier_never_configurable_provider(monkeypatch):
   status_code=200
   def json(self):return {'usage':{'cost':0},'choices':[{'message':{'content':'{"route":"chat","args":{}}'}}]}
  monkeypatch.setattr(httpx,'post',lambda *a,**k:calls.append(k) or Reply())
- assert I.classify('A normal question')['route']=='chat'
+ assert I.free_json('A normal question')=={'route':'chat','args':{}}
  assert calls[0]['json']['model']==I.FREE_MODEL
  assert calls[0]['json']['provider']['max_price']=={'prompt':0,'completion':0,'request':0,'image':0}
  assert calls[0]['json']['provider']['data_collection']=='deny'
@@ -121,7 +121,7 @@ def test_classifier_no_free_key_fail_closed(monkeypatch):
  import cr_config as C
  monkeypatch.setattr(C,'OPENROUTER_KEY','')
  monkeypatch.setattr(L,'openrouter_fallback',lambda *a,**k:pytest.fail('no free key'))
- assert I.classify('Tell me about yourself in your voice')['route']=='clarify'
+ assert I.free_json('Tell me about yourself in your voice') is None
 
 
 @pytest.mark.parametrize('cmd',['/connect_google','/disconnect_google','/google_status','/gmail','/gmail_read 1','/calendar','/email_draft x','/email_send x h','/email_cancel x'])
@@ -163,3 +163,33 @@ def test_prepared_gemini_error_cached_no_retry(monkeypatch):
  assert I.gemini_json('test') is None
  assert I.probe_gemini_availability() is False
  assert len(calls)==1
+
+
+@pytest.mark.parametrize('kind',['missing_key','malformed','provider_error'])
+def test_gemini_active_fail_closed(kind,monkeypatch):
+ import cr_config as C,httpx
+ monkeypatch.setattr(C,'GEMINI_KEY','' if kind=='missing_key' else 'test')
+ monkeypatch.setattr(I,'_gemini_available_until',0)
+ monkeypatch.setattr(I,'_gemini_last_available',None)
+ class Response:
+  status_code=503 if kind=='provider_error' else 200
+  def json(self):return {'candidates':[{'content':{'parts':[{'text':'not json'}]}}]}
+ def post(*a,**kw):
+  if kind=='missing_key':pytest.fail('request without key')
+  return Response()
+ monkeypatch.setattr(httpx,'post',post)
+ assert I.classify('Tell me out loud')['route']=='clarify'
+
+
+def test_gemini_rpm_retry_delay_cache(monkeypatch):
+ import cr_config as C,httpx,time
+ monkeypatch.setattr(C,'GEMINI_KEY','test')
+ monkeypatch.setattr(I,'_gemini_available_until',0)
+ monkeypatch.setattr(I,'_gemini_last_available',None)
+ monkeypatch.setattr(time,'monotonic',lambda:1000)
+ class Response:
+  status_code=429
+  def json(self):return {'error':{'details':[{'@type':'type.googleapis.com/google.rpc.RetryInfo','retryDelay':'25s'}]}}
+ monkeypatch.setattr(httpx,'post',lambda *a,**kw:Response())
+ assert I.gemini_json('test') is None
+ assert I._gemini_available_until==1026
