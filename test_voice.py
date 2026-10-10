@@ -25,19 +25,8 @@ def test_paid_plan_hard_stop(monkeypatch):
     monkeypatch.setattr(V.httpx,'Client',Client)
     with pytest.raises(ValueError,match='Free-only'):V.synthesize(1,'hello')
 
-def test_auto_reply_fresh_scope_and_private_exclusion(monkeypatch):
-    sent=[]
-    class Out:
-        def send(self,*args):sent.append(args)
-        def artifact(self,*args):sent.append(args)
-    state={'voice_optin_1':True}
-    monkeypatch.setattr(V.db,'kv_get',lambda k,d=None:state.get(k,d))
-    monkeypatch.setattr(V,'synthesize',lambda uid,text:{'filename':'reply.mp3','mime':'audio/mpeg','data':b'ok'})
-    assert not V.reply_audio(1,1,'Hi',{},Out())
-    state['voice_reply_optin_1']=True
-    assert not V.reply_audio(1,-1,'Hi',{},Out())
-    assert not V.reply_audio(1,1,'Inbox',{'tools':['read_email']},Out())
-    assert not V.reply_audio(1,1,'x'*1201,{},Out())
-    assert not sent
-    assert V.reply_audio(1,1,'Hi',{},Out())
-    assert len(sent)==2
+def test_no_automatic_reply_path():
+    from pathlib import Path
+    assert not hasattr(V,'reply_audio')
+    assert 'reply_audio' not in Path('cr_telegram.py').read_text()
+    assert 'reply_audio' not in Path('cr_web_app.py').read_text()

@@ -136,3 +136,5 @@ Automatic short general reply audio: /voice on discloses third-party reply uploa
 
 New chat headers are auto-extracted from the first successful request (up to9topic words,70characters), replacing only generic names; explicit topic-shift requests can retitle that same thread. No extra provider call or account-data upload. This is an extractive header, not a model-written semantic summary. Never creates a thread automatically.
 When configured, header generation uses the existing fixed openrouter/free zero-price/privacy-guarded router (40output-token limit, no tools), with extractive fallback. Google/account-keyword requests never go to the title model. No generic paid model route. Still only first exchange/explicit focus shift, not each turn.
+
+October10 correction: automatic voice replies removed entirely, existing live reply-consent states disabled. /voice on now enables explicit speech only; /voice confirm cannot enable automatic outputs. /speak text or "say/read/speak TEXT as a voice note" are explicit requests. General replies stay text-only, regardless of previous opt-in. Ambiguous "say it" is not inferred from private history.

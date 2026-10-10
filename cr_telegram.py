@@ -443,7 +443,6 @@ def _handle_text(uid, chat_id, name, text, message_id, out):
         if hasattr(out, "meta"):
             out.meta = meta
         out.send(chat_id, reply)
-        __import__('cr_voice').reply_audio(uid,chat_id,reply,meta,out)
 
         for item in meta.pop('artifacts',[]):
             try:
