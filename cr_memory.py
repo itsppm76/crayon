@@ -80,9 +80,9 @@ def forget(uid, key):
 
 def add_message(uid, role, content):
     ident=__import__('cr_conversations').current.get()
-    if ident:
-        db.q('INSERT INTO messages(user_id,role,content,conversation_id) VALUES(%s,%s,%s,%s)',(uid,role,redact(content)[:6000],ident),'none');return
-    db.q("INSERT INTO messages(user_id,role,content) VALUES(%s,%s,%s)", (uid, role, redact(content)[:6000]), "none")
+    events=__import__('cr_progress').snapshot() if role=='assistant' else []
+    db.q('INSERT INTO messages(user_id,role,content,conversation_id,work_events) VALUES(%s,%s,%s,%s,%s::jsonb)',
+         (uid,role,redact(content)[:6000],ident,__import__('json').dumps(events)),'none')
 
 
 def recent_messages(uid, n=None):

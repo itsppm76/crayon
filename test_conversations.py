@@ -15,7 +15,7 @@ def test_turn_context_isolated(monkeypatch):
     try:
         M.add_message(2,'user','hello');M.recent_messages(2)
     finally:C.current.reset(token)
-    assert calls[0][1][-1]=='thread'
+    assert calls[0][1][-2]=='thread'
     assert calls[1][1][1]=='thread'
     M.recent_messages(2)
     assert 'conversation_id IS NULL' in calls[-1][0]

@@ -173,8 +173,9 @@ def _run(uid, ident):
         def stream_report(text):
             db.q('UPDATE web_requests SET draft=%s,updated_at=now() WHERE user_id=%s AND id=%s AND state=%s',(encode({'text':text}),uid,ident,'running'),'none')
         stream_token=cr_stream.callback.set(stream_report)
+        events_token=cr_progress.recorded.set([])
         progress_token=cr_progress.callback.set(report)
-        report({'label':'Request accepted','state':'done'})
+        cr_progress.emit('Request accepted','done')
         try:
             items = dispatch(uid,data['name'],data['input'])
             try:
@@ -205,6 +206,7 @@ def _run(uid, ident):
     finally:
         if 'stream_token' in locals():cr_stream.callback.reset(stream_token)
         if 'progress_token' in locals():cr_progress.callback.reset(progress_token)
+        if 'events_token' in locals():cr_progress.recorded.reset(events_token)
         if 'reply_token' in locals():R.current.reset(reply_token)
         if 'conversation_token' in locals():conversations.current.reset(conversation_token)
         SLOTS.release()
@@ -236,14 +238,14 @@ def history(uid, before=None):
         if cursor.tzinfo is None:raise ValueError('History cursor needs timezone.')
     params=(uid,cursor,uid,cursor) if before else (uid,uid)
     condition=' AND ts<%s' if before else ''
-    rows=db.q("SELECT 'message' AS kind,id::text AS id,role,content,NULL::text AS encrypted,ts FROM messages WHERE user_id=%s"+condition+
-      " UNION ALL SELECT 'receipt',id,'receipt',NULL,encrypted,ts FROM channel_history WHERE user_id=%s"+condition+" ORDER BY ts DESC,id DESC LIMIT 51",params)
+    rows=db.q("SELECT 'message' AS kind,id::text AS id,role,content,NULL::text AS encrypted,ts,work_events FROM messages WHERE user_id=%s"+condition+
+      " UNION ALL SELECT 'receipt',id,'receipt',NULL,encrypted,ts,'[]'::jsonb FROM channel_history WHERE user_id=%s"+condition+" ORDER BY ts DESC,id DESC LIMIT 51",params)
     page=rows[:50];items=[]
     for r in reversed(page):
         if r['kind']=='receipt':
             data=json.loads(auth._cipher().decrypt(r['encrypted'].encode()))
             for role in ('user','assistant'):items.append({'id':r['id']+role,'role':role,'text':data[role],'time':str(r['ts']),'media_missing':False})
-        else:items.append({'id':r['id'],'role':r['role'],'text':r['content'],'time':str(r['ts']),'media_missing':r['content'].startswith('[User sent media:')})
+        else:items.append({'id':r['id'],'role':r['role'],'text':r['content'],'time':str(r['ts']),'work_events':r.get('work_events') or [],'media_missing':r['content'].startswith('[User sent media:')})
     return {'messages':items,'has_more':len(rows)>50,'before':page[-1]['ts'].isoformat() if page else None}
 
 

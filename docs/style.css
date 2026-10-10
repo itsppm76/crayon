@@ -79,3 +79,5 @@ body.sidebar-open main,body.sidebar-open .composer-wrap,body.sidebar-open footer
 .settled[data-outcome=blocked] .work-orbit{background:#bc623d20}.settled[data-outcome=blocked] .work-orbit::after{content:'!';color:#bc623d}
 .settled-row>.av{display:none}.settled-row .work-steps{margin:0;flex-basis:100%;max-width:500px}
 .quote-stage{max-width:780px;margin:0 auto 8px;padding:9px 14px;border-left:3px solid var(--accent);background:var(--wash);border-radius:9px;font-size:12px;display:flex;gap:10px;align-items:center}.quote-stage span{flex:1;overflow:hidden}.quote-stage button{font-size:12px;min-height:32px}
+
+.settled .step-label{color:var(--ink)}.settled li{animation:none}
