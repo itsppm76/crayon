@@ -42,9 +42,9 @@ def handle(uid,chat,text,out):
         M=__import__('cr_memory');out.send(chat,M.render_memory(uid) if command=='/memory' else json.dumps(M.review_memory(uid),ensure_ascii=False));return True
     if command=='/digest_now':out.send(chat,__import__('cr_proactive').digest_text(uid));return True
     if command.startswith(('/proactive ','/digest ')):
-        op,value=command.split();key='proactive' if op=='/proactive' else 'digest';P=__import__('cr_proactive');ok=P.set_option(uid,chat,key,value=='on' if key=='proactive' else value);out.send(chat,'Preference saved.' if ok else 'Preference was not confirmed.');return True
+        op,value=command.split();key='proactive' if op=='/proactive' else 'digest';P=__import__('cr_proactive');settings=P.settings(uid);f={k:settings[k] for k in P.DEFAULT};f[key]=value=='on' if key=='proactive' else value;out.send(chat,P.web_update(uid,{**f,'accept':True})['text']);return True
     if command.startswith('/quiet_hours '):
-        P=__import__('cr_proactive');a,b=map(int,command.split()[1:]);P.set_option(uid,chat,'quiet_start',a);P.set_option(uid,chat,'quiet_end',b);out.send(chat,'Quiet hours saved: '+str(a)+':00 to '+str(b)+':00.');return True
+        P=__import__('cr_proactive');a,b=map(int,command.split()[1:]);settings=P.settings(uid);f={k:settings[k] for k in P.DEFAULT};f.update(quiet_start=a,quiet_end=b,accept=True);out.send(chat,P.web_update(uid,f)['text']);return True
     if re.fullmatch(r'(connect|disconnect) (workspace|github)',command):
         op,provider=command.split();X=__import__('cr_connections')
         if op=='connect':out.send(chat,'Review your own '+provider+' account permissions here: '+X.begin(uid,provider))
