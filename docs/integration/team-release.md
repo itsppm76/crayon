@@ -12,6 +12,6 @@ Remaining: isolate and port latest peer browser-code/charts/read-only sharing/cu
 
 Proof: 524 inherited/private tests and four personal release contract tests; local browser390/1280 with mocked auth, no real login/provider send, 4download exports each width, UI/icon/PDF pixels inspected. These checks are staging evidence, not live provider/device acceptance.
 
-Text-only packaging: manifest references the unchanged existing crayon.svg (sizes:any), not newly generated PNGs. SVG manifests are supported by the manifest spec, but Android/TWA installability remains unverified. Vendored export library bytes remain unchanged (each file under 1 MB), no CDN or dependency changes.
+Text-only packaging: manifest references the unchanged existing crayon.svg (sizes:any), not newly generated PNGs. SVG manifests are supported by the manifest spec, but Android/TWA installability remains unverified. The earlier vendored text package was superseded by the CDN package below; library versions and bytes remain unchanged.
 
 CDN packaging: docx 8.5.0, jsPDF 2.5.1 and PptxGenJS 3.12.0 load from pinned URLs with SHA384 SRI and anonymous CORS. Downloaded upstream bytes were compared exactly to the formerly vendored files. Export libraries now need network availability; offline PDF/DOCX/PPTX export is not guaranteed. Markdown export remains local.
