@@ -50,7 +50,7 @@ def scan(uid,state):
     return '\n'.join(lines),state
 def tick(out):
     # Account IDs derive from stored opt-in keys, never a model or incoming email.
-    rows=db.q("SELECT key FROM kv WHERE key LIKE 'mail_watch_%' AND value IS NOT NULL ORDER BY key LIMIT 500",fetch='all') or []
+    rows=db.q("SELECT key FROM kv WHERE key LIKE 'mail_watch_%%' AND value IS NOT NULL ORDER BY key LIMIT 500",fetch='all') or []
     for row in rows:
         suffix=row['key'][len('mail_watch_'):]
         if not suffix.isdigit():continue

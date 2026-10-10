@@ -30,6 +30,7 @@ def init():
     __import__('cr_history').init()
     db.q(SCHEMA, fetch='none')
     db.q("ALTER TABLE web_requests ADD COLUMN IF NOT EXISTS progress JSONB DEFAULT '[]'::jsonb",fetch='none')
+    __import__('cr_conversations').init()
     __import__('cr_web_notifications').init()
     __import__('cr_web_rooms').init()
 
@@ -120,9 +121,11 @@ def dispatch(uid, name, text):
 
 def submit(user, body):
     text, ident = body.get('message'), body.get('request_id')
-    if set(body) != {'message','request_id'} or not isinstance(text,str) or not 1 <= len(text.strip()) <= 8000 or not isinstance(ident,str) or not auth.PATTERN.fullmatch(ident):
+    if set(body) not in ({'message','request_id'},{'message','request_id','conversation_id'}) or not isinstance(text,str) or not 1 <= len(text.strip()) <= 8000 or not isinstance(ident,str) or not auth.PATTERN.fullmatch(ident):
         raise ValueError('Invalid message request.')
     uid = user['user_id']
+    conversation=body.get('conversation_id')
+    if conversation:__import__('cr_conversations').require(uid,conversation)
     if looks_like_secret(text):
         raise ValueError('Do not send passwords, keys or credentials here.')
     old = db.q('SELECT state FROM web_requests WHERE user_id=%s AND id=%s', (uid,ident), 'one')
@@ -135,7 +138,7 @@ def submit(user, body):
         raise ValueError('Crayon is busy. Wait before sending another request.')
     try:
         row = db.q('INSERT INTO web_requests(id,user_id,encrypted) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING RETURNING id',
-            (ident,uid,encode({'input':text,'name':user['name']})), 'one')
+            (ident,uid,encode({'input':text,'name':user['name'],'conversation_id':conversation})), 'one')
         if row:
             POOL.submit(_run,uid,ident)
         else:
@@ -151,6 +154,10 @@ def _run(uid, ident):
         row = db.q("UPDATE web_requests SET state='running',updated_at=now() WHERE user_id=%s AND id=%s AND state='queued' RETURNING encrypted",(uid,ident),'one')
         if not row: return
         data = decode(row['encrypted'])
+        import cr_conversations as conversations
+        conversation=data.get('conversation_id')
+        if conversation:conversations.require(uid,conversation)
+        conversation_token=conversations.current.set(conversation)
         import cr_progress
         def report(event):
             db.q("UPDATE web_requests SET progress=(CASE WHEN jsonb_array_length(progress)<16 THEN progress ELSE progress - 0 END)||%s::jsonb WHERE user_id=%s AND id=%s AND state='running'",(json.dumps([event]),uid,ident),'none')
@@ -182,6 +189,7 @@ def _run(uid, ident):
              (status,encode({'items':items}),uid,ident),'none')
     finally:
         if 'progress_token' in locals():cr_progress.callback.reset(progress_token)
+        if 'conversation_token' in locals():conversations.current.reset(conversation_token)
         SLOTS.release()
 
 

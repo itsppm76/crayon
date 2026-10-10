@@ -171,6 +171,15 @@ def handle(h, method, raw=b''):
             if set(body)!={'id'}:raise ValueError('Invalid notification acknowledgement.')
             __import__('cr_web_notifications').acknowledge(user['user_id'],body['id'])
             reply(h,200,{'ok':True},cors=True)
+        elif method=='GET' and p.path=='/web/conversations':
+            reply(h,200,{'conversations':__import__('cr_conversations').list_for(user['user_id'])},cors=True)
+        elif method=='POST' and p.path=='/web/conversation-create':
+            if set(body)!={'title'}:raise ValueError('Invalid conversation request.')
+            reply(h,200,__import__('cr_conversations').create(user['user_id'],body['title']),cors=True)
+        elif method=='GET' and p.path=='/web/conversation-history':
+            q=parse_qs(p.query)
+            if set(q)!={'id'} or len(q['id'])!=1:raise ValueError('Invalid conversation query.')
+            reply(h,200,__import__('cr_conversations').history(user['user_id'],q['id'][0]),cors=True)
         elif method=='GET' and p.path=='/web/activity':
             reply(h,200,{'activity':W.activity(user['user_id'])},cors=True)
         elif method=='GET' and p.path=='/web/connections':

@@ -79,12 +79,19 @@ def forget(uid, key):
 
 
 def add_message(uid, role, content):
+    ident=__import__('cr_conversations').current.get()
+    if ident:
+        db.q('INSERT INTO messages(user_id,role,content,conversation_id) VALUES(%s,%s,%s,%s)',(uid,role,redact(content)[:6000],ident),'none');return
     db.q("INSERT INTO messages(user_id,role,content) VALUES(%s,%s,%s)", (uid, role, redact(content)[:6000]), "none")
 
 
 def recent_messages(uid, n=None):
     n = n or C.HISTORY_TURNS
-    rows = db.q("SELECT id,role,content FROM messages WHERE user_id=%s ORDER BY id DESC LIMIT %s", (uid, n * 2))
+    ident=__import__('cr_conversations').current.get()
+    if ident:
+        rows=db.q('SELECT id,role,content FROM messages WHERE user_id=%s AND conversation_id=%s ORDER BY id DESC LIMIT %s',(uid,ident,n*2))
+        return list(reversed(rows))
+    rows = db.q("SELECT id,role,content FROM messages WHERE user_id=%s AND conversation_id IS NULL ORDER BY id DESC LIMIT %s", (uid, n * 2))
     return list(reversed(rows))
 
 
@@ -98,7 +105,7 @@ def memory_block(uid):
     for f in fs:
         parts.append(f"- {f['key']}: {f['value']}")
     block = "\n".join(parts) if parts else "(nothing stored yet)"
-    if u.get("summary"):
+    if u.get("summary") and not __import__("cr_conversations").current.get():
         block += "\n\nEarlier conversation summary:\n" + u["summary"]
     return block
 
@@ -142,7 +149,7 @@ def maybe_summarize(uid):
     if not u:
         return
     upto = u["summary_upto"] or 0
-    rows = db.q("SELECT id,role,content FROM messages WHERE user_id=%s AND id>%s ORDER BY id", (uid, upto))
+    rows = db.q("SELECT id,role,content FROM messages WHERE user_id=%s AND conversation_id IS NULL AND id>%s ORDER BY id", (uid, upto))
     keep = C.HISTORY_TURNS * 2
     if len(rows) <= keep + 16:
         return
@@ -190,7 +197,7 @@ def delete_all(uid):
     import cr_web_app
     cr_web_app.init()
     __import__('cr_account_merge').delete_review_data(uid)
-    for table in ("web_notifications", "web_requests", "web_sessions", "web_login_codes", "web_action_reviews", "channel_history", "web_google_identities", "web_google_reviews", "account_identities", "web_email_sessions", "web_email_reviews"):
+    for table in ("web_conversations", "web_notifications", "web_requests", "web_sessions", "web_login_codes", "web_action_reviews", "channel_history", "web_google_identities", "web_google_reviews", "account_identities", "web_email_sessions", "web_email_reviews"):
         db.q("DELETE FROM " + table + " WHERE user_id=%s", (uid,), "none")
     db.q("DELETE FROM users WHERE user_id=%s", (uid,), "none")  # first: blocks late background writes
     for t in ("facts", "messages", "notes", "reminders"):
