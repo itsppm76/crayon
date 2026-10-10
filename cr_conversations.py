@@ -25,3 +25,32 @@ def history(uid,ident):
     require(uid,ident)
     rows=db.q('SELECT id,role,content,ts FROM messages WHERE user_id=%s AND conversation_id=%s ORDER BY id DESC LIMIT 100',(uid,ident))
     return {'messages':[{'id':str(r['id']),'role':r['role'],'text':r['content'],'time':str(r['ts'])} for r in reversed(rows)]}
+
+def title_from_text(text):
+    """Cost-free extractive topic header, no extra provider upload."""
+    import re
+    from cr_safety import clean_text,looks_like_secret
+    if looks_like_secret(text):return None
+    words=re.findall(r"[\w]+(?:['-][\w]+)*",clean_text(text),re.UNICODE)
+    while words and words[0].lower() in {'please','can','could','would','you','help','me','with','to'}:words.pop(0)
+    if not words:return None
+    title=' '.join(words[:9])[:70].strip()
+    return title[0].upper()+title[1:] if title else None
+
+def auto_title(uid,ident,text):
+    if not ident:return
+    import re
+    title=title_from_text(text)
+    if not title:return
+    row=require(uid,ident)
+    state=db.kv_get('conversation_title_'+str(uid)+'_'+ident,{})
+    n=state.get('turns',0)+1
+    old_words=set(re.findall(r'\w+',row['title'].lower()))-{'the','a','an','my','me','for','to','and','is','please','help'}
+    new_words=set(re.findall(r'\w+',title.lower()))-{'the','a','an','my','me','for','to','and','is','please','help'}
+    # Initial header replaces only a generic auto-created name; later switches
+    # need explicit shift wording and a different topic, not incidental replies.
+    initial=not state and (row['title']=='New chat' or row['title'].startswith('Chat '))
+    shift=bool(re.search(r'(?i)\b(new topic|switch topics|instead|now help|different topic|let.?s talk about)\b',text)) and len(new_words)>=3 and len(old_words&new_words)<=1
+    if initial or shift:
+        db.q('UPDATE web_conversations SET title=%s WHERE user_id=%s AND id=%s',(title,uid,ident),'none')
+    db.kv_set('conversation_title_'+str(uid)+'_'+ident,{'turns':n})

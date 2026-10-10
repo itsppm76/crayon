@@ -197,6 +197,9 @@ def _run(uid, ident):
             status = 'blocked'
         db.q('UPDATE web_requests SET state=%s,encrypted=%s,draft=NULL,updated_at=now() WHERE user_id=%s AND id=%s',
              (status,encode({'items':items}),uid,ident),'none')
+        if status=='done' and conversation:
+            try:conversations.auto_title(uid,conversation,data['input'])
+            except Exception:pass
     finally:
         if 'stream_token' in locals():cr_stream.callback.reset(stream_token)
         if 'progress_token' in locals():cr_progress.callback.reset(progress_token)

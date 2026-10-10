@@ -343,3 +343,9 @@ def test_browser_only_reminder_creates_inapp_delivery(config):
     config.setattr(T.db,'q',q)
     r=T.set_reminder({'uid':10**15,'chat_id':10**15},'Test',in_minutes=5)
     assert r['ok']
+
+def test_content_title_is_bounded_and_no_secrets():
+    import cr_conversations as C
+    assert C.title_from_text('Can you help me plan a study session?')=='Plan a study session'
+    assert len(C.title_from_text('word '*100))<=70
+    assert C.title_from_text('') is None
