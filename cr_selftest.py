@@ -102,13 +102,18 @@ def run(body):
             return {'ok':bool(seen),'chunks':len(seen),'samples':seen[:3],'final':r.get('text'),'model':r.get('model')}
         finally:S.allowed.reset(a);S.callback.reset(b)
     if body.get('openrouter_fallback_fixture'):
-        import cr_llm as L,cr_config as C
-        from unittest.mock import patch
-        def fail(*a,**k):raise L.LLMError('quota','Forced synthetic primary failure')
-        with patch.object(L,'_generate_primary',fail),patch.object(C,'OPENROUTER_AUTO_FALLBACK',True):
-            try:r=L.generate([L.user('Reply with only FALLBACK_READY. Synthetic integration test; no personal information.')],temperature=0,max_tokens=300)
-            except Exception as e:return {'ok':False,'kind':type(e).__name__,'reason':__import__('cr_safety').redact(str(e))[:250],'key_present':bool(C.OPENROUTER_KEY),'forced_primary_failure':True}
-        return {'ok':r.get('text')=='FALLBACK_READY','provider':r.get('raw',{}).get('provider'),'model':r.get('model'),'reply':r.get('text'),'forced_primary_failure':True,'note':'Live free-route request; no user, Google or media data.'}
+        import cr_llm as L, cr_config as C
+        if not (C.OPENROUTER_AUTO_FALLBACK and C.OPENROUTER_KEY):
+            return {'ok':False,'reason':'Fallback is not enabled and keyed'}
+        probe={'attempts':[]};token=L._failover_probe.set(probe)
+        try:
+            r=L.generate([L.user('Reply with only FALLBACK_READY. Synthetic integration test; no personal information.')],temperature=0,max_tokens=300)
+            return {'ok':r.get('text','').strip()=='FALLBACK_READY' and r.get('raw',{}).get('provider')=='openrouter',
+                    'provider':r.get('raw',{}).get('provider'),'model':r.get('model'),'reply':r.get('text'),
+                    'busy':r.get('raw',{}).get('busy',False),'attempts':probe['attempts'],
+                    'forced_primary_failure':True,'note':'Live configured free fallback; request-local forced failure, no personal data or external actions.'}
+        finally:
+            L._failover_probe.reset(token)
     if body.get('mail_watch_status'):
         import cr_mail_watch as W
         state=db.kv_get(W.KEY(W.OWNER),None)
