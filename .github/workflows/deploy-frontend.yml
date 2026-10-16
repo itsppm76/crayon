@@ -1,0 +1,41 @@
+name: Deploy approved Crayon frontend
+on:
+  push:
+    branches: [main]
+    paths: ['*crayon-approved-frontend.zip', '.github/workflows/deploy-frontend.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack approved static frontend
+        run: |
+          mkdir -p site
+          python3 - <<'PY'
+          import glob, zipfile
+          paths=glob.glob('*crayon-approved-frontend.zip')
+          assert len(paths)==1, 'Expected one approved frontend archive'
+          with zipfile.ZipFile(paths[0]) as z:
+              assert all(not n.startswith('/') and '..' not in n.split('/') for n in z.namelist())
+              z.extractall('site')
+          PY
+          test -f site/index.html
+          touch site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
