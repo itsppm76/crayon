@@ -2,6 +2,8 @@
 import json
 import logging
 import time
+from contextvars import ContextVar
+from decimal import Decimal, InvalidOperation
 
 import httpx
 
@@ -25,30 +27,118 @@ def _post(model, body):
     return r
 
 
+# Synthetic probes are request-local. No global monkeypatch affects live users.
+_failover_probe = ContextVar("crayon_failover_probe", default=None)
+_FREE_MODELS = ('nvidia/nemotron-3-ultra-550b-a55b:free',
+                'cohere/north-mini-code:free',
+                'nvidia/nemotron-3-super-120b-a12b:free', 'openrouter/free')
+_catalog = {'expires': 0, 'models': {}}
+_BUSY = "I'm here, but my free AI providers are busy right now. I couldn't finish this reply. Please try again in a little while. Any actions already confirmed above still count."
+
+
+def _busy():
+    return {'text': _BUSY, 'calls': [], 'parts': [{'text': _BUSY}],
+            'model': 'none', 'raw': {'provider': 'none', 'busy': True, 'completed': False}}
+
+
 def generate(contents, system="", tools=None, json_mode=False, temperature=0.6, max_tokens=1500,
              models=None, thinking_budget=None):
     try:
+        probe = _failover_probe.get()
+        if probe is not None:
+            probe['attempts'].append('gemini:forced-quota')
+            raise LLMError('quota', 'Synthetic primary failure')
         return _generate_primary(contents,system,tools,json_mode,temperature,max_tokens,models,thinking_budget)
     except LLMError as error:
         import cr_lc
-        if error.kind not in ('quota','unavailable','auth') or cr_lc.provider()!='gemini' or not C.OPENROUTER_AUTO_FALLBACK or not C.OPENROUTER_KEY:raise
-        # Gemini uploads cannot be forwarded, and non-image media lacks accepted OR proof.
+        if error.kind not in ('quota','unavailable','auth','notfound') or cr_lc.provider()!='gemini':
+            raise
+        # Gemini uploads and non-image media never leave Gemini.
         for content in contents:
             for part in content.get('parts',[]):
-                if 'fileData' in part or ('inlineData' in part and not part['inlineData'].get('mimeType','').startswith('image/')):raise error
-        return openrouter_fallback(contents,system,tools,json_mode,temperature,max_tokens)
+                if 'fileData' in part or ('inlineData' in part and not part['inlineData'].get('mimeType','').startswith('image/')):
+                    return _busy()
+        if not C.OPENROUTER_AUTO_FALLBACK or not C.OPENROUTER_KEY:
+            raise
+        try:
+            return openrouter_fallback(contents,system,tools,json_mode,temperature,max_tokens)
+        except LLMError as fallback_error:
+            if fallback_error.kind in ('quota','unavailable','auth','notfound','empty'):
+                return _busy()
+            raise
+
+
+def _zero_price(pricing):
+    if not isinstance(pricing, dict) or not {'prompt', 'completion'} <= pricing.keys():
+        return False
+    def zero(value):
+        if isinstance(value, dict):
+            return bool(value) and all(zero(v) for v in value.values())
+        if isinstance(value, list):
+            return bool(value) and all(zero(v) for v in value)
+        if isinstance(value, bool) or value is None:
+            return False
+        try:
+            number = Decimal(str(value))
+            return number.is_finite() and number == 0
+        except (InvalidOperation, ValueError):
+            return False
+    return all(zero(v) for v in pricing.values())
+
+
+def _free_catalog():
+    now = time.monotonic()
+    if now < _catalog['expires']:
+        return _catalog['models']
+    try:
+        response = httpx.get('https://openrouter.ai/api/v1/models', timeout=5)
+        response.raise_for_status()
+        payload = json.loads(response.text, parse_float=Decimal)
+        models = {item['id']: item for item in payload['data']
+                  if isinstance(item, dict) and item.get('id') in _FREE_MODELS
+                  and _zero_price(item.get('pricing'))}
+    except Exception:
+        # No stale catalog or paid route when preflight cannot be verified.
+        return {}
+    _catalog.update(expires=now+300, models=models)
+    return models
 
 
 def openrouter_fallback(contents,system='',tools=None,json_mode=False,temperature=0.6,max_tokens=1500):
     import cr_lc
-    if not C.OPENROUTER_KEY:raise LLMError('auth','OpenRouter fallback key absent')
-    # Fixed free router and explicit zero-price/provider-data guards; never use configured paid defaults.
-    chat=cr_lc.build_model('openrouter/free',temperature,max_tokens,json_mode,None,tools,selected_provider='openrouter')
-    try:ai=chat.invoke(cr_lc.to_messages(contents,system,selected_provider='openrouter'))
-    except Exception as e:raise LLMError(cr_lc.classify(e),'Free OpenRouter fallback unavailable; no paid route attempted') from None
-    text,calls,parts=cr_lc.from_ai(ai)
-    if not text and not calls:raise LLMError('empty','Free fallback returned no content; finish='+str(getattr(ai,'response_metadata',{}).get('finish_reason','unknown')))
-    return {'text':text,'calls':calls,'parts':parts,'model':'openrouter/free','raw':{'provider':'openrouter','fallback':True,'actual_model':getattr(ai,'response_metadata',{}).get('model_name','unknown')}}
+    if not C.OPENROUTER_KEY:
+        raise LLMError('auth','OpenRouter fallback key absent')
+    catalog = _free_catalog()
+    last_kind = 'unavailable'
+    deadline = time.monotonic()+55
+    # Different free models first; one bounded retry of the free router last.
+    for model in (*_FREE_MODELS, 'openrouter/free'):
+        item = catalog.get(model)
+        needed = ({'tools'} if tools else set()) | ({'response_format'} if json_mode else set())
+        if not item or not needed <= set(item.get('supported_parameters') or []):
+            continue
+        if time.monotonic() >= deadline:
+            break
+        probe = _failover_probe.get()
+        if probe is not None:
+            probe['attempts'].append(model)
+        try:
+            chat=cr_lc.build_model(model,temperature,max_tokens,json_mode,None,tools,selected_provider='openrouter')
+            ai=chat.invoke(cr_lc.to_messages(contents,system,selected_provider='openrouter'))
+            text,calls,parts=cr_lc.from_ai(ai)
+            if not text and not calls:
+                last_kind='empty'
+                continue
+            return {'text':text,'calls':calls,'parts':parts,'model':model,
+                    'raw':{'provider':'openrouter','fallback':True,
+                           'actual_model':getattr(ai,'response_metadata',{}).get('model_name',model)}}
+        except Exception as error:
+            last_kind=cr_lc.classify(error)
+            if last_kind=='auth':
+                break
+        if model == 'openrouter/free':
+            time.sleep(0.5)
+    raise LLMError(last_kind, 'Free providers unavailable; no paid route attempted')
 
 
 def _generate_primary(contents, system="", tools=None, json_mode=False, temperature=0.6, max_tokens=1500,
