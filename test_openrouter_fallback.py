@@ -5,7 +5,7 @@ import cr_config as C
 from langchain_core.messages import AIMessage
 @pytest.fixture(autouse=True)
 def fallback_enabled(monkeypatch):
-    monkeypatch.setattr(C,'LLM_PROVIDER','gemini');monkeypatch.setattr(C,'OPENROUTER_AUTO_FALLBACK',True);monkeypatch.setattr(C,'OPENROUTER_KEY','synthetic')
+    monkeypatch.setattr(L,'_free_catalog',lambda:{'openrouter/free':{'supported_parameters':['tools','response_format']}});monkeypatch.setattr(C,'LLM_PROVIDER','gemini');monkeypatch.setattr(C,'OPENROUTER_AUTO_FALLBACK',True);monkeypatch.setattr(C,'OPENROUTER_KEY','synthetic')
 def test_primary_success_never_falls_back(monkeypatch):
     monkeypatch.setattr(L,'_generate_primary',lambda *a:{'text':'primary'})
     monkeypatch.setattr(L,'openrouter_fallback',lambda *a:pytest.fail('fallback not needed'))
@@ -26,7 +26,7 @@ def test_media_uri_and_audio_never_forwarded(monkeypatch):
     def fail(*a):raise L.LLMError('quota')
     monkeypatch.setattr(L,'_generate_primary',fail);monkeypatch.setattr(L,'openrouter_fallback',lambda *a:pytest.fail('media must stay Gemini'))
     for part in ({'fileData':{'fileUri':'private','mimeType':'video/mp4'}},{'inlineData':{'mimeType':'audio/wav','data':'AAA'}}):
-        with pytest.raises(L.LLMError):L.generate([{'role':'user','parts':[part]}])
+        assert L.generate([{'role':'user','parts':[part]}])['raw']['busy']
 def test_free_zero_price_private_provider_guard(monkeypatch):
     import langchain_openai
     calls=[]

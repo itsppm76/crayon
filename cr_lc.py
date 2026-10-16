@@ -112,8 +112,8 @@ def build_model(model, temperature, max_tokens, json_mode, thinking_budget, tool
             from langchain_openai import ChatOpenAI
             kw = {"response_format": {"type": "json_object"}} if json_mode else {}
             m = ChatOpenAI(model=model, api_key=C.OPENROUTER_KEY, base_url=OPENROUTER_BASE, temperature=temperature,
-                           max_tokens=max_tokens, timeout=60, max_retries=0, model_kwargs=kw,
-                           default_headers={"X-Title": "Crayon"}, extra_body={"provider":{"max_price":{"prompt":0,"completion":0,"request":0,"image":0},"data_collection":"deny","require_parameters":True}})
+                           max_tokens=max_tokens, timeout=10, max_retries=0, model_kwargs=kw,
+                           default_headers={"X-Title": "Crayon"}, extra_body={"provider":{"max_price":{"prompt":0,"completion":0,"request":0,"image":0,"audio":0},"data_collection":"deny","require_parameters":True}})
         else:
             from langchain_google_genai import ChatGoogleGenerativeAI
             kw = {"response_mime_type": "application/json"} if json_mode else {}
